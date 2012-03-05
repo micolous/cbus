@@ -12,6 +12,15 @@ APP_LIGHTING = '38'
 ROUTING_NONE = '00'
 
 
+# light on
+#\0538007964 (GA 100)
+
+# light off
+#\0538000164 (GA 100)
+
+# set to level
+#\053800rr64FF (GA 100, to level 100%/0xff)
+
 def duration_to_ramp_rate(seconds):
 	if seconds == 0:
 		return '02'
@@ -33,7 +42,19 @@ def duration_to_ramp_rate(seconds):
 		return '42'
 	elif seconds <= 120:
 		return '4A'
-	elif seconds 
+	elif seconds <= 180:
+		return '52'
+	elif seconds <= 300:
+		return '5A'
+	elif seconds <= 420:
+		return '62'
+	elif seconds <= 600:
+		return '6A'
+	elif seconds <= 900:
+		return '72'
+	elif seconds <= 1020:
+		return '7A'
+	raise OutOfRangeException, 'That duration is too long'
 
 
 class CBusPCISerial(object):
