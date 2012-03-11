@@ -19,6 +19,9 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import struct
 from serial import Serial
+from base64 import b16encode, b16decode
+
+HEX_CHARS = "0123456789ABCDEF"
 
 END_COMMAND = '\r\n'
 
@@ -107,21 +110,85 @@ def cbus_checksum(input):
 	if input[0] == '\\':
 		input = input[1:]
 		
-	input = input.decode('base16')
+	input = b16decode(input)
 	c = 0
 	for x in input:
 		c += ord(x)
 	
 	return ((c % 256) ^ 256) + 1
 
+class CBusEvent(object):
+	def __init__(self, event_string):
+		" decode the given event string "
+		event_string = event_string.strip()
+		self.event_string = event_string
+		
+		for x in self.event_string:
+			if x not in HEX_CHARS:
+				raise Exception, "Not supported yet"
+		
+		# decode string
+		event_bytes = b16decode(self.event_string)
+		
+		event_code = ord(event_bytes[0])
+		
+		if event_code >= 0xC0:
+			# this is an MMI of length [0] - C0 (quick start page 13)
+			self.event_length = ord(event_bytes[0]) - 0xC0
+			self.event_type = 'MMI'
+			self.application_address = ord(event_bytes[1])
+			
+			# TODO: Implement this.
+		elif event_code == 0x05:
+			# this is a point-to-multipoint message.
+			self.event_type = 'PTMP'
+			self.source_address = ord(event_bytes[1])
+			self.application = ord(event_bytes[2])
+			self.routing = ord(event_bytes[3])
+			
+			if event_string[4:6] == APP_LIGHTING:
+				# lighting application
+				self.application_type = 'LIGHTING'
+				self.lighting_event = event_string[8:10]
+				if self.lighting_event in RAMP_RATES.keys():
+					# ramp
+					self.lighting_event_type = 'RAMP'
+					self.lighting_ramp_rate = ramp_rate_to_duration(self.lighting_event)
+				elif self.lighting_event == LIGHT_ON:
+					self.lighting_event_type = 'ON'
+				elif self.lighting_event == LIGHT_OFF:
+					self.lighting_event_type = 'OFF'
+				
+				self.group_address = ord(event_bytes[5])
+				self.checksum = ord(event_bytes[6])
+			else:
+				# not implemented.
+				raise Exception, "not implemented application %r" % (event_string[4:6])
+
+	def __str__(self):
+		if self.event_type == 'PTMP' and self.application_type == 'LIGHTING':
+			if self.lighting_event_type == 'RAMP':
+				ramp = ', rate=%d' % self.lighting_ramp_rate
+			else:
+				ramp = ''
+				
+			return '<PTMP src=%d, app=%s, routing=%d, group=%d, action=%s%s>' % (
+				self.source_address, self.application_type, self.routing,
+				self.group_address, self.lighting_event_type, ramp
+			)
+		else:
+			return '???'
 class CBusPCISerial(object):
 	def __init__(self, device):
 		self.s = Serial(device, 9600)
 		self.reset()
 
 	def reset(self):
-		# reset the PCI, enable MMI reports so we know when buttons are pressed.
-		# (mmi is actually disabled, 59g vs 79g
+		# reset the PCI, disable MMI reports so we know when buttons are pressed.
+		# (mmi toggle is 59g disable vs 79g enable)
+		# 
+		# MMI calls aren't needed to get events from light switches and other device on the network.
+		
 		self.write('~~~\r\nA3210038g\r\nA3420002g\r\nA3300059g\r\n')
 	
 	def write(self, msg):
@@ -135,3 +202,23 @@ class CBusPCISerial(object):
 	def lighting_group_off(self, group_id):
 		# TODO: Implement checksumming
 		self.write(POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_id) + 'g' + END_COMMAND)
+		
+	def event_waiting(self):
+		return self.s.inWaiting >= 1
+	
+	def get_event(self):
+		line = self.s.readline()
+		return line
+
+def event_test(port):
+	s = CBusPCISerial(port)
+	while True:
+		e = s.get_event();
+		try:
+			ce = CBusEvent(e)
+			print str(ce)
+		except Exception, ex:
+			print "exception %s" % ex
+			
+		print "%r" % e
+		
