@@ -89,7 +89,7 @@ class CBusBot(object):
 		
 		# setup irc client library.
 		self.irc = IRC(nick=self.nick, start_channels=[self.channel], version=VERSION)
-		self.irc.bind(self.handle_lighting, PRIVMSG, r'!cbus (\d+) (\S+)')
+		self.irc.bind(self.handle_lighting, PRIVMSG, r'^!cbus (\d+) (\S+)$')
 		self.irc.bind(self.handle_welcome, RPL_WELCOME)
 		
 		self.pci = CBusPCISerial(self.pcidev)
@@ -139,10 +139,21 @@ class CBusBot(object):
 	def process_events_loop(self):
 		while True:
 			try:
-				e = self.pci.get_event()
-				ce = CBusEvent(e)
-				print str(ce)
-				self.irc.tell(self.channel, str(ce))
+				print "line 142"
+				if self.pci.event_waiting():
+					print "line 144"
+					e = self.pci.get_event()
+					print "line 146"
+					ce = CBusEvent(e)
+					print "line 148"
+					if ce.event_type != "MMI":
+						print "line 150"
+						print str(ce)
+						print "line 152"
+						self.irc.tell(self.channel, str(ce))
+				
+				print "poke"
+				sleep(1)
 
 			except Exception, ex:
 				print "exception %s" % ex

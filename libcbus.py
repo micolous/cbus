@@ -26,7 +26,7 @@ HEX_CHARS = "0123456789ABCDEF"
 END_COMMAND = '\r\n'
 
 # command types
-POINT_TO_MULTIPOINT = '~\\05'
+POINT_TO_MULTIPOINT = '\\05'
 
 # Applications
 APP_LIGHTING = '38'
@@ -105,17 +105,21 @@ def ramp_rate_to_duration(rate):
 	rate = rate.upper()	
 	return RAMP_RATES[rate]
 
-def cbus_checksum(input):
+def cbus_checksum(i):
 	"Calculates the checksum of a C-Bus command string."
-	if input[0] == '\\':
-		input = input[1:]
+	if i[0] == '\\':
+		i = i[1:]
 		
-	input = b16decode(input)
+	i = b16decode(i)
 	c = 0
-	for x in input:
+	for x in i:
 		c += ord(x)
 	
-	return ((c % 256) ^ 256) + 1
+	return ((c % 0x100) ^ 0xff) + 1
+
+def add_cbus_checksum(i):
+	c = cbus_checksum(i)
+	return '%s%02X' % (i, c)
 
 class CBusEvent(object):
 	def __init__(self, event_string):
@@ -125,7 +129,7 @@ class CBusEvent(object):
 		
 		for x in self.event_string:
 			if x not in HEX_CHARS:
-				raise Exception, "Not supported yet"
+				raise Exception, "Not supported yet: %r" % self.event_string
 		
 		# decode string
 		event_bytes = b16decode(self.event_string)
@@ -180,7 +184,7 @@ class CBusEvent(object):
 			return '???'
 class CBusPCISerial(object):
 	def __init__(self, device):
-		self.s = Serial(device, 9600)
+		self.s = Serial(device, 9600, timeout=1)
 		self.reset()
 
 	def reset(self):
@@ -189,22 +193,47 @@ class CBusPCISerial(object):
 		# 
 		# MMI calls aren't needed to get events from light switches and other device on the network.
 		
-		self.write('~~~\r\nA3210038g\r\nA3420002g\r\nA3300059g\r\n')
+		# full system reset
+		self.write('~~~\r\n')
+		
+		# serial user interface guide sect 10.2
+		# Set application address 1 to 38 (lighting)
+		self.write('A3210038g\r\n')
+		
+		# Interface options #3 set to 02
+		# "Reserved".
+		self.write('A3420002g\r\n')
+		
+		# Interface options #1
+		# = 0x59 / 0101 1001
+		# 0: CONNECT
+		# 3: SRCHK - strict checksum check
+		# 4: SMART
+		# 5: MONITOR
+		# 6: IDMON
+		self.write('A3300059g\r\n')
+		
+		
+		
+		# quick start guide version
+		#self.write('~~~\r\nA3210038g\r\nA3420002g\r\nA3300059g\r\n')
 	
 	def write(self, msg):
 		print "Message = %r" % msg
 		self.s.write(msg)
 	
 	def lighting_group_on(self, group_id):
-		# TODO: Implement checksumming
-		self.write(POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_ON + ('%02X' % group_id) + 'g' + END_COMMAND)
+		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_ON + ('%02X' % group_id)
+		print "d = %r" % d
+		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
 	
 	def lighting_group_off(self, group_id):
-		# TODO: Implement checksumming
-		self.write(POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_id) + 'g' + END_COMMAND)
+		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_id)
+		print "d = %r" % d
+		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
 		
 	def event_waiting(self):
-		return self.s.inWaiting >= 1
+		return self.s.inWaiting() >= 1
 	
 	def get_event(self):
 		line = self.s.readline()
@@ -221,4 +250,4 @@ def event_test(port):
 			print "exception %s" % ex
 			
 		print "%r" % e
-		
+
