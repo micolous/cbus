@@ -1,0 +1,10 @@
+*.pyc
+*.swp
+*~
+.DS_Store
+__MACOSX
+Thumbs.db
+desktop.ini
+*.ini
+*.orig
+build
