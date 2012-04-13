@@ -143,7 +143,7 @@ class CBusEvent(object):
 			# this is an MMI of length [0] - C0 (quick start page 13)
 			self.event_length = ord(event_bytes[0]) - 0xC0
 			self.event_type = 'MMI'
-			self.application_address = ord(event_bytes[1])
+			self.application = ord(event_bytes[1])
 			
 			# TODO: Implement this.
 		elif event_code == 0x05:
