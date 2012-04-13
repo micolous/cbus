@@ -64,6 +64,9 @@ RAMP_RATES = {
 	'7A': 1020
 }
 
+RECALL = '1A'
+IDENTIFY = '21'
+
 
 def duration_to_ramp_rate(seconds):
 	if seconds == 0:
@@ -182,6 +185,7 @@ class CBusEvent(object):
 			)
 		else:
 			return '???'
+			
 class CBusPCISerial(object):
 	def __init__(self, device):
 		self.s = Serial(device, 9600, timeout=1)
@@ -230,6 +234,14 @@ class CBusPCISerial(object):
 	def lighting_group_off(self, group_id):
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_id)
 		print "d = %r" % d
+		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
+		
+	def recall(self, param_no, count):
+		d = '%s%02X%02X' % (RECALL, param_no, count)
+		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
+	
+	def identify(self, attribute):
+		d = '%s%02X' % (IDENTIFY, attribute) 
 		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
 		
 	def event_waiting(self):
