@@ -35,7 +35,9 @@ class CBusBackendAPI(dbus.service.Object):
 	def lighting_group_off(self, group_id):
 		self.pci.lighting_group_off(group_id)
 		
-
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ynd', out_signature='')
+	def lighting_group_ramp(self, group_id, duration, level):
+		self.pci.lighting_group_ramp(group_id, duration, level)
 
 def setup_dbus():
 	#bus = dbus.SystemnBus()

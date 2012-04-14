@@ -228,13 +228,40 @@ class CBusPCISerial(object):
 	
 	def lighting_group_on(self, group_id):
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_ON + ('%02X' % group_id)
-		print "d = %r" % d
+		#print "d = %r" % d
 		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
 	
 	def lighting_group_off(self, group_id):
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_id)
-		print "d = %r" % d
+		#print "d = %r" % d
 		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
+	
+	def lighting_group_ramp(self, group_id, duration, level=1.0):
+		"""
+		Ramps (fades) a group address to a specified level.
+		
+		Arguments:
+			`group_id`: The group address to fade.
+			`duration`: The duration, in seconds, that the fade should occur over.
+			            Please note, CBus only supports a limited number of fade
+			            durations, in decreasing accuracy up to 17 minutes (1020
+			            seconds).  This function will round the duration down to
+			            the nearest supported speed.
+			            
+			            A duration of 0 will stop the ramping.
+			            
+			            Durations longer than 17 minutes will throw an error.
+			`level`: An amount, between 0.0 and 1.0, of the light level to set,
+			         with 0.0 being the lowest level, and 1.0 being the highest.
+		"""
+		
+		if level < 0.0 or level > 1.0:
+			raise OverflowError, 'Ramp level is out of bounds.  Must be between 0.0 and 1.0.'
+		
+		level = int(level * 255)
+		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + duration_to_ramp_rate(duration) + ('%02X%02x' % (group_id, level))
+		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
+		
 		
 	def recall(self, param_no, count):
 		d = '%s%02X%02X' % (RECALL, param_no, count)
