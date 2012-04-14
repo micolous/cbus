@@ -27,31 +27,58 @@ class CBusBackendAPI(dbus.service.Object):
 		self.pci = pci
 		dbus.service.Object.__init__(self, bus, object_path)
 		
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='')
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
 	def lighting_group_on(self, group_id):
-		self.pci.lighting_group_on(group_id)
+		return self.pci.lighting_group_on(group_id)
 		
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='')
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
 	def lighting_group_off(self, group_id):
-		self.pci.lighting_group_off(group_id)
+		return self.pci.lighting_group_off(group_id)
 		
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ynd', out_signature='')
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ynd', out_signature='s')
 	def lighting_group_ramp(self, group_id, duration, level):
-		self.pci.lighting_group_ramp(group_id, duration, level)
+		return self.pci.lighting_group_ramp(group_id, duration, level)
+		
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='yyy', out_signature='s')
+	def recall(self, unit_addr, param_no, count):
+		# TODO: implement return response
+		return self.pci.recall(unit_addr, param_no, count)
+	
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='yy', out_signature='s')
+	def identify(self, unit_addr, attribute):
+		# TODO: implement return response
+		return self.pci.identify(unit_addr, attribute)
+		
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='', out_signature='')
+	def nop(self):
+		# TODO: fix bugs that need this
+		return
+	
 
-def setup_dbus():
-	#bus = dbus.SystemnBus()
-	bus = dbus.SessionBus()
-	name = dbus.service.BusName(DBUS_SERVICE, bus=bus)
-	pci = libcbus.CBusPCISerial('/dev/ttyUSB1')
-	o = CBusBackendAPI(name, pci)
-	return o
+	
 
 def boot_dbus():
+	bus = dbus.SessionBus()
+	name = dbus.service.BusName(DBUS_SERVICE, bus=bus)
+	pci = libcbus.CBusPCISerial('/dev/ttyUSB0')
+	o = CBusBackendAPI(name, pci)
+
 	mainloop = gobject.MainLoop()
-	mainloop.run()
+	gobject.threads_init()
+	context = mainloop.get_context()
+	
+	while True:	
+		if pci.event_waiting():
+			e = pci.get_event()
+			try:
+				ce = libcbus.CBusEvent(e)
+				print str(ce)
+			except Exception, ex:
+				print "exception %s" % ex
+			
+			print "%r" % e
+		context.iteration(True)
 
 if __name__ == '__main__':
-	setup_dbus()
 	boot_dbus()
 

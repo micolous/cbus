@@ -27,6 +27,9 @@ END_COMMAND = '\r\n'
 
 # command types
 POINT_TO_MULTIPOINT = '\\05'
+POINT_TO_POINT = '\\06'
+# undocumented command type issued for status inquiries by toolkit?
+POINT_TO_46 = '\\46'
 
 # Applications
 APP_LIGHTING = '38'
@@ -67,6 +70,8 @@ RAMP_RATES = {
 RECALL = '1A'
 IDENTIFY = '21'
 
+# these are valid confirmation codes used in acknowledge events.
+CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzGHIJKLMNOPQRSTUVWXYZ'
 
 def duration_to_ramp_rate(seconds):
 	if seconds == 0:
@@ -202,6 +207,20 @@ class CBusPCI(object):
 	def __init__(self):
 		self.reset()
 		
+		self.next_confirmation_index = 0
+	
+	def get_confirmation_code(self):
+		"""
+		Creates a confirmation code, and increments forward the next in the list.
+		
+		"""
+		o = CONFIRMATION_CODES[self.next_confirmation_index]
+		
+		self.next_confirmation_index += 1
+		self.next_confirmation_index %= len(CONFIRMATION_CODES)
+		
+		return o
+	
 	def write(self, msg):
 		raise NotImplementedError, "CBusPCI.write not implemented.  Use subclass (eg: CBusPCISerial)."
 
@@ -238,14 +257,31 @@ class CBusPCI(object):
 	
 	
 	def lighting_group_on(self, group_id):
+		"""
+		Turns on lights for the given group_id.
+		
+		Returns a single byte string, the matching code for the confirmation event.
+		"""
+	
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_ON + ('%02X' % group_id)
+		conf = self.get_confirmation_code()
 		#print "d = %r" % d
-		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
+		self.write(add_cbus_checksum(d) + conf + END_COMMAND)
+		
+		return conf
 	
 	def lighting_group_off(self, group_id):
+		"""
+		Turns off the lights for the given group_id.
+		
+		Returns a single byte string, the matching code for the confirmation event.
+		"""
+	
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_id)
 		#print "d = %r" % d
-		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
+		conf = self.get_confirmation_code()
+		self.write(add_cbus_checksum(d) + conf + END_COMMAND)
+		return conf
 	
 	def lighting_group_ramp(self, group_id, duration, level=1.0):
 		"""
@@ -271,16 +307,22 @@ class CBusPCI(object):
 		
 		level = int(level * 255)
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + duration_to_ramp_rate(duration) + ('%02X%02X' % (group_id, level))
-		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
+		conf = self.get_confirmation_code()
+		self.write(add_cbus_checksum(d) + conf + END_COMMAND)
+		return conf
 		
 		
-	def recall(self, param_no, count):
-		d = '%s%02X%02X' % (RECALL, param_no, count)
-		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
+	def recall(self, unit_addr, param_no, count):
+		d = '%s%02X%s%s%02X%02X' % (POINT_TO_46, unit_addr, ROUTING_NONE, RECALL, param_no, count)
+		conf = self.get_confirmation_code()
+		self.write(add_cbus_checksum(d) + conf + END_COMMAND)
+		return conf
 	
-	def identify(self, attribute):
-		d = '%s%02X' % (IDENTIFY, attribute) 
-		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
+	def identify(self, unit_addr, attribute):
+		d = '%s%02X%s%s%02X' % (POINT_TO_46, unit_addr, ROUTING_NONE, RECALL, attribute)
+		conf = self.get_confirmation_code()
+		self.write(add_cbus_checksum(d) + conf + END_COMMAND)
+		return conf
 
 def event_test(port):
 	s = CBusPCISerial(port)
