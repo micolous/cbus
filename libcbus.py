@@ -109,7 +109,11 @@ def ramp_rate_to_duration(rate):
 	return RAMP_RATES[rate]
 
 def cbus_checksum(i):
-	"Calculates the checksum of a C-Bus command string."
+	"""
+	Calculates the checksum of a C-Bus command string.
+	
+	Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
+	"""
 	if i[0] == '\\':
 		i = i[1:]
 		
