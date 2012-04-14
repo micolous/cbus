@@ -50,7 +50,7 @@ except:
 		print "Syntax:"
 		print "  %s [config]" % argv[0]
 		print ""
-		print "If no configuration file is specified or there was an error, it will default to `linkbot.ini'."
+		print "If no configuration file is specified or there was an error, it will default to `cbusbot.ini'."
 		print "If there was a failure reading the configuration, it will display this message."
 		exit(1)
 
@@ -120,6 +120,23 @@ class CBusBot(object):
 		elif state in OFF:
 			# send off command
 			self.pci.lighting_group_off(group_addr)
+		
+		elif state.startswith('ramp-'):
+			try:
+				keys = state.split('-')
+			
+				if len(keys) == 2:
+					level = float(keys[1])
+					rate = 12
+				elif len(keys) == 3:
+					level = float(keys[1])
+					rate = int(keys[2])
+					
+			except:
+				print "error parsing ramp request"
+				return
+			# send ramp command
+			self.pci.lighting_group_ramp(group_addr, rate, level)
 			
 		else:
 			print "unknown mode %r" % state

@@ -185,11 +185,21 @@ class CBusEvent(object):
 			)
 		else:
 			return '???'
-			
-class CBusPCISerial(object):
-	def __init__(self, device):
-		self.s = Serial(device, 9600, timeout=1)
+
+
+
+class CBusPCI(object):
+	"""
+	Generic CBusPCI module.
+	
+	You should subclass this.
+	
+	"""
+	def __init__(self):
 		self.reset()
+		
+	def write(self, msg):
+		raise NotImplementedError, "CBusPCI.write not implemented.  Use subclass (eg: CBusPCISerial)."
 
 	def reset(self):
 		# reset the PCI, disable MMI reports so we know when buttons are pressed.
@@ -222,9 +232,6 @@ class CBusPCISerial(object):
 		# quick start guide version
 		#self.write('~~~\r\nA3210038g\r\nA3420002g\r\nA3300059g\r\n')
 	
-	def write(self, msg):
-		print "Message = %r" % msg
-		self.s.write(msg)
 	
 	def lighting_group_on(self, group_id):
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_ON + ('%02X' % group_id)
@@ -259,7 +266,7 @@ class CBusPCISerial(object):
 			raise OverflowError, 'Ramp level is out of bounds.  Must be between 0.0 and 1.0.'
 		
 		level = int(level * 255)
-		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + duration_to_ramp_rate(duration) + ('%02X%02x' % (group_id, level))
+		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + duration_to_ramp_rate(duration) + ('%02X%02X' % (group_id, level))
 		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
 		
 		
@@ -270,13 +277,6 @@ class CBusPCISerial(object):
 	def identify(self, attribute):
 		d = '%s%02X' % (IDENTIFY, attribute) 
 		self.write(add_cbus_checksum(d) + 'g' + END_COMMAND)
-		
-	def event_waiting(self):
-		return self.s.inWaiting() >= 1
-	
-	def get_event(self):
-		line = self.s.readline()
-		return line
 
 def event_test(port):
 	s = CBusPCISerial(port)
@@ -289,4 +289,25 @@ def event_test(port):
 			print "exception %s" % ex
 			
 		print "%r" % e
+
+
+class CBusPCISerial(CBusPCI):
+	"""
+	Serial (RS232) / USB CBus PCI module.
+	
+	"""
+	def __init__(self, device):
+		self.s = Serial(device, 9600, timeout=1)
+		super(CBusPCISerial, self).__init__()
+		
+	def write(self, msg):
+		print "Message = %r" % msg
+		self.s.write(msg)
+	
+	def event_waiting(self):
+		return self.s.inWaiting() >= 1
+	
+	def get_event(self):
+		line = self.s.readline()
+		return line
 
