@@ -18,4 +18,4 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 from libcbus.pci import *
 from libcbus.pciserial import *
-
+from libcbus.cbz import *

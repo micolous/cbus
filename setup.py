@@ -12,6 +12,7 @@ setup(
 	requires=(
 		'configparser_plus (>=1.0)',
 		'serial (>=2.6)',
+		'lxml',
 		
 		# Extra optional dependancies not listed here:
 		# cbusbot requires ircasync, from https://github.com/micolous/ircbots

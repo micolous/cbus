@@ -34,6 +34,10 @@ Provides a DBus interface to CBus.  Requires dbus bindings for Python, which don
 
 Provides an IRC interface to CBus.  Requires (my version of ircasync)[https://github.com/micolous/ircbots].
 
+## `scripts/toolkit` ###
+
+Scripts relating to interacting with CBus Toolkit Backup files (CBZ).
+
 ## USB Driver ##
 
 (Note, this section is purely speculation!)
@@ -43,7 +47,7 @@ Clipsal's driver is not digitally signed.  It appears to use the driver `silabse
 * `10C4:EA60`: Generic SiLabs CP210X
 * `166A:0101`: [C-Bus Multi-room Audio Matrix Switcher (560884)](http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=560884/2&ref=)
 * `166A:0201`: [C-Bus Pascal/Programmable Automation Controller (5500PACA)](http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=5500PACA&ref=)
-* `166A:0301`: C-Bus Wireless PC Interface (5800PC) This appears to be an unreleased product.
+* `166A:0301`: C-Bus Wireless PC Interface (5800PC).  This appears to be an unreleased product.
 * `166A:0303`: [C-Bus Wired PC Interface (5500PCU)](http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=5500PCU&ref=)
 * `166A:0304`: [C-Bus Black & White Touchscreen Mk2 (5000CT2)](http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=5000CT2WB&ref=)
 * `166A:0305`: [C-Bus C-Touch Spectrum Colour Touchscreen (C-5000CT2)](http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=C-5000CTDL2&ref=)
