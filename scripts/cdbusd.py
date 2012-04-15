@@ -16,7 +16,8 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
-import dbus, dbus.service, dbus.glib, gobject, libcbus
+import libcbus
+import dbus, dbus.service, dbus.glib, gobject
 
 DBUS_INTERFACE = 'au.id.micolous.cbus.CBusInterface'
 DBUS_SERVICE = 'au.id.micolous.cbus.CBusService'
