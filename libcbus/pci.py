@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-libcbus.py
+libcbus/pci.py - Base CBus PCI protocol library.
 Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 
 This library is free software: you can redistribute it and/or modify
@@ -18,60 +18,9 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import struct
-from serial import Serial
 from base64 import b16encode, b16decode
+from libcbus.defines import *
 
-HEX_CHARS = "0123456789ABCDEF"
-
-END_COMMAND = '\r\n'
-
-# command types
-POINT_TO_MULTIPOINT = '\\05'
-POINT_TO_POINT = '\\06'
-# undocumented command type issued for status inquiries by toolkit?
-POINT_TO_46 = '\\46'
-
-# Applications
-APP_LIGHTING = '38'
-
-# Routing buffer
-ROUTING_NONE = '00'
-
-LIGHT_ON = '79'
-LIGHT_OFF = '01'
-# light on
-#\0538007964 (GA 100)
-
-# light off
-#\0538000164 (GA 100)
-
-# set to level
-#\053800rr64FF (GA 100, to level 100%/0xff)
-
-RAMP_RATES = {
-	'02': 0,
-	'0A': 4,
-	'12': 8,
-	'1A': 12,
-	'22': 20,
-	'2A': 30,
-	'32': 40,
-	'3A': 60,
-	'42': 90,
-	'4A': 120,
-	'52': 180,
-	'5A': 300,
-	'62': 420,
-	'6A': 600,
-	'72': 900,
-	'7A': 1020
-}
-
-RECALL = '1A'
-IDENTIFY = '21'
-
-# these are valid confirmation codes used in acknowledge events.
-CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzGHIJKLMNOPQRSTUVWXYZ'
 
 def duration_to_ramp_rate(seconds):
 	if seconds == 0:
@@ -335,25 +284,3 @@ def event_test(port):
 			print "exception %s" % ex
 			
 		print "%r" % e
-
-
-class CBusPCISerial(CBusPCI):
-	"""
-	Serial (RS232) / USB CBus PCI module.
-	
-	"""
-	def __init__(self, device):
-		self.s = Serial(device, 9600, timeout=1)
-		super(CBusPCISerial, self).__init__()
-		
-	def write(self, msg):
-		print "Message = %r" % msg
-		self.s.write(msg)
-	
-	def event_waiting(self):
-		return self.s.inWaiting() >= 1
-	
-	def get_event(self):
-		line = self.s.readline()
-		return line
-
