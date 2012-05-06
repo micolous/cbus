@@ -32,9 +32,9 @@ Provides a DBus interface to CBus.  Requires dbus bindings for Python, which don
 
 ### `scripts/cbusbot.py` ###
 
-Provides an IRC interface to CBus.  Requires (my version of ircasync)[https://github.com/micolous/ircbots].
+Provides an IRC interface to CBus.  Requires [my version of ircasync](https://github.com/micolous/ircbots).
 
-## `scripts/toolkit` ###
+### `scripts/toolkit` ###
 
 Scripts relating to interacting with CBus Toolkit Backup files (CBZ).
 
