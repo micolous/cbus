@@ -16,7 +16,7 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
-from serial import Serial
+from serial import serial_for_url
 from libcbus.pci import CBusPCI
 
 class CBusPCISerial(CBusPCI):
@@ -24,8 +24,9 @@ class CBusPCISerial(CBusPCI):
 	Serial (RS232) / USB CBus PCI module.
 	
 	"""
-	def __init__(self, device):
-		self.s = Serial(device, 9600, timeout=1)
+
+	def __init__(self, uri):
+		self.s = serial_for_url(uri, 9600, timeout=1)
 		super(CBusPCISerial, self).__init__()
 		
 	def write(self, msg):
