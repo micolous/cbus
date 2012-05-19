@@ -18,6 +18,7 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 import libcbus
 import dbus, dbus.service, dbus.glib, gobject
+from optparse import OptionParser
 
 DBUS_INTERFACE = 'au.id.micolous.cbus.CBusInterface'
 DBUS_SERVICE = 'au.id.micolous.cbus.CBusService'
