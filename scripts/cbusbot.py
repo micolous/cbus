@@ -89,7 +89,7 @@ class CBusBot(object):
 		
 		# setup irc client library.
 		self.irc = IRC(nick=self.nick, start_channels=[self.channel], version=VERSION)
-		self.irc.bind(self.handle_lighting, PRIVMSG, r'^!cbus (\d+) (\S+)$')
+		self.irc.bind(self.handle_lighting, PRIVMSG, r'^!cbus ([\d,]+) (\S+)$')
 		self.irc.bind(self.handle_welcome, RPL_WELCOME)
 		
 		self.pci = CBusPCISerial(self.pcidev)
@@ -100,26 +100,37 @@ class CBusBot(object):
 			return
 		
 		group_addr = match.group(1)
+		if ',' in group_addr:
+			group_addr = group_addr.split()
+		else:
+			group_addr = [group_addr]
 		
+		if len(group_addr) > 10:
+			print "too many addresses"
+			return
+			
 		try:
-			group_addr = int(group_addr)
+			group_addr = [int(g) for g in group_addr]	
 		except:
 			print "non-numeric group address"
 			return
 		
-		if group_addr < 0 or group_addr > 255:
-			print "group address out of range"
-			return
+		for g in group_addr:
+			if not (0 <= group_addr <= 255):
+				print "group address out of range"
+				return
 		
 		state = match.group(2).lower()
 		
 		if state in ON:
 			# send on command
-			self.pci.lighting_group_on(group_addr)
+			for g in group_addr:
+				self.pci.lighting_group_on(g)
 			
 		elif state in OFF:
 			# send off command
-			self.pci.lighting_group_off(group_addr)
+			for g in group_addr:
+				self.pci.lighting_group_off(g)
 		
 		elif state.startswith('ramp-'):
 			try:
@@ -136,7 +147,8 @@ class CBusBot(object):
 				print "error parsing ramp request"
 				return
 			# send ramp command
-			self.pci.lighting_group_ramp(group_addr, rate, level)
+			for g in group_addr:
+				self.pci.lighting_group_ramp(g, rate, level)
 			
 		else:
 			print "unknown mode %r" % state
