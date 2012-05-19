@@ -60,7 +60,7 @@ class CBusBackendAPI(dbus.service.Object):
 	
 
 def boot_dbus(pci_addr, daemonise, pid_file):
-	bus = dbus.SessionBus()
+	bus = dbus.SystemBus()
 	name = dbus.service.BusName(DBUS_SERVICE, bus=bus)
 	pci = libcbus.CBusPCISerial(pci_addr)
 	o = CBusBackendAPI(name, pci)
