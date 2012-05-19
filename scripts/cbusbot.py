@@ -116,7 +116,7 @@ class CBusBot(object):
 			return
 		
 		for g in group_addr:
-			if not (0 <= group_addr <= 255):
+			if not (0 <= g <= 255):
 				print "group address out of range"
 				return
 		
