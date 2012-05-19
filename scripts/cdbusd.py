@@ -58,17 +58,22 @@ class CBusBackendAPI(dbus.service.Object):
 
 	
 
-def boot_dbus():
+def boot_dbus(pci_addr, daemonise, pid_file):
 	bus = dbus.SessionBus()
 	name = dbus.service.BusName(DBUS_SERVICE, bus=bus)
-	pci = libcbus.CBusPCISerial('/dev/ttyUSB0')
+	pci = libcbus.CBusPCISerial(pci_addr)
 	o = CBusBackendAPI(name, pci)
-
+	
 	mainloop = gobject.MainLoop()
 	gobject.threads_init()
 	context = mainloop.get_context()
 	
-	while True:	
+	if daemonise:
+		assert pid_file, 'Running in daemon mode means pid_file must be specified.'
+		from daemon import daemonize
+		daemonize(pid_file)
+	
+	while True:
 		if pci.event_waiting():
 			e = pci.get_event()
 			try:
@@ -80,6 +85,17 @@ def boot_dbus():
 			print "%r" % e
 		context.iteration(True)
 
+def main_optparse():
+	parser = OptionParser(usage='%prog [--daemon] [--pci-device]')
+	parser.add_option('-D', '--daemon', action='store_true', dest='daemon', default=False, help='Start as a daemon [default: %default]')
+	parser.add_option('-P', '--pid', dest='pid_file', default='/var/run/cdbusd.pid', help='Location to write the PID file.  Only has effect in daemon mode.  [default: %default]')
+	parser.add_option('-p', '--pci-device', dest='pci_device', default='/dev/ttyUSB0', help='Location of the PCI device [default: %default]')
+	
+	option, args = parser.parse_args()
+	
+	boot_dbus(option.pci_device, option.daemon, option.pid_file)
+
+		
 if __name__ == '__main__':
-	boot_dbus()
+	main_optparse()
 
