@@ -101,7 +101,7 @@ class CBusBot(object):
 		
 		group_addr = match.group(1)
 		if ',' in group_addr:
-			group_addr = group_addr.split()
+			group_addr = group_addr.split(',')
 		else:
 			group_addr = [group_addr]
 		
