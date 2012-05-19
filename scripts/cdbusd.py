@@ -66,13 +66,14 @@ def boot_dbus(pci_addr, daemonise, pid_file):
 	o = CBusBackendAPI(name, pci)
 	
 	mainloop = gobject.MainLoop()
-	gobject.threads_init()
-	context = mainloop.get_context()
 	
 	if daemonise:
 		assert pid_file, 'Running in daemon mode means pid_file must be specified.'
 		from daemon import daemonize
 		daemonize(pid_file)
+	
+	gobject.threads_init()
+	context = mainloop.get_context()
 	
 	while True:
 		if pci.event_waiting():
