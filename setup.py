@@ -21,7 +21,7 @@ setup(
 	
 	
 	# TODO: add scripts to this.
-	packages=['libcbus'],
+	packages=['libcbus', 'cbus'],
 	scripts=[
 		'scripts/cdbusd.py',
 		'scripts/cbusbot.py',
