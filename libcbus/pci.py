@@ -19,68 +19,8 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import struct
 from base64 import b16encode, b16decode
-from libcbus.defines import *
-
-
-def duration_to_ramp_rate(seconds):
-	if seconds == 0:
-		return '02'
-	elif seconds <= 4:
-		return '0A'
-	elif seconds <= 8:
-		return '12'
-	elif seconds <= 12:
-		return '1A'
-	elif seconds <= 20:
-		return '22'
-	elif seconds <= 30:
-		return '2A'
-	elif seconds <= 40:
-		return '32'
-	elif seconds <= 60:
-		return '3A'
-	elif seconds <= 90:
-		return '42'
-	elif seconds <= 120:
-		return '4A'
-	elif seconds <= 180:
-		return '52'
-	elif seconds <= 300:
-		return '5A'
-	elif seconds <= 420:
-		return '62'
-	elif seconds <= 600:
-		return '6A'
-	elif seconds <= 900:
-		return '72'
-	elif seconds <= 1020:
-		return '7A'
-	raise OutOfRangeException, 'That duration is too long'
-
-def ramp_rate_to_duration(rate):
-	assert len(rate) == 2, "Ramp rate must be two characters."
-	rate = rate.upper()	
-	return RAMP_RATES[rate]
-
-def cbus_checksum(i):
-	"""
-	Calculates the checksum of a C-Bus command string.
-	
-	Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
-	"""
-	if i[0] == '\\':
-		i = i[1:]
-		
-	i = b16decode(i)
-	c = 0
-	for x in i:
-		c += ord(x)
-	
-	return ((c % 0x100) ^ 0xff) + 1
-
-def add_cbus_checksum(i):
-	c = cbus_checksum(i)
-	return '%s%02X' % (i, c)
+from libcbus.base import *
+from libcbus.common import *
 
 class CBusEvent(object):
 	def __init__(self, event_string):
@@ -145,12 +85,12 @@ class CBusEvent(object):
 			return '???'
 
 
-
-class CBusPCI(object):
+class CBusPCI(CBusBase):
 	"""
 	Generic CBusPCI module.
 	
-	You should subclass this.
+	You should subclass this to implement a libcbus implementation that talks
+	over CBus serial protocol (includes USB and CNI).
 	
 	"""
 	def __init__(self):
@@ -206,11 +146,7 @@ class CBusPCI(object):
 	
 	
 	def lighting_group_on(self, group_id):
-		"""
-		Turns on lights for the given group_id.
-		
-		Returns a single byte string, the matching code for the confirmation event.
-		"""
+		super(CBusPCI, self).lighting_group_on(group_id)
 	
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_ON + ('%02X' % group_id)
 		conf = self.get_confirmation_code()
@@ -220,11 +156,7 @@ class CBusPCI(object):
 		return conf
 	
 	def lighting_group_off(self, group_id):
-		"""
-		Turns off the lights for the given group_id.
-		
-		Returns a single byte string, the matching code for the confirmation event.
-		"""
+		super(CBusPCI, self).lighting_group_off(group_id)
 	
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_id)
 		#print "d = %r" % d
@@ -233,26 +165,7 @@ class CBusPCI(object):
 		return conf
 	
 	def lighting_group_ramp(self, group_id, duration, level=1.0):
-		"""
-		Ramps (fades) a group address to a specified level.
-		
-		Arguments:
-			`group_id`: The group address to fade.
-			`duration`: The duration, in seconds, that the fade should occur over.
-			            Please note, CBus only supports a limited number of fade
-			            durations, in decreasing accuracy up to 17 minutes (1020
-			            seconds).  This function will round the duration down to
-			            the nearest supported speed.
-			            
-			            A duration of 0 will stop the ramping.
-			            
-			            Durations longer than 17 minutes will throw an error.
-			`level`: An amount, between 0.0 and 1.0, of the light level to set,
-			         with 0.0 being the lowest level, and 1.0 being the highest.
-		"""
-		
-		if level < 0.0 or level > 1.0:
-			raise OverflowError, 'Ramp level is out of bounds.  Must be between 0.0 and 1.0.'
+		super(CBusPCI, self).lighting_group_ramp(group_id, duration, level)
 		
 		level = int(level * 255)
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + duration_to_ramp_rate(duration) + ('%02X%02X' % (group_id, level))
@@ -262,12 +175,14 @@ class CBusPCI(object):
 		
 		
 	def recall(self, unit_addr, param_no, count):
+		super(CBusPCI, self).recall(unit_addr, param_no, count)
 		d = '%s%02X%s%s%02X%02X' % (POINT_TO_46, unit_addr, ROUTING_NONE, RECALL, param_no, count)
 		conf = self.get_confirmation_code()
 		self.write(add_cbus_checksum(d) + conf + END_COMMAND)
 		return conf
 	
 	def identify(self, unit_addr, attribute):
+		super(CBusPCI, self).identify(unit_addr, attribute)
 		d = '%s%02X%s%s%02X' % (POINT_TO_46, unit_addr, ROUTING_NONE, RECALL, attribute)
 		conf = self.get_confirmation_code()
 		self.write(add_cbus_checksum(d) + conf + END_COMMAND)
@@ -284,3 +199,4 @@ def event_test(port):
 			print "exception %s" % ex
 			
 		print "%r" % e
+

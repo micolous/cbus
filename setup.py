@@ -24,7 +24,8 @@ setup(
 	packages=['libcbus'],
 	scripts=[
 		'scripts/cdbusd.py',
-		'scripts/cbusbot.py'
+		'scripts/cbusbot.py',
+		'scripts/cbz_dump_labels.py'
 	]
 )
 

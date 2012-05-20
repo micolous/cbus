@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-libcbus/defines.py - Constants used in the CBUS protocol.
+libcbus/common.py - Constants and common functions used in the CBUS protocol.
 Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 
 This library is free software: you can redistribute it and/or modify
@@ -64,8 +64,47 @@ RAMP_RATES = {
 	'7A': 1020
 }
 
+MIN_RAMP_RATE = 0
+MAX_RAMP_RATE = 1020
+
 RECALL = '1A'
 IDENTIFY = '21'
 
 # these are valid confirmation codes used in acknowledge events.
 CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzGHIJKLMNOPQRSTUVWXYZ'
+
+MIN_GROUP_ADDR = 0
+MAX_GROUP_ADDR = 255
+
+def duration_to_ramp_rate(seconds):
+	for k, v in RAMP_RATES.iteritems():
+		if seconds <= v:
+			return k
+	raise ValueError, 'That duration is too long!'
+
+def ramp_rate_to_duration(rate):
+	assert len(rate) == 2, "Ramp rate must be two characters."
+	rate = rate.upper()	
+	return RAMP_RATES[rate]
+
+def cbus_checksum(i):
+	"""
+	Calculates the checksum of a C-Bus command string.
+	
+	Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
+	"""
+	if i[0] == '\\':
+		i = i[1:]
+		
+	i = b16decode(i)
+	c = 0
+	for x in i:
+		c += ord(x)
+	
+	return ((c % 0x100) ^ 0xff) + 1
+
+def add_cbus_checksum(i):
+	c = cbus_checksum(i)
+	return '%s%02X' % (i, c)
+
+
