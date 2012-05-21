@@ -24,19 +24,7 @@ You can then use tools like Wireshark to monitor interactions with the C-Bus PCI
 
 You could also use this with tools like C-Gate to get a higher level interface with the C-Bus PCI.
 
-## Scripts ##
 
-### `scripts/cdbusd.py` ###
-
-Provides a DBus interface to CBus.  Requires dbus bindings for Python, which don't work on Windows.
-
-### `scripts/cbusbot.py` ###
-
-Provides an IRC interface to CBus.  Requires [my version of ircasync](https://github.com/micolous/ircbots).
-
-### `scripts/toolkit` ###
-
-Scripts relating to interacting with CBus Toolkit Backup files (CBZ).
 
 ## USB Driver ##
 
