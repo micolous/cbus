@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 libcbus/base.py - Base CBus libcbus framework.
+
 Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 
 This library is free software: you can redistribute it and/or modify
@@ -16,6 +17,7 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
+
 from libcbus.common import *
 
 class CBusBase(object):

@@ -1,20 +1,25 @@
 #!/usr/bin/env python
+# cdbus.py - DBus service for controlling CBus.
+# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# 
+# This library is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
-cdbus.py - DBus service for controlling CBus.
-Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+cdbusd implements a basic wrapper around the cbus.protocol.pciprotocol in order
+to expose a similar API over DBus.
 
-This library is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+The service exposes itself on the service au.id.micolous.cbus.CBusService.
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # from http://twistedmatrix.com/trac/attachment/ticket/1352/dbus-twisted.py
@@ -34,12 +39,26 @@ from optparse import OptionParser
 
 DBusGMainLoop(set_as_default=True)
 
+__all__ = [
+	'DBUS_INTERFACE',
+	'DBUS_SERVICE',
+	'DBUS_PATH',
+	'CBusService',
+	'boot_dbus',
+	'main'
+]
+
 DBUS_INTERFACE = 'au.id.micolous.cbus.CBusInterface'
 DBUS_SERVICE = 'au.id.micolous.cbus.CBusService'
 DBUS_PATH = '/'
 
 class CBusProtocolHandler(PCIProtocol):
-	# TODO: merge this into CBusBackendAPI so it is one object.
+	"""
+	Glue to wire events from the PCI onto the DBus API service.
+	
+	TODO: Merge this into the CBusService so it is one object.
+	
+	"""
 	cbus_api = None
 	
 	def on_confirmation(self, code, success):
@@ -66,31 +85,53 @@ class CBusProtocolHandler(PCIProtocol):
 		if not self.cbus_api: return
 		self.cbus_api.on_lighting_group_off(source_addr, group_addr)
 		
-class CBusBackendAPI(dbus.service.Object):	
+class CBusService(dbus.service.Object):
+	"""
+	DBus service Object for CBus.
+	
+	"""
 	def __init__(self, bus, protocol, object_path=DBUS_PATH):
 		self.pci = protocol
 		self.pci.cbus_api = self
 		dbus.service.Object.__init__(self, bus, object_path)
-		
+	
+
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
 	def lighting_group_on(self, group_addr):
+		"""
+		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_on
+		"""
 		return self.pci.lighting_group_on(group_addr)
 		
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
 	def lighting_group_off(self, group_addr):
+		"""
+		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_off
+		"""
 		return self.pci.lighting_group_off(group_addr)
 		
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ynd', out_signature='s')
 	def lighting_group_ramp(self, group_addr, duration, level):
+		"""
+		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_ramp
+		"""
 		return self.pci.lighting_group_ramp(group_addr, duration, level)
 		
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='yyy', out_signature='s')
 	def recall(self, unit_addr, param_no, count):
+		"""
+		See cbus.protocol.pciprotocol.PCIProtocol.recall
+		"""
+
 		# TODO: implement return response
 		return self.pci.recall(unit_addr, param_no, count)
 	
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='yy', out_signature='s')
 	def identify(self, unit_addr, attribute):
+		"""
+		See cbus.protocol.pciprotocol.PCIProtocol.identify
+		"""
+
 		# TODO: implement return response
 		return self.pci.identify(unit_addr, attribute)
 	
@@ -127,7 +168,7 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 	name = dbus.service.BusName(DBUS_SERVICE, bus=bus)
 	
 	protocol = CBusProtocolHandler()
-	api = CBusBackendAPI(name, protocol)
+	api = CBusService(name, protocol)
 	
 	if serial_mode:
 		SerialPort(protocol, addr, reactor, baudrate=9600)
