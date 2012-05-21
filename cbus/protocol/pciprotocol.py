@@ -22,6 +22,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 from twisted.internet import reactor
 from cbus.common import *
+from base64 import b16encode, b16decode
 
 class PCIProtocol(LineReceiver):
 	delimiter = END_COMMAND
@@ -37,6 +38,7 @@ class PCIProtocol(LineReceiver):
 		
 		if line == '~~~':
 			self.on_reset()
+			return
 		
 		if line[0] in CONFIRMATION_CODES:
 			# this is blind, doesn't know if it was ok...
@@ -48,6 +50,77 @@ class PCIProtocol(LineReceiver):
 			line = line[2:]
 		
 		# TODO: handle other bus events properly.
+		self.decode_cbus_event(line)
+	
+	def decode_cbus_event(self, line):
+		"""
+		returns a remaining unparsed data, or None on error (ie: discard result)
+		"""
+		event_string = line.strip()
+		for x in event_string:
+			if x not in HEX_CHARS:
+				# fail, invalid characters
+				log.msg("invalid character %r in event %r, dropping event" % (x, event_string))
+				return
+				
+		# decode string
+		event_bytes = b16decode(event_string)
+		
+		event_code = ord(event_bytes[0])
+		
+		if event_code >= 0xC0:
+			# there is an MMI of length [0] - C0 (quick start page 13)
+			event_length = ord(event_bytes[0]) - 0xC0
+			event_data = event_bytes[1:event_length]
+			
+			# get the remainder
+			event_bytes = event_bytes[event_length+1:]
+			
+			# parse information we know...
+			application = ord(event_data[1])
+			
+			self.on_mmi(application, event_bytes)
+			
+			return event_bytes
+		elif event_code == 0x05:
+			# this is a point to multipoint message
+			source_addr = ord(event_bytes[1])
+			application = ord(event_bytes[2])
+			routing = ord(event_bytes[3])
+			
+			
+			if b16encode(chr(application)) == APP_LIGHTING:
+				# lighting event.
+				lighting_event = b16encode(event_bytes[4])
+				group_addr = ord(event_bytes[5])
+				
+				if lighting_event in RAMP_RATES.keys():
+					checksum = ord(event_bytes[7])
+					
+					duration = ramp_rate_to_duration(lighting_event)
+					level = ord(event_bytes[6]) / 255.
+					
+					self.on_lighting_group_ramp(source_addr, group_addr, duration, level)
+					
+					return event_bytes[8:]
+				else:
+					checksum = ord(event_bytes[6])
+					if lighting_event == LIGHT_ON:
+						self.on_lighting_group_on(source_addr, group_addr)
+					elif lighting_event == LIGHT_OFF:
+						self.on_lighting_group_off(source_addr, group_addr)
+					else:
+						log.msg("unsupported lighting event: %r, dropping event %r" % (self.lighting_event, event_bytes))
+						return
+					
+					return event_bytes[7:]
+			else:
+				# unknown application
+				log.msg("unsupported PTMP application: %r, dropping event %r" % (application, event_bytes))
+				return
+		else:
+			# unknown event
+			log.msg("unsupported event code: %r, dropping event %r" % (event_code, event_bytes))
 	
 	
 	# event handlers
@@ -56,6 +129,19 @@ class PCIProtocol(LineReceiver):
 	
 	def on_reset(self):
 		log.msg("recv: pci reset in progress!")
+		
+	def on_mmi(self, application, bytes):
+		log.msg("recv: mmi: application %r, data %r" % (application, bytes))
+		
+	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
+		log.msg("recv: lighting ramp: from %d to %d, duration %d seconds to level %.2f%%" % (source_addr, group_addr, duration, level*100))
+	
+	def on_lighting_group_on(self, source_addr, group_addr):
+		log.msg("recv: lighting on: from %d to %d" % (source_addr, group_addr))
+	
+	def on_lighting_group_off(self, source_addr, group_addr):
+		log.msg("recv: lighting off: from %d to %d" % (source_addr, group_addr))
+	
 	
 	# other things.	
 	
