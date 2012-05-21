@@ -43,9 +43,28 @@ class CBusProtocolHandler(PCIProtocol):
 	
 	def on_confirmation(self, code, success):
 		if not self.cbus_api: return
-		print "confirmation %r %r" % (code, success)
+		self.cbus_api.on_confirmation(code, success)
 
-
+	def on_reset(self):
+		if not self.cbus_api: return
+		self.cbus_api.on_reset()
+		
+	def on_mmi(self, application, bytes):
+		if not self.cbus_api: return
+		self.cbus_api.on_mmi(application, bytes)
+		
+	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
+		if not self.cbus_api: return
+		self.cbus_api.on_lighting_group_ramp(source_addr, group_addr, duration, level)
+	
+	def on_lighting_group_on(self, source_addr, group_addr):
+		if not self.cbus_api: return
+		self.cbus_api.on_lighting_group_on(source_addr, group_addr)
+			
+	def on_lighting_group_off(self, source_addr, group_addr):
+		if not self.cbus_api: return
+		self.cbus_api.on_lighting_group_off(source_addr, group_addr)
+		
 class CBusBackendAPI(dbus.service.Object):	
 	def __init__(self, bus, protocol, object_path=DBUS_PATH):
 		self.pci = protocol
@@ -74,9 +93,29 @@ class CBusBackendAPI(dbus.service.Object):
 		# TODO: implement return response
 		return self.pci.identify(unit_addr, attribute)
 	
-	
-
-	
+	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='sb')
+	def on_confirmation(self, code, success):
+		pass
+			
+	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='')	
+	def on_reset(self):
+		pass
+				
+	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='ys')
+	def on_mmi(self, application, bytes):
+		pass
+			
+	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yynd')
+	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
+		pass
+			
+	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
+	def on_lighting_group_on(self, source_addr, group_addr):
+		pass
+			
+	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
+	def on_lighting_group_off(self, source_addr, group_addr):
+		pass
 
 def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 	if session_bus:

@@ -121,6 +121,7 @@ class PCIProtocol(LineReceiver):
 		else:
 			# unknown event
 			log.msg("unsupported event code: %r, dropping event %r" % (event_code, event_bytes))
+			return
 	
 	
 	# event handlers
