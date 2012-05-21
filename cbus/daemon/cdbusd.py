@@ -39,6 +39,7 @@ DBUS_SERVICE = 'au.id.micolous.cbus.CBusService'
 DBUS_PATH = '/'
 
 class CBusProtocolHandler(PCIProtocol):
+	# TODO: merge this into CBusBackendAPI so it is one object.
 	cbus_api = None
 	
 	def on_confirmation(self, code, success):
@@ -147,7 +148,7 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 	gobject.threads_init()
 	context = mainloop.get_context()"""
 
-def main_optparse():
+def main():
 	parser = OptionParser(usage='%prog')
 	parser.add_option('-D', '--daemon', action='store_true', dest='daemon', default=False, help='Start as a daemon [default: %default]')
 	parser.add_option('-P', '--pid', dest='pid_file', default='/var/run/cdbusd.pid', help='Location to write the PID file.  Only has effect in daemon mode.  [default: %default]')
@@ -181,5 +182,5 @@ def main_optparse():
 
 		
 if __name__ == '__main__':
-	main_optparse()
+	main()
 

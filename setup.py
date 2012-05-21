@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
 	name="cbus",
@@ -9,10 +9,12 @@ setup(
 	author="Michael Farrell",
 	author_email="micolous@gmail.com",
 	url="https://github.com/micolous/cbus",
+	license="LGPL3+",
 	requires=(
 		'configparser_plus (>=1.0)',
 		'serial (>=2.6)',
 		'lxml',
+		'Twisted (>=12.0.0)',
 		
 		# Extra optional dependancies not listed here:
 		# cbusbot requires ircasync, from https://github.com/micolous/ircbots
@@ -21,11 +23,17 @@ setup(
 	
 	
 	# TODO: add scripts to this.
-	packages=['libcbus', 'cbus'],
-	scripts=[
-		'scripts/cdbusd.py',
-		'scripts/cbusbot.py',
-		'scripts/cbz_dump_labels.py'
-	]
+	packages=find_packages(),
+	
+	entry_points={
+		'console_scripts': [
+			'cbz_dump_labels = cbus.toolkit.dump_labels:main',
+			'cdbusd = cbus.daemon.cdbusd:main',
+		]
+	},
+	
+	classifiers=[
+	
+	],
 )
 

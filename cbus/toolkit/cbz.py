@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-libcbus/cbz.py
+cbus/toolkit/cbz.py
 Library for reading CBus Toolkit CBZ files with lxml.
 
 This library is free software: you can redistribute it and/or modify
