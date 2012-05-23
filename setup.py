@@ -15,6 +15,8 @@ setup(
 		'serial (>=2.6)',
 		'lxml',
 		'Twisted (>=12.0.0)',
+		'PyGObject',
+		'dbus-python',
 		
 		# Extra optional dependancies not listed here:
 		# cbusbot requires ircasync, from https://github.com/micolous/ircbots
