@@ -16,7 +16,7 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
-
+from base64 import b16encode, b16decode
 
 HEX_CHARS = "0123456789ABCDEF"
 
