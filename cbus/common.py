@@ -107,4 +107,18 @@ def add_cbus_checksum(i):
 	c = cbus_checksum(i)
 	return '%s%02X' % (i, c)
 
+def validate_ga(group_addr):
+	"""
+	Validates a given group address to verify that it is valid.
+	
+	:param group_addr: Input group address to validate.
+	:type group_addr: int
+	:returns: True if the given group address is valid, False otherwise.
+	:rtype: bool
+	
+	"""
+	return MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR
+
+def validate_ramp_rate(rate):
+	return MIN_RAMP_RATE <= duration <= MAX_RAMP_RATE
 

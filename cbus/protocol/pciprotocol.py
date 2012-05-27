@@ -60,7 +60,7 @@ class PCIProtocol(LineReceiver):
 			self.on_reset()
 			return
 		
-		if line[0] in CONFIRMATION_CODES:
+		while line[0] in CONFIRMATION_CODES:
 			# this is blind, doesn't know if it was ok...
 			success = line[1] == '.'
 			
@@ -304,7 +304,7 @@ class PCIProtocol(LineReceiver):
 		:rtype: string
 		
 		"""
-		if not (MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR):
+		if not validate_ga(group_addr):
 			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
 
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_ON + ('%02X' % group_addr)
@@ -321,7 +321,7 @@ class PCIProtocol(LineReceiver):
 		
 		
 		"""
-		if not (MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR):
+		if not validate_ga(group_addr):
 			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
 
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_addr)
@@ -348,13 +348,13 @@ class PCIProtocol(LineReceiver):
 		:rtype: string
 		
 		"""
-		if not (MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR):
+		if not validate_ga(group_addr):
 			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
 			
 		if not (0.0 <= level <= 1.0):
 			raise ValueError, 'Ramp level is out of bounds.  Must be between 0.0 and 1.0 (got %r).' % level
 		
-		if not (MIN_RAMP_RATE <= duration <= MAX_RAMP_RATE):
+		if not validate_ramp_rate(duration):
 			raise ValueError, 'Duration is out of bounds, must be between %d and %d (got %r)' % (MIN_RAMP_RATE, MAX_RAMP_RATE, duration)
 		
 		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + \
