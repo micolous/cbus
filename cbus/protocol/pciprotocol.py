@@ -60,6 +60,12 @@ class PCIProtocol(LineReceiver):
 			self.on_reset()
 			return
 		
+		while line[0] == '!':
+			# buffer is full / invalid checksum, some requests have been dropped!
+			# (serial interface guide s4.3.3; page 28)
+			self.on_pci_cannot_accept_data()
+			line = line[1:]
+		
 		while line[0] in CONFIRMATION_CODES:
 			# this is blind, doesn't know if it was ok...
 			success = line[1] == '.'
@@ -228,6 +234,25 @@ class PCIProtocol(LineReceiver):
 		"""
 		log.msg("recv: lighting off: from %d to %d" % (source_addr, group_addr))
 	
+	def on_pci_cannot_accept_data(self):
+		"""
+		Event called whenever the PCI cannot accept the supplied data.  Common
+		reasons for this occurring:
+		
+		* The checksum is incorrect.
+		* The buffer in the PCI is full.
+		
+		Unfortunately the PCI does not tell us which requests these are associated
+		with.
+		
+		This error can occur if data is being sent to the PCI too quickly, or if 
+		the cable connecting the PCI to the computer is faulty.
+		
+		While the PCI can operate at 9600 baud, this only applies to data it
+		sends, not to data it recieves.
+		
+		"""
+		log.msg("recv: PCI cannot accept data")
 	
 	# other things.	
 	

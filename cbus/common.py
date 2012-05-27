@@ -119,6 +119,6 @@ def validate_ga(group_addr):
 	"""
 	return MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR
 
-def validate_ramp_rate(rate):
+def validate_ramp_rate(duration):
 	return MIN_RAMP_RATE <= duration <= MAX_RAMP_RATE
 
