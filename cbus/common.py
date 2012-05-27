@@ -78,6 +78,45 @@ MAX_RAMP_RATE = 1020
 RECALL = 0x1A
 IDENTIFY = 0x21
 
+# Lighting Application s2.4.3 s6-7
+LANGUAGE_CODES = {
+	# english and dialects
+	0x01: 'en',
+	0x02: 'en-AU',
+	0x03: 'en-BZ',
+	0x04: 'en-CA',
+	#0x05: English (Carribean)
+	0x06: 'en-IE',
+	0x07: 'en-JM',
+	0x08: 'en-NZ',
+	0x09: 'en-PH',
+	0x0A: 'en-ZA',
+	0x0B: 'en-TT',
+	0x0C: 'en-GB',
+	0x0D: 'en-US',
+	0x0E: 'en-ZW',
+	
+	0x40: 'af', # afrikaans
+	0x41: 'eu', # basque
+	0x42: 'ca', # catalan
+	0x43: 'da', # danish
+	
+	0x44: 'nl-BE', # dutch (belgium)
+	0x45: 'nl-NL', # dutch (netherlands)
+	
+	0x46: 'fo', # faroese
+	0x47: 'fi', # finnish
+	
+	0x48: 'fr-BE', # french (belgium)
+	0x49: 'fr-CA', # french (canada)
+	0x4A: 'fr', # french
+	0x4B: 'fr-LU', # french (luxembourg)
+	0x4C: 'fr-MC', # french (monaco)
+	0x4D: 'fr-CH', # french (switzerland)
+	
+	0x4E: 'gl', # galician
+	
+}
 # these are valid confirmation codes used in acknowledge events.
 CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzGHIJKLMNOPQRSTUVWXYZ'
 
@@ -91,8 +130,6 @@ def duration_to_ramp_rate(seconds):
 	raise ValueError, 'That duration is too long!'
 
 def ramp_rate_to_duration(rate):
-	assert len(rate) == 2, "Ramp rate must be two characters."
-	rate = rate.upper()	
 	return LIGHT_RAMP_RATES[rate]
 
 def cbus_checksum(i, b16=False):

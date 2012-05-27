@@ -154,6 +154,8 @@ class PCIProtocol(LineReceiver):
 						self.on_lighting_group_on(source_addr, group_addr)
 					elif lighting_event == LIGHT_OFF:
 						self.on_lighting_group_off(source_addr, group_addr)
+					elif lighting_event == LIGHT_TERMINATE_RAMP:
+						self.on_lighting_group_terminate_ramp(source_addr, group_addr)
 					else:
 						log.msg("unsupported lighting event: %r, dropping event %r" % (lighting_event, event_bytes))
 						return
@@ -243,6 +245,19 @@ class PCIProtocol(LineReceiver):
 		:type group_addr: int
 		"""
 		log.msg("recv: lighting off: from %d to %d" % (source_addr, group_addr))
+
+	def on_lighting_group_terminate_ramp(self, source_addr, group_addr):
+		"""
+		Event called when a lighting application "terminate ramp" request is
+		recieved.
+		
+		:param source_addr: Source address of the unit that generated this event.
+		:type source_addr: int
+		
+		:param group_addr: Group address stopping ramping.
+		:type group_addr: int
+		"""
+		log.msg("recv: lighting terminate ramp: from %d to %d" % (source_addr, group_addr))
 	
 	def on_pci_cannot_accept_data(self):
 		"""

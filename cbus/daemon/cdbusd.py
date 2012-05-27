@@ -87,6 +87,11 @@ class CBusProtocolHandler(PCIProtocol):
 		if not self.cbus_api: return
 		self.cbus_api.on_lighting_group_off(source_addr, group_addr)
 		
+	def on_lighting_group_terminate_ramp(self, source_addr, group_addr):
+		if not self.cbus_api: return
+		self.cbus_api.on_lighting_group_terminate_ramp(source_addr, group_addr)
+		
+		
 class CBusService(dbus.service.Object):
 	"""
 	DBus service Object for CBus.
@@ -111,6 +116,13 @@ class CBusService(dbus.service.Object):
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_off
 		"""
 		return self.pci.lighting_group_off(group_addr)
+
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
+	def lighting_group_terminate_ramp(self, group_addr):
+		"""
+		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_terminate_ramp
+		"""
+		return self.pci.lighting_group_terminate_ramp(group_addr)
 		
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ynd', out_signature='s')
 	def lighting_group_ramp(self, group_addr, duration, level):
@@ -159,6 +171,10 @@ class CBusService(dbus.service.Object):
 			
 	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
 	def on_lighting_group_off(self, source_addr, group_addr):
+		pass
+
+	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
+	def on_lighting_group_terminate_ramp(self, source_addr, group_addr):
 		pass
 
 class CBusProtocolHandlerFactory(Factory):

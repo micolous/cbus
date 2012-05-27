@@ -246,6 +246,8 @@ class PCIServerProtocol(LineReceiver):
 						self.on_lighting_group_on(group_addr)
 					elif lighting_event == LIGHT_OFF:
 						self.on_lighting_group_off(group_addr)
+					elif lighting_event == LIGHT_TERMINATE_RAMP:
+						self.on_lighting_group_terminate_ramp(group_addr)
 					else:
 						log.msg("unsupported lighting event: %r, dropping event %r" % (lighting_event, event_bytes))
 						return
@@ -310,6 +312,16 @@ class PCIServerProtocol(LineReceiver):
 		:type group_addr: int
 		"""
 		log.msg("recv: lighting off: %d" % (group_addr))
+		
+	def on_lighting_group_terminate_ramp(self, group_addr):
+		"""
+		Event called when a lighting application "terminate ramp" request is
+		recieved.
+		
+		:param group_addr: Group address ramp being terminated.
+		:type group_addr: int
+		"""
+		log.msg("recv: lighting terminate ramy: %d" % group_addr)
 	
 	# other things.	
 	
@@ -424,6 +436,28 @@ class PCIServerProtocol(LineReceiver):
 		d = (POINT_TO_MULTIPOINT, source_addr, APP_LIGHTING, ROUTING_NONE,
 			duration_to_ramp_rate(duration), group_addr, level)
 		
+		return self._send(d)
+
+	def lighting_group_terminate_ramp(self, source_addr, group_addr):
+		"""
+		Stops ramping a group address at the current point.
+		
+		:param source_addr: Source address of the event.
+		:type source_addr: int
+		
+		:param group_addr: Group address to stop ramping of.
+		:type group_addr: int
+		
+		:returns: Single-byte string with code for the confirmation event.
+		:rtype: string
+		"""
+		
+		if not validate_ga(group_addr):
+			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
+		
+		d = (POINT_TO_MULTIPOINT, source_addr, APP_LIGHTING, ROUTING_NONE, \
+			LIGHT_TERMINATE_RAMP, group_addr)
+			
 		return self._send(d)
 		
 if __name__ == '__main__':
