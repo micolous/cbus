@@ -23,3 +23,39 @@ lighting group address messages and transmits additional messages via cdbusd.
 
 DEFAULT_CONFIG_FILE = '/etc/cbus/staged.ini'
 
+import dbus, gobject
+from dbus.mainloop.glib import DBusGMainLoop
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+from cbus.daemon.cdbusd import DBUS_INTERFACE, DBUS_SERVICE, DBUS_PATH
+
+
+bus = dbus.SystemBus()
+obj = bus.get_object(DBUS_SERVICE, DBUS_PATH)
+api = dbus.Interface(obj, DBUS_INTERFACE)
+
+def on_lighting_group_on(source_addr, group_addr):
+	print "on_lighting_group_on: %r, %r" % (source_addr, group_addr)
+
+def on_lighting_group_off(source_addr, group_addr):
+	print "on_lighting_group_off: %r, %r" % (source_addr, group_addr)
+
+def on_lighting_group_ramp(source_addr, group_addr, duration, level):
+	print "on_lighting_group_ramp: %r, %r, %r, %r" % (source_addr, group_addr, duration, level)
+
+
+for n, m in (
+	('on_lighting_group_on', on_lighting_group_on),
+	('on_lighting_group_off', on_lighting_group_off),
+	('on_lighting_group_ramp', on_lighting_group_ramp)
+):
+	bus.add_signal_receiver(
+		m,
+		dbus_interface=DBUS_INTERFACE,
+		bus_name=DBUS_SERVICE,
+		path=DBUS_PATH,
+		signal_name=n
+	)
+
+loop = gobject.MainLoop()
+loop.run()
+
