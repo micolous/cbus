@@ -222,19 +222,19 @@ class PCIServerProtocol(LineReceiver):
 			#return
 			
 			
-		elif event_code == 0x05:
+		elif event_code == POINT_TO_MULTIPOINT:
 			# this is a point to multipoint message
 			#source_addr = ord(event_bytes[1])
 			application = ord(event_bytes[1])
 			routing = ord(event_bytes[2])
 			
 			
-			if b16encode(chr(application)) == APP_LIGHTING:
+			if application == APP_LIGHTING:
 				# lighting event.
-				lighting_event = b16encode(event_bytes[3])
+				lighting_event = ord(event_bytes[3])
 				group_addr = ord(event_bytes[4])
 				
-				if lighting_event in RAMP_RATES.keys():					
+				if lighting_event in LIGHT_RAMP_RATES.keys():					
 					duration = ramp_rate_to_duration(lighting_event)
 					level = ord(event_bytes[5]) / 255.
 					
@@ -318,6 +318,10 @@ class PCIServerProtocol(LineReceiver):
 		Sends a packet of CBus data.
 		
 		"""
+		if type(cmd) != str:
+			# must be an iterable of ints
+			cmd = ''.join([chr(x) for x in cmd])
+		
 		if checksum and self.checksum:
 			cmd = add_cbus_checksum(cmd)
 		
@@ -356,7 +360,8 @@ class PCIServerProtocol(LineReceiver):
 		if not validate_ga(group_addr):
 			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
 
-		d = '05' + ('%02X' % source_addr) + APP_LIGHTING + ROUTING_NONE + LIGHT_ON + ('%02X' % group_addr)
+		d = (POINT_TO_MULTIPOINT, source_addr, APP_LIGHTING, ROUTING_NONE,
+			LIGHT_ON, group_addr)
 		return self._send(d)
 	
 	def lighting_group_off(self, source_addr, group_addr):
@@ -377,7 +382,8 @@ class PCIServerProtocol(LineReceiver):
 		if not validate_ga(group_addr):
 			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
 
-		d = '05' + ('%02X' % source_addr) + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_addr)
+		d = (POINT_TO_MULTIPOINT, source_addr, APP_LIGHTING, ROUTING_NONE, 
+			LIGHT_OFF, group_addr)
 		return self._send(d)
 	
 	def lighting_group_ramp(self, source_addr, group_addr, duration, level=1.0):
@@ -415,8 +421,8 @@ class PCIServerProtocol(LineReceiver):
 		if not validate_ramp_rate(duration):
 			raise ValueError, 'Duration is out of bounds, must be between %d and %d (got %r)' % (MIN_RAMP_RATE, MAX_RAMP_RATE, duration)
 		
-		d = '05' + ('%02X' % source_addr) + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + \
-			duration_to_ramp_rate(duration) + ('%02X%02X' % (group_addr, level))
+		d = (POINT_TO_MULTIPOINT, source_addr, APP_LIGHTING, ROUTING_NONE,
+			duration_to_ramp_rate(duration), group_addr, level)
 		
 		return self._send(d)
 		

@@ -24,19 +24,25 @@ END_COMMAND = '\r\n'
 
 # command types
 # TODO: improve this with data from s3.4 of serial interface guide p11/12
-POINT_TO_MULTIPOINT = '\\05'
-POINT_TO_POINT = '\\06'
+POINT_TO_MULTIPOINT = 0x05
+POINT_TO_POINT = 0x06
 # undocumented command type issued for status inquiries by toolkit?
-POINT_TO_46 = '\\46'
+#POINT_TO_46 = '\\46'
 
 # Applications
-APP_LIGHTING = '38'
+APP_LIGHTING = 0x38
 
 # Routing buffer
-ROUTING_NONE = '00'
+ROUTING_NONE = 0x00
 
-LIGHT_ON = '79'
-LIGHT_OFF = '01'
+# lighting application commands.
+LIGHT_ON = 0x79
+LIGHT_OFF = 0x01
+LIGHT_TERMINATE_RAMP = 0x09
+# note that 0xA0 - 0xA2 are invalid (minimum label length = 3)
+# Lighting Application s2.6.5 p11
+LIGHT_LABEL = range(0xA0, 0xC0)
+
 # light on
 #\0538007964 (GA 100)
 
@@ -46,30 +52,31 @@ LIGHT_OFF = '01'
 # set to level
 #\053800rr64FF (GA 100, to level 100%/0xff)
 
-RAMP_RATES = {
-	'02': 0,
-	'0A': 4,
-	'12': 8,
-	'1A': 12,
-	'22': 20,
-	'2A': 30,
-	'32': 40,
-	'3A': 60,
-	'42': 90,
-	'4A': 120,
-	'52': 180,
-	'5A': 300,
-	'62': 420,
-	'6A': 600,
-	'72': 900,
-	'7A': 1020
+LIGHT_RAMP_RATES = {
+	0x02: 0,
+	0x0A: 4,
+	0x12: 8,
+	0x1A: 12,
+	0x22: 20,
+	0x2A: 30,
+	0x32: 40,
+	0x3A: 60,
+	0x42: 90,
+	0x4A: 120,
+	0x52: 180,
+	0x5A: 300,
+	0x62: 420,
+	0x6A: 600,
+	0x72: 900,
+	0x7A: 1020
 }
+
 
 MIN_RAMP_RATE = 0
 MAX_RAMP_RATE = 1020
 
-RECALL = '1A'
-IDENTIFY = '21'
+RECALL = 0x1A
+IDENTIFY = 0x21
 
 # these are valid confirmation codes used in acknowledge events.
 CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzGHIJKLMNOPQRSTUVWXYZ'
@@ -78,7 +85,7 @@ MIN_GROUP_ADDR = 0
 MAX_GROUP_ADDR = 255
 
 def duration_to_ramp_rate(seconds):
-	for k, v in RAMP_RATES.iteritems():
+	for k, v in LIGHT_RAMP_RATES.iteritems():
 		if seconds <= v:
 			return k
 	raise ValueError, 'That duration is too long!'
@@ -86,18 +93,20 @@ def duration_to_ramp_rate(seconds):
 def ramp_rate_to_duration(rate):
 	assert len(rate) == 2, "Ramp rate must be two characters."
 	rate = rate.upper()	
-	return RAMP_RATES[rate]
+	return LIGHT_RAMP_RATES[rate]
 
-def cbus_checksum(i):
+def cbus_checksum(i, b16=False):
 	"""
 	Calculates the checksum of a C-Bus command string.
 	
 	Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
 	"""
-	if i[0] == '\\':
-		i = i[1:]
+	if b16:
+		if i[0] == '\\':
+			i = i[1:]
 		
-	i = b16decode(i)
+		i = b16decode(i)
+	
 	c = 0
 	for x in i:
 		c += ord(x)
@@ -106,13 +115,13 @@ def cbus_checksum(i):
 
 def add_cbus_checksum(i):
 	c = cbus_checksum(i)
-	return '%s%02X' % (i, c)
+	return i + chr(c)
 	
 def validate_cbus_checksum(i):
 	c = i[-2:]
 	d = i[:-2]
 	
-	cc = cbus_checksum(c)
+	cc = cbus_checksum(c, b16=True)
 	
 	return c == cc
 

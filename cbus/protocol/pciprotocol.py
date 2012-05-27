@@ -127,19 +127,19 @@ class PCIProtocol(LineReceiver):
 			self.on_mmi(application, event_bytes)
 			
 			return event_bytes
-		elif event_code == 0x05:
+		elif event_code == POINT_TO_MULTIPOINT:
 			# this is a point to multipoint message
 			source_addr = ord(event_bytes[1])
 			application = ord(event_bytes[2])
 			routing = ord(event_bytes[3])
 			
 			
-			if b16encode(chr(application)) == APP_LIGHTING:
+			if application == APP_LIGHTING:
 				# lighting event.
-				lighting_event = b16encode(event_bytes[4])
+				lighting_event = ord(event_bytes[4])
 				group_addr = ord(event_bytes[5])
 				
-				if lighting_event in RAMP_RATES.keys():
+				if lighting_event in LIGHT_RAMP_RATES.keys():
 					checksum = ord(event_bytes[7])
 					
 					duration = ramp_rate_to_duration(lighting_event)
@@ -288,14 +288,21 @@ class PCIProtocol(LineReceiver):
 		
 		return o
 	
-	def _send(self, cmd, checksum=True, confirmation=True):
+	def _send(self, cmd, encode=True, checksum=True, confirmation=True):
 		"""
 		Sends a packet of CBus data.
 		
 		"""
+		if type(cmd) != str:
+			# must be an iterable of ints
+			cmd = ''.join([chr(x) for x in cmd])
+		
 		if checksum:
 			cmd = add_cbus_checksum(cmd)
-			
+		
+		if encode:
+			cmd = '\\' + b16encode(cmd)
+		
 		if confirmation:
 			conf_code = self._get_confirmation_code()
 			cmd += conf_code
@@ -320,15 +327,15 @@ class PCIProtocol(LineReceiver):
 		# MMI calls aren't needed to get events from light switches and other device on the network.
 		
 		# full system reset
-		self._send('~~~', checksum=False, confirmation=False)
+		self._send('~~~', encode=False, checksum=False, confirmation=False)
 		
 		# serial user interface guide sect 10.2
 		# Set application address 1 to 38 (lighting)
-		self._send('A3210038', checksum=False)
+		self._send('A3210038', encode=False, checksum=False)
 		
 		# Interface options #3 set to 02
 		# "LOCAL_SAL".
-		self._send('A3420002', checksum=False)
+		self._send('A3420002', encode=False, checksum=False)
 		
 		# Interface options #1
 		# = 0x59 / 0101 1001
@@ -337,14 +344,15 @@ class PCIProtocol(LineReceiver):
 		# 4: SMART
 		# 5: MONITOR
 		# 6: IDMON
-		self._send('A3300059', checksum=False)
+		self._send('A3300059', encode=False, checksum=False)
 	
 	def lighting_group_on(self, group_addr):
 		"""
 		Turns on the lights for the given group_id.
 		
-		:param group_id: Group address to turn the lights on for.
-		:type group_id: int
+		:param group_addr: Group address to turn the lights on for.
+		:type group_addr: int
+		
 		:returns: Single-byte string with code for the confirmation event.
 		:rtype: string
 		
@@ -352,15 +360,18 @@ class PCIProtocol(LineReceiver):
 		if not validate_ga(group_addr):
 			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
 
-		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_ON + ('%02X' % group_addr)
+		d = (POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE, LIGHT_ON,
+			group_addr)
+			
 		return self._send(d)
 	
 	def lighting_group_off(self, group_addr):
 		"""
 		Turns off the lights for the given group_id.
 		
-		:param group_id: Group address to turn the lights on for.
-		:type group_id: int
+		:param group_addr: Group address to turn the lights on for.
+		:type group_addr: int
+		
 		:returns: Single-byte string with code for the confirmation event.
 		:rtype: string
 		
@@ -369,7 +380,9 @@ class PCIProtocol(LineReceiver):
 		if not validate_ga(group_addr):
 			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
 
-		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + ('%02X' % group_addr)
+		d = (POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE, LIGHT_OFF,
+			group_addr)
+			
 		return self._send(d)
 	
 	def lighting_group_ramp(self, group_addr, duration, level=1.0):
@@ -382,8 +395,8 @@ class PCIProtocol(LineReceiver):
 		
 		A duration of 0 will ramp "instantly" to the given level.
 
-		:param group_id: The group address to ramp.
-		:type group_id: int
+		:param group_addr: The group address to ramp.
+		:type group_addr: int
 		:param duration: Duration, in seconds, that the ramp should occur over.
 		:type duration: int
 		:param level: An amount between 0.0 and 1.0 indicating the brightness to set.
@@ -402,22 +415,42 @@ class PCIProtocol(LineReceiver):
 		if not validate_ramp_rate(duration):
 			raise ValueError, 'Duration is out of bounds, must be between %d and %d (got %r)' % (MIN_RAMP_RATE, MAX_RAMP_RATE, duration)
 		
-		d = POINT_TO_MULTIPOINT + APP_LIGHTING + ROUTING_NONE + LIGHT_OFF + \
-			duration_to_ramp_rate(duration) + ('%02X%02X' % (group_addr, level))
+		d = (POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE, \
+			duration_to_ramp_rate(duration), group_addr, int(level * 255))
 		
 		return self._send(d)
 	
-	def recall(self, unit_addr, param_no, count):
-		return self._send('%s%02X%s%s%02X%02X' % (
-			POINT_TO_46, unit_addr, ROUTING_NONE, RECALL, param_no, count
-		))
+	def lighting_group_terminate_ramp(self, group_addr):
+		"""
+		Stops ramping a group address at the current point.
+		
+		:param group_addr: Group address to stop ramping of.
+		:type group_addr: int
+		
+		:returns: Single-byte string with code for the confirmation event.
+		:rtype: string
+		"""
+		
+		if not validate_ga(group_addr):
+			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
+		
+		d = (POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE, \
+			LIGHT_TERMINATE_RAMP, group_addr)
+			
+		return self._send(d)
+		
+	
+	#def recall(self, unit_addr, param_no, count):
+	#	return self._send('%s%02X%s%s%02X%02X' % (
+	#		POINT_TO_46, unit_addr, ROUTING_NONE, RECALL, param_no, count
+	#	))
 		
 
 	
-	def identify(self, unit_addr, attribute):
-		return self._send('%s%02X%s%s%02X' % (
-			POINT_TO_46, unit_addr, ROUTING_NONE, RECALL, attribute
-		))
+	#def identify(self, unit_addr, attribute):
+	#	return self._send('%s%02X%s%s%02X' % (
+	#		POINT_TO_46, unit_addr, ROUTING_NONE, RECALL, attribute
+	#	))
 
 
 if __name__ == '__main__':
