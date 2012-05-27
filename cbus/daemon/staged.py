@@ -32,7 +32,7 @@ import gobject
 import sys
 from optparse import OptionParser
 from dbus.mainloop.glib import DBusGMainLoop
-dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+DBusGMainLoop(set_as_default=True)
 from cbus.daemon.cdbusd import DBUS_INTERFACE, DBUS_SERVICE, DBUS_PATH
 import cbus.common
 from twisted.python import log
@@ -203,7 +203,7 @@ def main():
 	options, args = parser.parse_args()
 	
 	if options.log:
-		log.startLogging(option.log)
+		log.startLogging(options.log)
 	else:
 		log.startLogging(sys.stdout)
 	

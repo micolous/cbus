@@ -23,6 +23,7 @@ HEX_CHARS = "0123456789ABCDEF"
 END_COMMAND = '\r\n'
 
 # command types
+# TODO: improve this with data from s3.4 of serial interface guide p11/12
 POINT_TO_MULTIPOINT = '\\05'
 POINT_TO_POINT = '\\06'
 # undocumented command type issued for status inquiries by toolkit?
@@ -106,6 +107,14 @@ def cbus_checksum(i):
 def add_cbus_checksum(i):
 	c = cbus_checksum(i)
 	return '%s%02X' % (i, c)
+	
+def validate_cbus_checksum(i):
+	c = i[-2:]
+	d = i[:-2]
+	
+	cc = cbus_checksum(c)
+	
+	return c == cc
 
 def validate_ga(group_addr):
 	"""
@@ -113,6 +122,7 @@ def validate_ga(group_addr):
 	
 	:param group_addr: Input group address to validate.
 	:type group_addr: int
+	
 	:returns: True if the given group address is valid, False otherwise.
 	:rtype: bool
 	

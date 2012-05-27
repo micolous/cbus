@@ -27,6 +27,8 @@ from twisted.internet import glib2reactor
 glib2reactor.install()
 
 from twisted.internet import reactor
+from twisted.internet.protocol import Factory
+from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.internet.serialport import SerialPort
 from twisted.python import log
 from cbus.protocol.pciprotocol import PCIProtocol
@@ -159,6 +161,13 @@ class CBusService(dbus.service.Object):
 	def on_lighting_group_off(self, source_addr, group_addr):
 		pass
 
+class CBusProtocolHandlerFactory(Factory):
+	def __init__(self, protocol):
+		self.protocol = protocol
+		
+	def buildProtocol(self, addr):
+		return self.protocol
+
 def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 	if session_bus:
 		bus = dbus.SessionBus()
@@ -173,7 +182,9 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 	if serial_mode:
 		SerialPort(protocol, addr, reactor, baudrate=9600)
 	else:
-		raise NotImplementedError, 'Not implemented yet'
+		point = TCP4ClientEndpoint(reactor, addr[0], int(addr[1]))
+		d = point.connect(CBusProtocolHandlerFactory(protocol))
+		
 	
 	
 	
@@ -209,7 +220,7 @@ def main():
 		addr = option.serial_pci
 	elif option.tcp_pci:
 		serial_mode = False
-		addr = option.tcp_pci
+		addr = option.tcp_pci.split(':', 2)
 	else:
 		parser.error('No CBus PCI address was specified!  (See -s or -t option)')
 		

@@ -65,6 +65,14 @@ class PCIProtocol(LineReceiver):
 			# (serial interface guide s4.3.3; page 28)
 			self.on_pci_cannot_accept_data()
 			line = line[1:]
+			if not line:
+				return
+		
+		while line[0] == '+':
+			self.on_pci_power_up()
+			line = line[1:]
+			if not line:
+				return
 		
 		while line[0] in CONFIRMATION_CODES:
 			# this is blind, doesn't know if it was ok...
@@ -74,6 +82,8 @@ class PCIProtocol(LineReceiver):
 			
 			# shift across for the remainder
 			line = line[2:]
+			if not line:
+				return
 		
 		# TODO: handle other bus events properly.
 		self.decode_cbus_event(line)
@@ -145,7 +155,7 @@ class PCIProtocol(LineReceiver):
 					elif lighting_event == LIGHT_OFF:
 						self.on_lighting_group_off(source_addr, group_addr)
 					else:
-						log.msg("unsupported lighting event: %r, dropping event %r" % (self.lighting_event, event_bytes))
+						log.msg("unsupported lighting event: %r, dropping event %r" % (lighting_event, event_bytes))
 						return
 					
 					return event_bytes[7:]
@@ -254,6 +264,16 @@ class PCIProtocol(LineReceiver):
 		"""
 		log.msg("recv: PCI cannot accept data")
 	
+	def on_pci_power_up(self):
+		"""
+		If Power-up Notification (PUN) is enabled on the PCI, this event is fired.
+		
+		This event may be fired multiple times in quick succession, as the PCI
+		will send the event twice.
+		
+		"""
+		log.msg("recv: PCI power-up notification")
+	
 	# other things.	
 	
 	def _get_confirmation_code(self):
@@ -307,7 +327,7 @@ class PCIProtocol(LineReceiver):
 		self._send('A3210038', checksum=False)
 		
 		# Interface options #3 set to 02
-		# "Reserved".
+		# "LOCAL_SAL".
 		self._send('A3420002', checksum=False)
 		
 		# Interface options #1
@@ -398,7 +418,8 @@ class PCIProtocol(LineReceiver):
 		return self._send('%s%02X%s%s%02X' % (
 			POINT_TO_46, unit_addr, ROUTING_NONE, RECALL, attribute
 		))
-		
+
+
 if __name__ == '__main__':
 	# test program for protocol
 	class PCIProtocolFactory(ClientFactory):
