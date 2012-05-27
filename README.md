@@ -6,6 +6,8 @@ Currently only supports the [C-Bus Serial PC Interface (PCI), 5500PC](http://www
 
 Note that Clipsal say something about "voiding warranties" if you use non-Clipsal software to connect to your C-Bus network without prior authorisation.
 
+Automatically generated documentation for the project is published at http://cbus.rtfd.org/
+
 ## Hacking Notes ##
 
 Official serial protocol documentation: http://training.clipsal.com/downloads/OpenCBus/OpenCBusProtocolDownloads.html
