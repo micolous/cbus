@@ -179,7 +179,7 @@ class PCIProtocol(LineReceiver):
 						source_addr,
 						application,
 						routing,
-						event_bytes
+						b16encode(event_bytes)
 					)
 					return event_bytes
 				else:
