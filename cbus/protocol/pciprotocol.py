@@ -21,6 +21,7 @@ from twisted.python import log
 from twisted.internet import reactor
 from cbus.common import *
 from base64 import b16encode, b16decode
+from traceback import print_exc
 
 __all__ = ['PCIProtocol']
 
@@ -56,37 +57,43 @@ class PCIProtocol(LineReceiver):
 		"""
 		log.msg("recv: %r" % line)
 		
-		if line == '~~~':
-			self.on_reset()
-			return
-		
-		while line[0] == '!':
-			# buffer is full / invalid checksum, some requests have been dropped!
-			# (serial interface guide s4.3.3; page 28)
-			self.on_pci_cannot_accept_data()
-			line = line[1:]
-			if not line:
+		try:
+			if line == '~~~':
+				self.on_reset()
 				return
-		
-		while line[0] == '+':
-			self.on_pci_power_up()
-			line = line[1:]
-			if not line:
-				return
-		
-		while line[0] in CONFIRMATION_CODES:
-			# this is blind, doesn't know if it was ok...
-			success = line[1] == '.'
 			
-			self.on_confirmation(line[0], success)
+			while line[0] == '!':
+				# buffer is full / invalid checksum, some requests have been dropped!
+				# (serial interface guide s4.3.3; page 28)
+				self.on_pci_cannot_accept_data()
+				line = line[1:]
+				if not line:
+					return
 			
-			# shift across for the remainder
-			line = line[2:]
-			if not line:
-				return
-		
-		# TODO: handle other bus events properly.
-		self.decode_cbus_event(line)
+			while line[0] == '+':
+				self.on_pci_power_up()
+				line = line[1:]
+				if not line:
+					return
+			
+			while line[0] in CONFIRMATION_CODES:
+				# this is blind, doesn't know if it was ok...
+				success = line[1] == '.'
+				
+				self.on_confirmation(line[0], success)
+				
+				# shift across for the remainder
+				line = line[2:]
+				if not line:
+					return
+			
+			# TODO: handle other bus events properly.
+			while line:
+				line = self.decode_cbus_event(line)
+		except Exception:
+			# caught exception.  dump stack trace to log and move on
+			log.msg("recv: caught exception. line state = %r" % line)
+			print_exc()
 	
 	def decode_cbus_event(self, line):
 		"""
@@ -124,7 +131,7 @@ class PCIProtocol(LineReceiver):
 			# parse information we know...
 			application = ord(event_data[1])
 			
-			self.on_mmi(application, event_bytes)
+			self.on_mmi(application, event_data)
 			
 			return event_bytes
 		elif event_code == POINT_TO_MULTIPOINT:
@@ -140,16 +147,17 @@ class PCIProtocol(LineReceiver):
 				group_addr = ord(event_bytes[5])
 				
 				if lighting_event in LIGHT_RAMP_RATES.keys():
-					checksum = ord(event_bytes[7])
+					#checksum = ord(event_bytes[7])
 					
 					duration = ramp_rate_to_duration(lighting_event)
 					level = ord(event_bytes[6]) / 255.
 					
 					self.on_lighting_group_ramp(source_addr, group_addr, duration, level)
+					event_bytes = event_bytes[8:]
 					
-					return event_bytes[8:]
+
 				else:
-					checksum = ord(event_bytes[6])
+					#checksum = ord(event_bytes[6])
 					if lighting_event == LIGHT_ON:
 						self.on_lighting_group_on(source_addr, group_addr)
 					elif lighting_event == LIGHT_OFF:
@@ -160,7 +168,23 @@ class PCIProtocol(LineReceiver):
 						log.msg("unsupported lighting event: %r, dropping event %r" % (lighting_event, event_bytes))
 						return
 					
-					return event_bytes[7:]
+					event_bytes = event_bytes[7:]
+			
+				if len(event_bytes) > 1:
+					# this is a chained lighting command
+					log.msg('recv: chained lighting event')
+					
+					event_bytes = "%02X%02X%02X%s" % (
+						event_code,
+						source_addr,
+						application,
+						routing,
+						event_bytes
+					)
+					return event_bytes
+				else:
+					return
+					
 			else:
 				# unknown application
 				log.msg("unsupported PTMP application: %r, dropping event %r" % (application, event_bytes))
