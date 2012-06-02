@@ -153,7 +153,7 @@ class PCIProtocol(LineReceiver):
 					level = ord(event_bytes[6]) / 255.
 					
 					self.on_lighting_group_ramp(source_addr, group_addr, duration, level)
-					event_bytes = event_bytes[8:]
+					event_bytes = event_bytes[7:]
 					
 
 				else:
@@ -168,7 +168,7 @@ class PCIProtocol(LineReceiver):
 						log.msg("unsupported lighting event: %r, dropping event %r" % (lighting_event, event_bytes))
 						return
 					
-					event_bytes = event_bytes[7:]
+					event_bytes = event_bytes[6:]
 			
 				if len(event_bytes) > 1:
 					# this is a chained lighting command
