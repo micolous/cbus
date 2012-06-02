@@ -172,7 +172,7 @@ class PCIProtocol(LineReceiver):
 			
 				if len(event_bytes) > 1:
 					# this is a chained lighting command
-					log.msg('recv: chained lighting event')
+					log.msg('recv: chained lighting event: pushing %r back on the stack' % event_bytes)
 					
 					event_bytes = "%02X%02X%02X%02X%s" % (
 						event_code,
