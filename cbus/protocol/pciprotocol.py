@@ -174,7 +174,7 @@ class PCIProtocol(LineReceiver):
 					# this is a chained lighting command
 					log.msg('recv: chained lighting event')
 					
-					event_bytes = "%02X%02X%02X%s" % (
+					event_bytes = "%02X%02X%02X%02X%s" % (
 						event_code,
 						source_addr,
 						application,
