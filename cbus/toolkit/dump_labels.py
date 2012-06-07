@@ -29,6 +29,7 @@ def main():
 	parser = OptionParser(usage='%prog -i input.cbz -o output.json', version='%prog 1.0')
 	parser.add_option('-o', '--output', dest='output', metavar='FILE', help='write output to FILE')
 	parser.add_option('-i', '--input', dest='input', metavar='FILE', help='read Toolkit backup from FILE')
+	parser.add_option('-p', '--pretty', dest='pretty', metavar='SPACES', help='pretty-prints the output with the specified number of spaces between indent levels')
 	options, args = parser.parse_args()
 
 	if options.input == None:
@@ -36,6 +37,17 @@ def main():
 	
 	if options.output == None:
 		parser.error('Output filename not given.')
+		
+	if options.pretty:
+		try:
+			pretty = int(options.pretty)
+		except ValueError:
+			parser.error('Pretty-printing spaces value is not a number.')
+		
+		if pretty < 0:
+			parser.error('Pretty-printing spaces value must not be negative.')
+	else:
+		pretty = None
 	
 	cbz = CBZ(options.input)
 	of = open(options.output, 'wb')
@@ -79,7 +91,7 @@ def main():
 		o[int(network.Address)] = no
 
 	# dump structure as json.
-	json.dump(o, of)
+	json.dump(o, of, indent=pretty)
 	of.flush()
 	of.close()
 
