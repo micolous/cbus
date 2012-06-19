@@ -512,8 +512,28 @@ if __name__ == '__main__':
 	from twisted.internet.serialport import SerialPort
 	import sys
 	
+	parser = OptionParser(usage='%prog', description="""
+		Library for communications with a CBus PCI in Twisted.  Acts as a test
+		program to dump events from a PCI.
+	""")
+	parser.add_option('-s', '--serial-pci', dest='serial_pci', default=None, help='Serial port where the PCI is located.  Either this or -t must be specified.')
+	parser.add_option('-t', '--tcp-pci', dest='tcp_pci', default=None, help='IP address and TCP port where the PCI is located (CNI).  Either this or -s must be specified.')
+	
+	option, args = parser.parse_args()
+	
 	log.startLogging(sys.stdout)
-	SerialPort(PCIProtocol(), '/dev/ttyUSB0', reactor, baudrate=9600)
+	
+	if option.serial_pci and option.tcp_pci:
+		parser.error('Both serial and TCP CBus PCI addresses were specified!  Use only one...')
+	elif option.serial_pci:
+		SerialPort(protocol, option.serial_pci, reactor, baudrate=9600)
+	elif option.tcp_pci:
+		addr = option.tcp_pci.split(':', 2)
+		point = TCP4ClientEndpoint(reactor, addr[0], int(addr[1]))
+		d = point.connect(CBusProtocolHandlerFactory(protocol))
+	else:
+		parser.error('No CBus PCI address was specified!  (See -s or -t option)')
+	
 	reactor.run()
 	
 

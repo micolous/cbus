@@ -11,6 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
    
+   introduction
+   status
    cbus
    cbus.daemon
    cbus.protocol
