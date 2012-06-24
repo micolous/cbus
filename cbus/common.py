@@ -41,7 +41,7 @@ LIGHT_OFF = 0x01
 LIGHT_TERMINATE_RAMP = 0x09
 # note that 0xA0 - 0xA2 are invalid (minimum label length = 3)
 # Lighting Application s2.6.5 p11
-LIGHT_LABEL = range(0xA0, 0xC0)
+LIGHT_LABEL = 0xA0
 
 # light on
 #\0538007964 (GA 100)

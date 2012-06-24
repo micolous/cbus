@@ -156,7 +156,44 @@ class PCIProtocol(LineReceiver):
 					self.on_lighting_group_ramp(source_addr, group_addr, duration, level)
 					event_bytes = event_bytes[7:]
 					
+				elif lighting_event & LIGHT_LABEL == LIGHT_LABEL:
+					# label event (lighting application, s2.6.5 p11)
+					length = lighting_event | LIGHT_LABEL
+					
+					assert length >= 3, 'LIGHT_LABEL event with length < 3 (%d)' % length
+					
+					options = ord(event_bytes[6])
+					language_code = ord(event_bytes[7])
+					data = event_bytes[8:5+length]
+					
+					# these are things the doc says are required
+					assert options & 0x01 == 0, "bit 0 of options is non-zero (must be 0 for lighting)"
+					assert options & 0x08 == 0, "bit 3 of options is non-zero (must be 0 for lighting)"
+					assert options & 0x10 == 0, "bit 5 of options is non-zero (reserved)"
+					
+					action = (options & 0x06) >> 1
+					flavour = (options & 0x60) >> 5
+					event_bytes = event_bytes[5+length:]
 
+					
+					if action == 0:
+						# text label
+						self.on_lighting_label_text(source_addr, group_addr, flavour, language_code, event_bytes)
+					# TODO: implement icons properly
+					#elif action == 1:
+					#	# predefined icon
+					#	# TODO: decode image
+					#	self.on_lighting_label_predefined_icon(source_addr, group_addr, flavour, language_code, event_bytes)
+					#elif action == 2:
+					#	# load dynamic icon
+					#	# TODO: decode image
+					#	self.on_lighting_label_load_dynamic_icon(source_addr, group_addr, flavour, language_code, event_bytes)
+					#elif action == 3:
+					#	# set preferred language
+					#	self.on_lighting_label_set_preferred_language(source_addr, group_addr, flavour, language_code)
+					
+					
+					
 				else:
 					#checksum = ord(event_bytes[6])
 					if lighting_event == LIGHT_ON:
@@ -165,6 +202,7 @@ class PCIProtocol(LineReceiver):
 						self.on_lighting_group_off(source_addr, group_addr)
 					elif lighting_event == LIGHT_TERMINATE_RAMP:
 						self.on_lighting_group_terminate_ramp(source_addr, group_addr)
+
 					else:
 						log.msg("unsupported lighting event: %r, dropping event %r" % (lighting_event, event_bytes))
 						return
@@ -283,6 +321,30 @@ class PCIProtocol(LineReceiver):
 		:type group_addr: int
 		"""
 		log.msg("recv: lighting terminate ramp: from %d to %d" % (source_addr, group_addr))
+	
+	def on_lighting_label_text(self, source_addr, group_addr, flavour, language_code, label):
+		"""
+		Event called when a group address' label text is updated.
+		
+		:param source_addr: Source address of the unit that generated this event.
+		:type source_addr: int
+		
+		:param group_addr: Group address to relabel.
+		:type group_addr: int
+		
+		:param flavour: "Flavour" of the label to update.  This is a value between 0 and 3.
+		:type flavour: int
+		
+		:param language_code: Language code for the label.
+		:type language_code: int
+		
+		:param event_bytes: Label text, or an empty string to delete the label.
+		:type event_bytes: str
+		
+		
+		"""
+		log.msg("recv: lighting label text: from %d to %d flavour %d lang %d text %r" % (
+			source_addr, group_addr, flavour, language_code, label))
 	
 	def on_pci_cannot_accept_data(self):
 		"""
