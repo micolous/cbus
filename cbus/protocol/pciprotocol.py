@@ -22,6 +22,7 @@ from twisted.internet import reactor
 from cbus.common import *
 from base64 import b16encode, b16decode
 from traceback import print_exc
+from collections import Iterable
 
 __all__ = ['PCIProtocol']
 
@@ -389,18 +390,29 @@ class PCIProtocol(LineReceiver):
 		"""
 		Turns on the lights for the given group_id.
 		
-		:param group_addr: Group address to turn the lights on for.
-		:type group_addr: int
+		:param group_addr: Group address(es) to turn the lights on for, up to 9.
+		:type group_addr: int, or iterable of ints of length <= 9.
 		
 		:returns: Single-byte string with code for the confirmation event.
 		:rtype: string
 		
 		"""
-		if not validate_ga(group_addr):
-			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
-
-		d = (POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE, LIGHT_ON,
-			group_addr)
+		if not isinstance(group_addr, Iterable):
+			group_addr = [group_addr]
+		
+		group_addr = [int(g) for g in group_addr]
+		
+		if len(group_addr) > 9:
+			# maximum 9 group addresses per packet
+			raise ValueError, 'group_addr iterable length is > 9 (%r)' % len(group_addr)
+		
+		# validate GAs
+		d = [POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE]
+		
+		for ga in group_addr:
+			if not validate_ga(ga):
+				raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, ga)
+			d += [LIGHT_ON, ga]
 			
 		return self._send(d)
 	
@@ -408,19 +420,29 @@ class PCIProtocol(LineReceiver):
 		"""
 		Turns off the lights for the given group_id.
 		
-		:param group_addr: Group address to turn the lights on for.
-		:type group_addr: int
+		:param group_addr: Group address(es) to turn the lights off for, up to 9.
+		:type group_addr: int, or iterable of ints of length <= 9.
 		
 		:returns: Single-byte string with code for the confirmation event.
 		:rtype: string
 		
-		
 		"""
-		if not validate_ga(group_addr):
-			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
-
-		d = (POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE, LIGHT_OFF,
-			group_addr)
+		if not isinstance(group_addr, Iterable):
+			group_addr = [group_addr]
+			
+		group_addr = [int(g) for g in group_addr]
+		
+		if len(group_addr) > 9:
+			# maximum 9 group addresses per packet
+			raise ValueError, 'group_addr iterable length is > 9 (%r)' % len(group_addr)
+		
+		# validate GAs
+		d = [POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE]
+		
+		for ga in group_addr:
+			if not validate_ga(ga):
+				raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, ga)
+			d += [LIGHT_OFF, ga]
 			
 		return self._send(d)
 	
@@ -494,6 +516,11 @@ class PCIProtocol(LineReceiver):
 
 if __name__ == '__main__':
 	# test program for protocol
+	from twisted.internet import reactor
+	from twisted.internet.serialport import SerialPort
+	import sys
+	
+	
 	class PCIProtocolFactory(ClientFactory):
 		def startedConnecting(self, connector):
 			log.msg('Started to connect')
@@ -504,13 +531,13 @@ if __name__ == '__main__':
 		
 		def clientConnectionLost(self, connector, reason):
 			print 'Lost connection.  Reason:', reason
+			reactor.stop()
 
 		def clientConnectionFailed(self, connector, reason):
 			print 'Connection failed. Reason:', reason
+			reactor.stop()
 	
-	from twisted.internet import reactor
-	from twisted.internet.serialport import SerialPort
-	import sys
+
 	
 	parser = OptionParser(usage='%prog', description="""
 		Library for communications with a CBus PCI in Twisted.  Acts as a test
