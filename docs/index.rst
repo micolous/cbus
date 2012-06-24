@@ -13,6 +13,7 @@ Contents:
    
    introduction
    status
+   hacking
    cbus
    cbus.daemon
    cbus.protocol
