@@ -103,14 +103,16 @@ class CBusService(dbus.service.Object):
 		dbus.service.Object.__init__(self, bus, object_path)
 	
 
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
+	#@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ay', out_signature='s')
 	def lighting_group_on(self, group_addr):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_on
 		"""
 		return self.pci.lighting_group_on(group_addr)
 		
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
+	#@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ay', out_signature='s')
 	def lighting_group_off(self, group_addr):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_off
