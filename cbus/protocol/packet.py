@@ -22,6 +22,7 @@ from cbus.protocol.base_packet import BasePacket
 #from cbus.protocol.pp_packet import PointToPointPacket
 #from cbus.protocol.ppm_packet import PointToPointToMultipointPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
+from cbus.protocol.dm_packet import DeviceManagementPacket
 from cbus.common import *
 import warnings
 
@@ -69,6 +70,12 @@ def decode_packet(data, checksum=True, strict=True, server_packet=False):
 	data = data[1:]
 	
 	# TODO: handle source address
+	
+	
+	if dp:
+		# device management flag set!
+		# this is used to set parameters of the PCI
+		return DeviceManagementPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
 	
 	
 	if destination_address_type == DAT_PP:
