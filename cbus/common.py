@@ -123,6 +123,41 @@ CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzGHIJKLMNOPQRSTUVWXYZ'
 MIN_GROUP_ADDR = 0
 MAX_GROUP_ADDR = 255
 
+
+# priority classes.
+CLASS_1 = 0x03
+CLASS_2 = 0x02
+CLASS_3 = 0x01
+CLASS_4 = 0x00
+
+CLASSES = {
+	CLASS_1: '1',
+	CLASS_2: '2',
+	CLASS_3: '3',
+	CLASS_4: '4'
+}
+
+# destination address type
+DAT_PPM = 0x03
+DAT_PM = 0x05
+DAT_PP = 0x06
+
+DATS = {
+	DAT_PPM: 'PPM',
+	DAT_PM: 'PM',
+	DAT_PP: 'PP'
+}
+
+# bridge length
+BRIDGE_LENGTHS = {
+	0x09: 0,
+	0x12: 1,
+	0x1B: 2,
+	0x24: 3,
+	0x2D: 4,
+	0x36: 5
+}
+
 def duration_to_ramp_rate(seconds):
 	for k, v in LIGHT_RAMP_RATES.iteritems():
 		if seconds <= v:
@@ -148,7 +183,11 @@ def cbus_checksum(i, b16=False):
 	for x in i:
 		c += ord(x)
 	
-	return ((c % 0x100) ^ 0xff) + 1
+	c = ((c % 0x100) ^ 0xff) + 1
+	
+	if b16:
+		return b16encode(chr(c))
+	return c
 
 def add_cbus_checksum(i):
 	c = cbus_checksum(i)
@@ -158,8 +197,8 @@ def validate_cbus_checksum(i):
 	c = i[-2:]
 	d = i[:-2]
 	
-	cc = cbus_checksum(c, b16=True)
-	
+	cc = cbus_checksum(d, b16=True)
+	#print "%r: %r == %r ? %r" % (d, c, cc, c == cc)
 	return c == cc
 
 def validate_ga(group_addr):
