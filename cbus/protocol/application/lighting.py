@@ -18,6 +18,11 @@
 from cbus.common import *
 
 __all__ = [
+	'LightingSAL',
+	'LightingRampSAL',
+	'LightingOnSAL',
+	'LightingOffSAL',
+	'LightingTerminateRampSAL',
 	'LightingApplication'
 ]
 
@@ -40,10 +45,7 @@ class LightingSAL(object):
 			
 			sal, data = SAL_HANDLERS[command_code].decode(data, packet, command_code, group_address)
 			
-			# gobble it
-			# TODO: implement correctly.
 			output.append(sal)
-			data = ''
 		return output
 
 
@@ -82,17 +84,25 @@ class LightingOffSAL(LightingSAL):
 		return cls(packet, group_address), data
 		
 
+class LightingTerminateRampSAL(LightingSAL):
+	def __init__(self, packet, group_address):
+		super(LightingTerminateRampSAL, self).__init__(packet, group_address)
+	
+	@classmethod
+	def decode(cls, data, packet, command_code, group_address):
+		assert command_code == LIGHT_TERMINATE_RAMP, "command_code (%r) != LIGHT_TERMINATE_RAMP (%r)" % (command_code, LIGHT_TERMINATE_RAMP)
+		return cls(packet, group_address), data
+
+
 SAL_HANDLERS = {
 	LIGHT_ON: LightingOnSAL,
 	LIGHT_OFF: LightingOffSAL,
+	LIGHT_TERMINATE_RAMP: LightingTerminateRampSAL,
 }
 
 for x in LIGHT_RAMP_RATES.keys():
 	assert x not in SAL_HANDLERS, "LightingRampSAL attempted registration of existing command code!"
 	SAL_HANDLERS[x] = LightingRampSAL
-
-
-
 
 
 class LightingApplication(object):
