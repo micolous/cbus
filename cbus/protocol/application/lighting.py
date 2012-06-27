@@ -63,6 +63,13 @@ class LightingRampSAL(LightingSAL):
 		
 		data = data[1:]
 		return cls(packet, group_address, duration, level), data
+	
+	def encode(self):
+		return [
+			duration_to_ramp_rate(self.duration),
+			self.group_address,
+			int(self.level * 255)
+		]
 		
 class LightingOnSAL(LightingSAL):
 	def __init__(self, packet, group_address):
@@ -73,6 +80,11 @@ class LightingOnSAL(LightingSAL):
 		assert command_code == LIGHT_ON, "command_code (%r) != LIGHT_ON (%r)" % (command_code, LIGHT_ON)
 		return cls(packet, group_address), data
 		
+	def encode(self):
+		return [
+			LIGHT_ON,
+			self.group_address
+		]
 
 class LightingOffSAL(LightingSAL):
 	def __init__(self, packet, group_address):
@@ -83,6 +95,11 @@ class LightingOffSAL(LightingSAL):
 		assert command_code == LIGHT_OFF, "command_code (%r) != LIGHT_OFF (%r)" % (command_code, LIGHT_OFF)
 		return cls(packet, group_address), data
 		
+	def encode(self):
+		return [
+			LIGHT_OFF,
+			self.group_address
+		]
 
 class LightingTerminateRampSAL(LightingSAL):
 	def __init__(self, packet, group_address):
@@ -92,6 +109,12 @@ class LightingTerminateRampSAL(LightingSAL):
 	def decode(cls, data, packet, command_code, group_address):
 		assert command_code == LIGHT_TERMINATE_RAMP, "command_code (%r) != LIGHT_TERMINATE_RAMP (%r)" % (command_code, LIGHT_TERMINATE_RAMP)
 		return cls(packet, group_address), data
+		
+	def encode(self):
+		return [
+			LIGHT_TERMINATE_RAMP,
+			self.group_address
+		]
 
 
 SAL_HANDLERS = {

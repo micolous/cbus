@@ -20,9 +20,9 @@ from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.application.lighting import *
 
-class LightingTests(unittest.TestCase):
+class LightingSerialInterfaceGuideTests(unittest.TestCase):
 	def runTest(self):
-		# Examples in serial interface guide, s6.4
+		"Examples in serial interface guide, s6.4"
 		# Switch on light at GA 8
 		p = decode_packet('\\0538000108BA')
 		
@@ -31,6 +31,9 @@ class LightingTests(unittest.TestCase):
 		
 		self.assertIsInstance(p.sal[0], LightingOffSAL)
 		self.assertEqual(p.sal[0].group_address, 8)
+		
+		# check that it encodes properly again
+		self.assertEqual(p.encode(), '0538000108BA')
 		
 		
 		p = decode_packet('\\05380001087909090A25')
@@ -50,8 +53,13 @@ class LightingTests(unittest.TestCase):
 		self.assertIsInstance(p.sal[2], LightingTerminateRampSAL)
 		self.assertEqual(p.sal[2].group_address, 10)
 		
+		# check that it encodes properly again
+		self.assertEqual(p.encode(), '05380001087909090A25')
 		
-		# Examples in Lighting Application s2.11
+
+class LightingApplicationTests(unittest.TestCase):
+	def runTest(self):
+		"Examples in Lighting Application s2.11"
 		# switch on light at GA 0x93
 		p = decode_packet('\\0538007993B7')
 		
@@ -60,8 +68,14 @@ class LightingTests(unittest.TestCase):
 		
 		self.assertIsInstance(p.sal[0], LightingOnSAL)
 		self.assertEqual(p.sal[0].group_address, 0x93)
+		
+		# check that it encodes properly again
+		self.assertEqual(p.encode(), '0538007993B7')
 
-		# Examples in quick start guide, s9.1
+
+class LightingQuickStartGuideTests(unittest.TestCase):
+	def runTest(self):
+		"Examples in quick start guide, s9.1"
 		# turn on light 0x21
 		p = decode_packet('\\053800792129')
 		
@@ -70,7 +84,10 @@ class LightingTests(unittest.TestCase):
 		
 		self.assertIsInstance(p.sal[0], LightingOnSAL)
 		self.assertEqual(p.sal[0].group_address, 0x21)
-		
+
+		# check that it encodes properly again
+		self.assertEqual(p.encode(), '053800792129')
+				
 		
 		# turn off light 0x21
 		p = decode_packet('\\0538000121A1')
@@ -80,6 +97,10 @@ class LightingTests(unittest.TestCase):
 		
 		self.assertIsInstance(p.sal[0], LightingOffSAL)
 		self.assertEqual(p.sal[0].group_address, 0x21)
+
+		# check that it encodes properly again
+		self.assertEqual(p.encode(), '0538000121A1')
+		
 		
 		# ramp light 0x21 to 50% over 4 seconds
 		p = decode_packet('\\0538000A217F19')
@@ -94,5 +115,6 @@ class LightingTests(unittest.TestCase):
 		# 50%, but 49.8039%.  next value is 50.1%.
 		self.assertEqual(round(p.sal[0].level, 2), 0.5)
 		
-		
+		# check that it encodes properly again
+		self.assertEqual(p.encode(), '0538000A217F19')		
 

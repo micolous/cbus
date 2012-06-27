@@ -159,7 +159,7 @@ BRIDGE_LENGTHS = {
 }
 
 def duration_to_ramp_rate(seconds):
-	for k, v in LIGHT_RAMP_RATES.iteritems():
+	for k, v in sorted(LIGHT_RAMP_RATES.iteritems(), cmp=lambda x, y: cmp(x[0], y[0])):
 		if seconds <= v:
 			return k
 	raise ValueError, 'That duration is too long!'

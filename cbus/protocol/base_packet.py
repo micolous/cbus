@@ -21,9 +21,26 @@ class BasePacket(object):
 		# base packet implementation.
 		self.checksum = checksum
 		
-		self.flags = flags
+		#self.flags = flags
 		self.destination_address_type = destination_address_type
 		self.rc = rc
 		self.dp = dp
 		self.priority_class = priority_class
+
+	def _encode(self):
+		# do checks to make sure the maths will work out.
+		assert self.destination_address_type == self.destination_address_type & 0x07, 'destination_address_type > 0x07'
+		assert self.rc == self.rc & 0x03, 'rc > 0x03'
+		assert self.priority_class == self.priority_class & 0x03, 'priority_class > 0x03'
+		
+		flags = \
+			self.destination_address_type + \
+			(self.rc << 3) + \
+			(0x20 if self.dp else 0x00) + \
+			(self.priority_class << 6)
+		
+		#print self.destination_address_type, self.rc << 3, 0x20 if self.dp else 0x00, self.priority_class << 6
+		assert 0 <= flags <= 0xFF, 'flags not between 0 and 255 (%r)!' % flags
+		
+		return [flags]
 

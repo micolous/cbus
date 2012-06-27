@@ -68,7 +68,8 @@ def decode_packet(data, checksum=True, strict=True, server_packet=False):
 	# increment ourselves along
 	data = data[1:]
 	
-	checksum = bool(checksum)
+	# TODO: handle source address
+	
 	
 	if destination_address_type == DAT_PP:
 		# decode as point-to-point packet
