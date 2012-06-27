@@ -23,6 +23,7 @@ from cbus.protocol.application.lighting import *
 class LightingTests(unittest.TestCase):
 	def runTest(self):
 		# Examples in serial interface guide, s6.4
+		# Switch on light at GA 8
 		p = decode_packet('\\0538000108BA')
 		
 		self.assertIsInstance(p, PointToMultipointPacket)
@@ -48,4 +49,50 @@ class LightingTests(unittest.TestCase):
 		# terminate ramp on light 10)
 		self.assertIsInstance(p.sal[2], LightingTerminateRampSAL)
 		self.assertEqual(p.sal[2].group_address, 10)
+		
+		
+		# Examples in Lighting Application s2.11
+		# switch on light at GA 0x93
+		p = decode_packet('\\0538007993B7')
+		
+		self.assertIsInstance(p, PointToMultipointPacket)
+		self.assertEqual(len(p.sal), 1)
+		
+		self.assertIsInstance(p.sal[0], LightingOnSAL)
+		self.assertEqual(p.sal[0].group_address, 0x93)
+
+		# Examples in quick start guide, s9.1
+		# turn on light 0x21
+		p = decode_packet('\\053800792129')
+		
+		self.assertIsInstance(p, PointToMultipointPacket)
+		self.assertEqual(len(p.sal), 1)
+		
+		self.assertIsInstance(p.sal[0], LightingOnSAL)
+		self.assertEqual(p.sal[0].group_address, 0x21)
+		
+		
+		# turn off light 0x21
+		p = decode_packet('\\0538000121A1')
+		
+		self.assertIsInstance(p, PointToMultipointPacket)
+		self.assertEqual(len(p.sal), 1)
+		
+		self.assertIsInstance(p.sal[0], LightingOffSAL)
+		self.assertEqual(p.sal[0].group_address, 0x21)
+		
+		# ramp light 0x21 to 50% over 4 seconds
+		p = decode_packet('\\0538000A217F19')
+		
+		self.assertIsInstance(p, PointToMultipointPacket)
+		self.assertEqual(len(p.sal), 1)
+		
+		self.assertIsInstance(p.sal[0], LightingRampSAL)
+		self.assertEqual(p.sal[0].group_address, 0x21)
+		self.assertEqual(p.sal[0].duration, 4)
+		# rounding must be done to 2 decimal places, as the value isn't actually
+		# 50%, but 49.8039%.  next value is 50.1%.
+		self.assertEqual(round(p.sal[0].level, 2), 0.5)
+		
+		
 
