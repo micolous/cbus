@@ -17,6 +17,7 @@
 
 
 class BasePacket(object):
+	confirmation = None
 	def __init__(self, checksum=True, flags=None, destination_address_type=None, rc=None, dp=None, priority_class=None):
 		# base packet implementation.
 		self.checksum = checksum
@@ -43,4 +44,23 @@ class BasePacket(object):
 		assert 0 <= flags <= 0xFF, 'flags not between 0 and 255 (%r)!' % flags
 		
 		return [flags]
+
+
+class SpecialClientPacket(BasePacket):
+	"""
+	Client -> PCI communications have some special packets, which we make subclasses of SpecialClientPacket to make them entirely seperate from normal packets.
+	
+	These have non-standard methods for serialisation.
+	"""
+	checksum = False
+	destination_address_type = None
+	rc = None
+	dp = None
+	priority_class = None
+	
+	def __init__(self):
+		pass
+	
+	def _encode(self):
+		return ''
 

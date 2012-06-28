@@ -26,14 +26,51 @@ from cbus.protocol.dm_packet import DeviceManagementPacket
 from cbus.common import *
 import warnings
 
-def decode_packet(data, checksum=True, strict=True, server_packet=False):
+def decode_packet(data, checksum=True, strict=True, server_packet=True):
 	data = data.strip()
+	if data == '':
+		return None
 	
-	# determine if this is a hard reset
-	if not server_packet and data == '~~~':
-		# reset
-		return ResetPacket()
+	# packets from clients have some special flags which we need to handle.
+	if not server_packet:
+		if data == '~~~':
+			# reset
+			return ResetPacket()
+		elif data == '|':
+			# smart + connect shortcut
+			return SmartConnectShortcutPacket()
+		elif '?' in data:
+			# discard data before the ?, and resubmit for processing.
+			data = data.split('?')[-1]
+			return decode_packet(data, checksum, strict, server_packet)
 
+		if data[0] == '\\':
+			data = data[1:]
+		
+		if data[0] == '@':
+			# this causes it to be once-off a "basic" mode command.
+			data = data[1:]
+			checksum = False		
+			
+		if data[-1] not in HEX_CHARS:
+			# then there is a confirmation code at the end.
+			confirmation = data[-1]
+			
+			if confirmation not in CONFIRMATION_CODES:
+				if strict:
+					raise ValueError, "Confirmation code is not a lowercase letter in g - z"
+				else:
+					warnings.warn('Confirmation code is not a lowercase letter in g - z')
+					
+			data = data[:-1]
+		else:
+			confirmation = None
+			
+			
+	for c in data:
+		if c not in HEX_CHARS:
+			raise ValueError, "Non-base16 input: %r in %r" % (c, data)
+			
 	# get the checksum, if it's there.
 	if checksum:
 		# check the checksum
@@ -46,12 +83,9 @@ def decode_packet(data, checksum=True, strict=True, server_packet=False):
 		# strip checksum
 		data = data[:-2]
 	
-	if data[0] == '\\':
-		data = data[1:]
+
 	
-	for c in data:
-		if c not in HEX_CHARS:
-			raise ValueError, "Non-base16 input: %r in %r" % (c, data)
+
 	
 	# base16 decode
 	data = b16decode(data)
@@ -75,7 +109,7 @@ def decode_packet(data, checksum=True, strict=True, server_packet=False):
 	if dp:
 		# device management flag set!
 		# this is used to set parameters of the PCI
-		return DeviceManagementPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
+		p = DeviceManagementPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
 	
 	
 	if destination_address_type == DAT_PP:
@@ -84,10 +118,14 @@ def decode_packet(data, checksum=True, strict=True, server_packet=False):
 		pass
 	elif destination_address_type == DAT_PM:
 		# decode as point-to-multipoint packet
-		return PointToMultipointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
+		p = PointToMultipointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
 	elif destination_address_type == DAT_PPM:
 		# decode as point-to-point-to-multipoint packet
 		#return PointToPointToMultipointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
 		pass
 
+	if not server_packet and confirmation:
+		p.confirmation = confirmation
+	
+	return p
 

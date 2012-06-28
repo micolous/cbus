@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/reset_packet.py - PCI Reset Packet
+# cbus/protocol/scs_packet.py - Smart + Connect Mode Shortcut Packet
 # Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify
@@ -15,12 +15,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from cbus.protocol.base_packet import SpecialClientPacket
+from cbus.protocol.base_packet import SpecialClientPacketcd cbi
 
-class ResetPacket(SpecialClientPacket):
+class SmartConnectShortcutPacket(SpecialClientPacket):
 	def __init__(self):
-		super(ResetPacket, self).__init__(checksum=False)
+		super(SmartConnectShortcutPacket, self).__init__(checksum=False)
 	
 	def encode(self, source_addr=None):
-		return '~~~'
+		return '|'
 

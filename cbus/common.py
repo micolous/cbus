@@ -118,7 +118,7 @@ LANGUAGE_CODES = {
 	
 }
 # these are valid confirmation codes used in acknowledge events.
-CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzGHIJKLMNOPQRSTUVWXYZ'
+CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzg'
 
 MIN_GROUP_ADDR = 0
 MAX_GROUP_ADDR = 255

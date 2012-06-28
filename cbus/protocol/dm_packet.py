@@ -19,7 +19,7 @@ from cbus.protocol.application import APPLICATIONS
 from cbus.common import *
 from base64 import b16encode
 
-class PointToMultipointPacket(BasePacket):
+class DeviceManagementPacket(BasePacket):
 	status_request = False
 	sal = []
 	
