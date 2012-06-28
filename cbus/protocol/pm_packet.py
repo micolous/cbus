@@ -21,6 +21,9 @@ from base64 import b16encode
 
 class PointToMultipointPacket(BasePacket):
 	status_request = False
+	level_request = False
+	group_address = None
+	application = None
 	sal = []
 	
 	@classmethod
@@ -39,7 +42,26 @@ class PointToMultipointPacket(BasePacket):
 			# ...decode it.
 			data = data[2:]
 			
-			raise NotImplemented, "status request not implemented"
+			if data[0] in ('\x7A', '\xFA'):
+				# 7A version of the status request (binary)
+				# FA is deprecated and "shouldn't be used".  ha ha.
+				data = data[1:]
+				level_request = False
+			elif data[:2] == '\x73\x07':
+				# 7307 version of the status request (levels, in v4)
+				data = data[2:]
+				level_request = True
+			else:
+				raise NotImplemented, 'unknown status request type %r' % data[0]
+			
+			
+			# now read the application
+			packet.application = ord(data[0])
+			packet.group_address = ord(data[1])
+			
+			assert packet.group_address % 0x20 == 0, 'group_address report must be a multiple of 0x20'
+			
+			return packet
 		else:
 			# SAL data (application request)
 			packet.status_request = False
@@ -56,7 +78,15 @@ class PointToMultipointPacket(BasePacket):
 		# TODO: Implement source address
 		
 		if self.status_request:
-			raise NotImplemented, "status request not implemented"
+			# this a level request
+			a = int(self.application)
+			ga = int(self.group_address)
+			
+			assert 0 <= a <= 0xFF, 'application must be in range 0..255 (got %r)' % a
+			assert 0 <= ga <= 0xFF, 'groupaddress must be in range 0..255 (got %r)' % ga
+			
+			l = [0x73, 0x07] if self.level_request else [0x7A]
+			o = [0xFF] + l + [packet.application, packet.group_address]
 		
 		else:
 			# encode the remainder

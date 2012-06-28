@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/application/lighting_test.py - Lighting Application unit tests
+# cbus/protocol/application/testlighting.py - Lighting Application unit tests
 # Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify
