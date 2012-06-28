@@ -15,11 +15,14 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from cbus.protocol.base_packet import SpecialClientPacketcd cbi
+from cbus.protocol.base_packet import SpecialClientPacket
+
+__all__ = ['SmartConnectShortcutPacket']
+
 
 class SmartConnectShortcutPacket(SpecialClientPacket):
 	def __init__(self):
-		super(SmartConnectShortcutPacket, self).__init__(checksum=False)
+		super(SmartConnectShortcutPacket, self).__init__()
 	
 	def encode(self, source_addr=None):
 		return '|'

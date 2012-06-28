@@ -22,6 +22,13 @@ from twisted.python import log
 from twisted.internet import reactor
 from cbus.common import *
 from base64 import b16encode, b16decode
+from cbus.protocol.packet import decode_packet
+from cbus.protocol.base_packet import BasePacket, SpecialClientPacket
+from cbus.protocol.reset_packet import ResetPacket
+from cbus.protocol.scs_packet import SmartConnectShortcutPacket
+from cbus.protocol.pm_packet import PointToMultipointPacket
+from cbus.protocol.dm_packet import DeviceManagementPacket
+from cbus.protocol.application.lighting import *
 
 __all__ = ['PCIServerProtocol']
 
@@ -76,15 +83,14 @@ class PCIServerProtocol(LineReceiver):
 		if self.basic_mode:
 			self._send(line, checksum=False, nl=False)
 		
-		if line == '~~~':
-			self.on_reset()
-
-			return
-		
-		if len(line) == 0:
-			# skip, empty line
-			log.msg("recv: empty line")
-			return
+		#if line == '~~~':
+		#	self.on_reset()
+		#	return
+		#
+		#if len(line) == 0:
+		#	# skip, empty line
+		#	log.msg("recv: empty line")
+		#	return
 			
 		# TODO: handle other bus requests properly.
 		self.decode_cbus_event(line)
@@ -103,6 +109,113 @@ class PCIServerProtocol(LineReceiver):
 		
 		"""
 		
+		# pass the data to the protocol decoder
+		p = decode_packet(line, checksum=self.checksum, server_packet=False)
+		
+		# check for special commands, and handle them.
+		if p == None:
+			log.msg("dce: packet == None")
+			return
+			
+		if isinstance(p, SpecialClientPacket):
+			# do special things
+			# full reset
+			if isinstance(p, ResetPacket):
+				self.on_reset()
+				return
+			
+			# smart+connect shortcut
+			if isinstance(p, SmartConnectShortcutPacket):
+				self.basic_mode = False
+				self.checksum = True
+				self.connect = True
+				return
+				
+			log.msg('dce: unknown SpecialClientPacket: %r', p)
+		elif isinstance(p, PointToMultipointPacket):
+			# is this a status inquiry
+			
+			if p.status_request == None:
+				# status request
+				# TODO
+				log.msg('dce: unhandled status request packet')
+			else:
+				# application command
+				
+				for s in p.sal:
+					if isinstance(s, LightingSAL):
+						# lighting application
+						if isinstance(s, LightingRampSAL):
+							self.on_lighting_group_ramp(s.group_address, s.duration, s.level)
+						elif isinstance(s, LightingOnSAL):
+							self.on_lighting_group_on(s.group_address)
+						elif isinstance(s, LightingOffSAL):
+							self.on_lighting_group_off(s.group_address)
+						elif isinstance(s, LightingTerminateRampSAL):
+							self.on_lighting_group_terminate_ramp(s.group_address)
+						else:
+							log.msg('dce: unhandled lighting SAL type: %r' % s)
+							return
+					
+					else:
+						log.msg('dce: unhandled SAL type: %r' % s)
+						return
+		elif isinstance(p, DeviceManagementPacket):
+			if p.parameter == 0x21:
+				# application address 1
+				application_addr1 = p.value
+			elif p.parameter == 0x22:
+				# application address 2
+				application_addr2 = p.value
+			elif p.parameter == 0x3E:
+				# interface options 2
+				# TODO: implement
+				pass
+			elif p.parameter == 0x42:
+				# interface options 3
+				# TODO: implement
+				pass
+			elif p.parameter in (0x30, 0x41):
+				# interface options 1 / power up options 1
+				self.connect = self.checksum = self.monitor = self.idmon = False
+				self.basic_mode = True
+				
+				if p.value & 0x01:
+					self.connect = True
+				if p.value & 0x02:
+					# reserved, ignored.
+					pass
+				if p.value & 0x04:
+					# TODO: xon/xoff handshaking.  not supported.
+					pass
+				if p.value & 0x08:
+					# srchk (checksum checking)
+					self.checksum = True
+				if p.value & 0x10:
+					# smart mode
+					self.basic_mode = False
+					self.local_echo = False
+				if p.value & 0x20:
+					# monitor mode
+					self.monitor = True
+				if p.value & 0x40:
+					# idmon
+					self.idmon = True
+			else:
+				log.msg('dce: unhandled DeviceManagementPacket (%r = %r)' % (p.parameter, p.value))
+				return
+		else:
+			log.msg('dce: unhandled packet type: %r', p)
+			return
+		
+		# TODO: handle parameters
+		
+		if p.confirmation:
+			self.send_confirmation(p.confirmation, True)
+		
+		print p
+		return
+		
 		# check for any ? in the line (cancel), s4.2.4
 		if '?' in line:
 			# delete everything before the ?
@@ -112,6 +225,7 @@ class PCIServerProtocol(LineReceiver):
 		# SMART + CONNECT shortcut
 		if line == '|':
 			self.basic_mode = False
+			self.checksum = True
 			self.connect = True
 			return
 			

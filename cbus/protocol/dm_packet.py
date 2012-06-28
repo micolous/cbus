@@ -20,30 +20,38 @@ from cbus.common import *
 from base64 import b16encode
 
 class DeviceManagementPacket(BasePacket):
-	status_request = False
-	sal = []
+	parameter = None
+	value = None
 	
 	@classmethod
 	def decode_packet(cls, data, checksum, flags, destination_address_type, rc, dp, priority_class):
 		packet = cls(checksum, flags, destination_address_type, rc, dp, priority_class)
 		
-			
+		# serial interface guide s10.2
+		# A3 pp 00 vv
+		# where:
+		#  pp = parameter number
+		#  vv = value
+		
+		packet.parameter = ord(data[0])
+		assert ord(data[1]) == 0, 'second byte of DeviceManagementPacket must be 0'
+		packet.value = ord(data[2])
+		
+		assert len(data) == 3, 'bad device management packet length (!= 3+)'
+		
 		return packet
 		
 	def encode(self, source_addr=None):
-		raise NotImplemented, "status request not implemented"
 
 		# encode the remainder
 		o = [
-			self.application,
+			self.parameter,
 			0,
+			self.value
 		]
-		for x in self.sal:
-				o += x.encode()
-		
 		# join the packet
 		p = (''.join((chr(x) for x in (
-			super(PointToMultipointPacket, self)._encode() + o
+			super(DeviceManagementPacket, self)._encode() + o
 		))))
 		
 		# checksum it, if needed.

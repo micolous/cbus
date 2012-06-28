@@ -19,7 +19,7 @@ from cbus.protocol.base_packet import SpecialClientPacket
 
 class ResetPacket(SpecialClientPacket):
 	def __init__(self):
-		super(ResetPacket, self).__init__(checksum=False)
+		super(ResetPacket, self).__init__()
 	
 	def encode(self, source_addr=None):
 		return '~~~'

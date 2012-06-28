@@ -18,6 +18,7 @@
 
 from base64 import b16encode, b16decode
 from cbus.protocol.reset_packet import ResetPacket
+from cbus.protocol.scs_packet import SmartConnectShortcutPacket
 from cbus.protocol.base_packet import BasePacket
 #from cbus.protocol.pp_packet import PointToPointPacket
 #from cbus.protocol.ppm_packet import PointToPointToMultipointPacket

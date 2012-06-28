@@ -581,7 +581,9 @@ if __name__ == '__main__':
 	from twisted.internet import reactor
 	from twisted.internet.serialport import SerialPort
 	import sys
-	
+	from optparse import OptionParser
+	from twisted.internet.endpoints import TCP4ClientEndpoint
+	from twisted.internet.protocol import Factory
 	
 	class PCIProtocolFactory(ClientFactory):
 		def startedConnecting(self, connector):
@@ -599,7 +601,12 @@ if __name__ == '__main__':
 			print 'Connection failed. Reason:', reason
 			reactor.stop()
 	
-
+	class CBusProtocolHandlerFactory(Factory):
+		def __init__(self, protocol):
+			self.protocol = protocol
+		
+		def buildProtocol(self, addr):
+			return self.protocol
 	
 	parser = OptionParser(usage='%prog', description="""
 		Library for communications with a CBus PCI in Twisted.  Acts as a test
@@ -612,6 +619,7 @@ if __name__ == '__main__':
 	
 	log.startLogging(sys.stdout)
 	
+	protocol = PCIProtocol()
 	if option.serial_pci and option.tcp_pci:
 		parser.error('Both serial and TCP CBus PCI addresses were specified!  Use only one...')
 	elif option.serial_pci:

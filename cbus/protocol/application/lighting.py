@@ -16,6 +16,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from cbus.common import *
+import warnings
 
 __all__ = [
 	'LightingSAL',
@@ -39,13 +40,24 @@ class LightingSAL(object):
 		
 		while data:
 			# parse the data
+			
+			if len(data) < 2:
+				# not enough data to go on.
+				warnings.warn("Got 1 byte of stray SAL for lighting application (malformed packet)", UserWarning)
+				break
+			
 			command_code = ord(data[0])
 			group_address = ord(data[1])
 			data = data[2:]
 			
+			if command_code not in SAL_HANDLERS:
+				warnings.warn('Got unknown lighting command %r, stopping processing prematurely' % command_code, UserWarning)
+				break
+				
 			sal, data = SAL_HANDLERS[command_code].decode(data, packet, command_code, group_address)
-			
-			output.append(sal)
+		
+			if sal:
+				output.append(sal)
 		return output
 
 
@@ -59,6 +71,11 @@ class LightingRampSAL(LightingSAL):
 	@classmethod
 	def decode(cls, data, packet, command_code, group_address):
 		duration = ramp_rate_to_duration(command_code)
+		
+		if not data:
+			warnings.warn('Couldn\'t get level for LightingRampSAL, no more data.', UserWarning)
+			return None
+			
 		level = ord(data[0]) / 255.
 		
 		data = data[1:]
