@@ -104,8 +104,12 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 	# increment ourselves along
 	data = data[1:]
 	
-	# TODO: handle source address
-	
+	# handle source address
+	if server_packet:
+		source_addr = ord(data[0])
+		data = data[1:]
+	else:
+		source_addr = None
 	
 	if dp:
 		# device management flag set!
@@ -127,6 +131,8 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 
 	if not server_packet and confirmation:
 		p.confirmation = confirmation
+	elif source_addr:
+		p.source_address = source_addr
 	
 	return p
 

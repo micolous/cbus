@@ -19,6 +19,7 @@ import unittest
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.application.lighting import *
+from cbus.common import *
 
 class LightingSerialInterfaceGuideTests(unittest.TestCase):
 	def runTest(self):
@@ -121,4 +122,24 @@ class LightingQuickStartGuideTests(unittest.TestCase):
 		# check that it encodes properly again
 		self.assertEqual(p.encode(), '0538000A217F19')		
 		self.assertEqual(p.confirmation, 'l')
+
+
+class EncodeDecodeTests(unittest.TestCase):
+	def runTest(self):
+		"self-made tests of encode then decode"
+		
+		orig = PointToMultipointPacket(application=APP_LIGHTING)
+		orig.source_address = 5
+		orig.sal.append(LightingOnSAL(orig, 27))
+		
+		data = orig.encode()
+
+		d = decode_packet(data)
+		self.assertIsInstance(orig, PointToMultipointPacket)		
+		self.assertEqual(orig.source_address, d.source_address)
+		self.assertEqual(len(orig.sal), len(d.sal))
+		
+		self.assertIsInstance(d.sal[0], LightingOnSAL)
+		self.assertEqual(orig.sal[0].group_address, orig.sal[0].group_address)
+
 

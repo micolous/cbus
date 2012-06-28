@@ -316,12 +316,12 @@ class PCIServerProtocol(LineReceiver):
 		:rtype: string
 		
 		"""
-		if not validate_ga(group_addr):
-			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
-
-		d = (POINT_TO_MULTIPOINT, source_addr, APP_LIGHTING, ROUTING_NONE,
-			LIGHT_ON, group_addr)
-		return self._send(d)
+		
+		p = PointToMultipointPacket()
+		p.source_address = source_addr
+		p.sal.append(LightingOnSAL(p, group_addr))
+		p.checksum = self.checksum
+		return self._send(p.encode(), checksum=False)
 	
 	def lighting_group_off(self, source_addr, group_addr):
 		"""
@@ -335,15 +335,14 @@ class PCIServerProtocol(LineReceiver):
 		
 		:returns: Single-byte string with code for the confirmation event.
 		:rtype: string
-		
-		
+				
 		"""
-		if not validate_ga(group_addr):
-			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
+		p = PointToMultipointPacket()
+		p.source_address = source_addr
+		p.sal.append(LightingOffSAL(p, group_addr))
+		p.checksum = self.checksum
+		return self._send(p.encode(), checksum=False)
 
-		d = (POINT_TO_MULTIPOINT, source_addr, APP_LIGHTING, ROUTING_NONE, 
-			LIGHT_OFF, group_addr)
-		return self._send(d)
 	
 	def lighting_group_ramp(self, source_addr, group_addr, duration, level=1.0):
 		"""
@@ -371,19 +370,12 @@ class PCIServerProtocol(LineReceiver):
 		:rtype: string
 		
 		"""
-		if not validate_ga(group_addr):
-			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
-			
-		if not (0.0 <= level <= 1.0):
-			raise ValueError, 'Ramp level is out of bounds.  Must be between 0.0 and 1.0 (got %r).' % level
-		
-		if not validate_ramp_rate(duration):
-			raise ValueError, 'Duration is out of bounds, must be between %d and %d (got %r)' % (MIN_RAMP_RATE, MAX_RAMP_RATE, duration)
-		
-		d = (POINT_TO_MULTIPOINT, source_addr, APP_LIGHTING, ROUTING_NONE,
-			duration_to_ramp_rate(duration), group_addr, level)
-		
-		return self._send(d)
+		p = PointToMultipointPacket(application=APP_LIGHTING)
+		p.source_address = source_addr
+		p.sal.append(LightingRampSAL(p, group_addr, duration, level))
+		p.checksum = self.checksum
+		return self._send(p.encode(), checksum=False)
+
 
 	def lighting_group_terminate_ramp(self, source_addr, group_addr):
 		"""
@@ -398,14 +390,12 @@ class PCIServerProtocol(LineReceiver):
 		:returns: Single-byte string with code for the confirmation event.
 		:rtype: string
 		"""
-		
-		if not validate_ga(group_addr):
-			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
-		
-		d = (POINT_TO_MULTIPOINT, source_addr, APP_LIGHTING, ROUTING_NONE, \
-			LIGHT_TERMINATE_RAMP, group_addr)
-			
-		return self._send(d)
+		p = PointToMultipointPacket()
+		p.source_address = source_addr
+		p.sal.append(LightingTerminateRampSAL(p, group_addr))
+		p.checksum = self.checksum
+		return self._send(p.encode(), checksum=False)
+
 		
 if __name__ == '__main__':
 	# test program for protocol

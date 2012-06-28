@@ -18,6 +18,8 @@
 
 class BasePacket(object):
 	confirmation = None
+	source_address = None
+	
 	def __init__(self, checksum=True, flags=None, destination_address_type=None, rc=None, dp=None, priority_class=None):
 		# base packet implementation.
 		self.checksum = checksum
@@ -43,7 +45,13 @@ class BasePacket(object):
 		#print self.destination_address_type, self.rc << 3, 0x20 if self.dp else 0x00, self.priority_class << 6
 		assert 0 <= flags <= 0xFF, 'flags not between 0 and 255 (%r)!' % flags
 		
-		return [flags]
+		if self.source_address:
+			source_address = int(self.source_address)
+			assert 0 <= flags <= 0xFF, 'source_address set, and not between 0 and 255 (%r)!' % source_address
+			
+			return [flags, source_address]
+		else:
+			return [flags]
 
 
 class SpecialClientPacket(BasePacket):

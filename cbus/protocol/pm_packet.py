@@ -26,9 +26,15 @@ class PointToMultipointPacket(BasePacket):
 	application = None
 	sal = []
 	
+	def __init__(self, checksum=True, priority_class=CLASS_4, application=None, status_request=False):
+		super(PointToMultipointPacket, self).__init__(checksum, None, DAT_PM, 0, False, priority_class)
+		self.application = application
+		self.status_request = status_request
+		
+	
 	@classmethod
 	def decode_packet(cls, data, checksum, flags, destination_address_type, rc, dp, priority_class):
-		packet = cls(checksum, flags, destination_address_type, rc, dp, priority_class)
+		packet = cls(checksum, priority_class)
 		# serial interface guide s4.2.9.2
 		
 		# is this referencing an application

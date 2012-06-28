@@ -59,6 +59,12 @@ class LightingSAL(object):
 			if sal:
 				output.append(sal)
 		return output
+	
+	def encode(self):
+		if not validate_ga(self.group_address):
+			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, self.group_address)
+		
+		return []
 
 
 class LightingRampSAL(LightingSAL):
@@ -82,7 +88,13 @@ class LightingRampSAL(LightingSAL):
 		return cls(packet, group_address, duration, level), data
 	
 	def encode(self):
-		return [
+		if not (0.0 <= self.level <= 1.0):
+			raise ValueError, 'Ramp level is out of bounds.  Must be between 0.0 and 1.0 (got %r).' % self.level
+		
+		if not validate_ramp_rate(self.duration):
+			raise ValueError, 'Duration is out of bounds, must be between %d and %d (got %r)' % (MIN_RAMP_RATE, MAX_RAMP_RATE, self.duration)
+			
+		return super(LightingRampSAL, self).encode() + [
 			duration_to_ramp_rate(self.duration),
 			self.group_address,
 			int(self.level * 255)
@@ -98,7 +110,7 @@ class LightingOnSAL(LightingSAL):
 		return cls(packet, group_address), data
 		
 	def encode(self):
-		return [
+		return super(LightingOnSAL, self).encode() + [
 			LIGHT_ON,
 			self.group_address
 		]
@@ -113,7 +125,7 @@ class LightingOffSAL(LightingSAL):
 		return cls(packet, group_address), data
 		
 	def encode(self):
-		return [
+		return super(LightingOffSAL, self).encode() + [
 			LIGHT_OFF,
 			self.group_address
 		]
@@ -128,7 +140,7 @@ class LightingTerminateRampSAL(LightingSAL):
 		return cls(packet, group_address), data
 		
 	def encode(self):
-		return [
+		return super(LightingTerminateRampSAL, self).encode() + [
 			LIGHT_TERMINATE_RAMP,
 			self.group_address
 		]
