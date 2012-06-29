@@ -24,26 +24,58 @@ from cbus.protocol.base_packet import BasePacket
 #from cbus.protocol.ppm_packet import PointToPointToMultipointPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.dm_packet import DeviceManagementPacket
+from cbus.protocol.po_packet import PowerOnPacket
+from cbus.protocol.error_packet import PCIErrorPacket
+from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.common import *
 import warnings
 
 def decode_packet(data, checksum=True, strict=True, server_packet=True):
+	"""
+	Decodes a packet from or send to the PCI.
+	
+	Returns a tuple, the packet that was parsed and the remainder that was
+	unparsed (in the case of some special commands.
+	
+	If no packet was able to be parsed, the first element of the tuple will be
+	None.  However there may be some circumstances where there is still a
+	remainder to be parsed (cancel request).
+	
+	"""
 	data = data.strip()
 	if data == '':
-		return None
+		return None, None
 	
 	# packets from clients have some special flags which we need to handle.
-	if not server_packet:
+	if server_packet:
+		if data[0] == '+':
+			data = data[1:]
+			return PowerOnPacket(), data
+		elif data[0] == '!':
+			# buffer is full / invalid checksum, some requests may be dropped.
+			# serial interface guide s4.3.3 p28
+			data = data[1:]
+			return PCIErrorPacket(), data
+		
+		if data[0] in CONFIRMATION_CODES:
+			success = line[1] == '.'
+			code = line[0]
+			data = data[2:]
+			return ConfirmationPacket(code, success), data
+			
+			
+			
+	else:
 		if data == '~~~':
 			# reset
-			return ResetPacket()
+			return ResetPacket(), None
 		elif data == '|':
 			# smart + connect shortcut
-			return SmartConnectShortcutPacket()
+			return SmartConnectShortcutPacket(), None
 		elif '?' in data:
 			# discard data before the ?, and resubmit for processing.
 			data = data.split('?')[-1]
-			return decode_packet(data, checksum, strict, server_packet)
+			return None, data
 
 		if data[0] == '\\':
 			data = data[1:]
@@ -83,10 +115,6 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 		
 		# strip checksum
 		data = data[:-2]
-	
-
-	
-
 	
 	# base16 decode
 	data = b16decode(data)
@@ -134,5 +162,5 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 	elif source_addr:
 		p.source_address = source_addr
 	
-	return p
+	return p, None
 

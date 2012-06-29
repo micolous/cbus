@@ -15,6 +15,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+__all__ = [
+	'BasePacket',
+	'SpecialPacket',
+	'SpecialClientPacket',
+	'SpecialServerPacket'
+]
 
 class BasePacket(object):
 	confirmation = None
@@ -54,11 +60,9 @@ class BasePacket(object):
 			return [flags]
 
 
-class SpecialClientPacket(BasePacket):
+class SpecialPacket(BasePacket):
 	"""
-	Client -> PCI communications have some special packets, which we make subclasses of SpecialClientPacket to make them entirely seperate from normal packets.
-	
-	These have non-standard methods for serialisation.
+
 	"""
 	checksum = False
 	destination_address_type = None
@@ -71,4 +75,23 @@ class SpecialClientPacket(BasePacket):
 	
 	def _encode(self):
 		return ''
+
+
+class SpecialClientPacket(SpecialPacket):
+	"""
+	Client -> PCI communications have some special packets, which we make subclasses of SpecialClientPacket to make them entirely seperate from normal packets.
+	
+	These have non-standard methods for serialisation.
+	"""
+	
+	pass
+	
+class SpecialServerPacket(SpecialPacket):
+	"""
+	PCI -> Client has some special packets that we make subclasses of this, because they're different to regular packets.
+	
+	These have non-standard serialisation methods.
+	"""
+	
+	pass
 

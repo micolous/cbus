@@ -26,8 +26,11 @@ from cbus.protocol.packet import decode_packet
 from cbus.protocol.base_packet import BasePacket, SpecialClientPacket
 from cbus.protocol.reset_packet import ResetPacket
 from cbus.protocol.scs_packet import SmartConnectShortcutPacket
+from cbus.protocol.po_packet import PowerOnPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.dm_packet import DeviceManagementPacket
+from cbus.protocol.confirm_packet import ConfirmationPacket
+from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.application.lighting import *
 
 __all__ = ['PCIServerProtocol']
@@ -64,7 +67,7 @@ class PCIServerProtocol(LineReceiver):
 		
 		"""
 		
-		self._send('++', checksum=False)
+		self._send(PowerOnPacket())
 		
 		
 	def lineReceived(self, line):
@@ -93,7 +96,8 @@ class PCIServerProtocol(LineReceiver):
 		#	return
 			
 		# TODO: handle other bus requests properly.
-		self.decode_cbus_event(line)
+		while line:
+			line = self.decode_cbus_event(line)
 	
 	def decode_cbus_event(self, line):
 		"""
@@ -110,26 +114,26 @@ class PCIServerProtocol(LineReceiver):
 		"""
 		
 		# pass the data to the protocol decoder
-		p = decode_packet(line, checksum=self.checksum, server_packet=False)
+		p, remainder = decode_packet(line, checksum=self.checksum, server_packet=False)
 		
 		# check for special commands, and handle them.
 		if p == None:
 			log.msg("dce: packet == None")
-			return
+			return remainder
 			
 		if isinstance(p, SpecialClientPacket):
 			# do special things
 			# full reset
 			if isinstance(p, ResetPacket):
 				self.on_reset()
-				return
+				return remainder
 			
 			# smart+connect shortcut
 			if isinstance(p, SmartConnectShortcutPacket):
 				self.basic_mode = False
 				self.checksum = True
 				self.connect = True
-				return
+				return remainder
 				
 			log.msg('dce: unknown SpecialClientPacket: %r', p)
 		elif isinstance(p, PointToMultipointPacket):
@@ -155,11 +159,11 @@ class PCIServerProtocol(LineReceiver):
 							self.on_lighting_group_terminate_ramp(s.group_address)
 						else:
 							log.msg('dce: unhandled lighting SAL type: %r' % s)
-							return
+							return remainder
 					
 					else:
 						log.msg('dce: unhandled SAL type: %r' % s)
-						return
+						return remainder
 		elif isinstance(p, DeviceManagementPacket):
 			if p.parameter == 0x21:
 				# application address 1
@@ -203,15 +207,17 @@ class PCIServerProtocol(LineReceiver):
 					self.idmon = True
 			else:
 				log.msg('dce: unhandled DeviceManagementPacket (%r = %r)' % (p.parameter, p.value))
-				return
+				return remainder
 		else:
 			log.msg('dce: unhandled packet type: %r', p)
-			return
+			return remainder
 		
 		# TODO: handle parameters
 		
 		if p.confirmation:
 			self.send_confirmation(p.confirmation, True)
+		
+		return remainder
 		
 	# event handlers
 	
@@ -277,9 +283,19 @@ class PCIServerProtocol(LineReceiver):
 		Sends a packet of CBus data.
 		
 		"""
-		if type(cmd) != str:
-			# must be an iterable of ints
-			cmd = ''.join([chr(x) for x in cmd])
+		if isinstance(cmd, BasePacket):
+			checksum = False
+			
+			if isinstance(cmd, ConfirmationPacket):
+				nl = False
+			cmd = cmd.encode()
+		else:
+			if nl:
+				# special packets get exemption from this warning
+				log.msg('send: non-basepacket type!')
+			if type(cmd) != str:
+				# must be an iterable of ints
+				cmd = ''.join([chr(x) for x in cmd])
 		
 		if checksum and self.checksum:
 			cmd = add_cbus_checksum(cmd)
@@ -292,13 +308,13 @@ class PCIServerProtocol(LineReceiver):
 			self.transport.write(cmd)
 		
 	def send_error(self):
-		self._send('!', checksum=False, nl=False)
+		self._send(PCIErrorPacket())
 	
 	def send_confirmation(self, code, ok=True):
-		if not ok:
-			raise NotImplementedError, 'ok != true not implemented'
+		#if not ok:
+		#	raise NotImplementedError, 'ok != true not implemented'
 		
-		self._send(code + '.', checksum=False, nl=False)
+		self._send(ConfirmationPacket(code, ok))
 			
 		
 	
@@ -321,7 +337,7 @@ class PCIServerProtocol(LineReceiver):
 		p.source_address = source_addr
 		p.sal.append(LightingOnSAL(p, group_addr))
 		p.checksum = self.checksum
-		return self._send(p.encode(), checksum=False)
+		return self._send(p, checksum=False)
 	
 	def lighting_group_off(self, source_addr, group_addr):
 		"""
@@ -341,7 +357,7 @@ class PCIServerProtocol(LineReceiver):
 		p.source_address = source_addr
 		p.sal.append(LightingOffSAL(p, group_addr))
 		p.checksum = self.checksum
-		return self._send(p.encode(), checksum=False)
+		return self._send(p, checksum=False)
 
 	
 	def lighting_group_ramp(self, source_addr, group_addr, duration, level=1.0):
@@ -374,7 +390,7 @@ class PCIServerProtocol(LineReceiver):
 		p.source_address = source_addr
 		p.sal.append(LightingRampSAL(p, group_addr, duration, level))
 		p.checksum = self.checksum
-		return self._send(p.encode(), checksum=False)
+		return self._send(p, checksum=False)
 
 
 	def lighting_group_terminate_ramp(self, source_addr, group_addr):
@@ -394,7 +410,7 @@ class PCIServerProtocol(LineReceiver):
 		p.source_address = source_addr
 		p.sal.append(LightingTerminateRampSAL(p, group_addr))
 		p.checksum = self.checksum
-		return self._send(p.encode(), checksum=False)
+		return self._send(p, checksum=False)
 
 		
 if __name__ == '__main__':

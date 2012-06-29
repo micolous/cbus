@@ -25,7 +25,7 @@ class LightingSerialInterfaceGuideTests(unittest.TestCase):
 	def runTest(self):
 		"Examples in serial interface guide, s6.4"
 		# Switch on light at GA 8
-		p = decode_packet('\\0538000108BAg', server_packet=False)
+		p, r = decode_packet('\\0538000108BAg', server_packet=False)
 		
 		self.assertIsInstance(p, PointToMultipointPacket)
 		self.assertEqual(len(p.sal), 1)
@@ -38,7 +38,7 @@ class LightingSerialInterfaceGuideTests(unittest.TestCase):
 		self.assertEqual(p.confirmation, 'g')
 		
 		
-		p = decode_packet('\\05380001087909090A25h', server_packet=False)
+		p, r = decode_packet('\\05380001087909090A25h', server_packet=False)
 		
 		self.assertIsInstance(p, PointToMultipointPacket)
 		self.assertEqual(len(p.sal), 3)
@@ -64,7 +64,7 @@ class LightingApplicationTests(unittest.TestCase):
 	def runTest(self):
 		"Examples in Lighting Application s2.11"
 		# switch on light at GA 0x93
-		p = decode_packet('\\0538007993B7j', server_packet=False)
+		p, r = decode_packet('\\0538007993B7j', server_packet=False)
 		
 		self.assertIsInstance(p, PointToMultipointPacket)
 		self.assertEqual(len(p.sal), 1)
@@ -81,7 +81,7 @@ class LightingQuickStartGuideTests(unittest.TestCase):
 	def runTest(self):
 		"Examples in quick start guide, s9.1"
 		# turn on light 0x21
-		p = decode_packet('\\053800792129i', server_packet=False)
+		p, r = decode_packet('\\053800792129i', server_packet=False)
 		
 		self.assertIsInstance(p, PointToMultipointPacket)
 		self.assertEqual(len(p.sal), 1)
@@ -94,7 +94,7 @@ class LightingQuickStartGuideTests(unittest.TestCase):
 		self.assertEqual(p.confirmation, 'i')
 		
 		# turn off light 0x21
-		p = decode_packet('\\0538000121A1k', server_packet=False)
+		p, r = decode_packet('\\0538000121A1k', server_packet=False)
 		
 		self.assertIsInstance(p, PointToMultipointPacket)
 		self.assertEqual(len(p.sal), 1)
@@ -107,7 +107,7 @@ class LightingQuickStartGuideTests(unittest.TestCase):
 		self.assertEqual(p.confirmation, 'k')
 		
 		# ramp light 0x21 to 50% over 4 seconds
-		p = decode_packet('\\0538000A217F19l', server_packet=False)
+		p, r = decode_packet('\\0538000A217F19l', server_packet=False)
 		
 		self.assertIsInstance(p, PointToMultipointPacket)
 		self.assertEqual(len(p.sal), 1)
@@ -134,12 +134,13 @@ class EncodeDecodeTests(unittest.TestCase):
 		
 		data = orig.encode()
 
-		d = decode_packet(data)
+		d, r = decode_packet(data)
 		self.assertIsInstance(orig, PointToMultipointPacket)		
 		self.assertEqual(orig.source_address, d.source_address)
 		self.assertEqual(len(orig.sal), len(d.sal))
 		
 		self.assertIsInstance(d.sal[0], LightingOnSAL)
 		self.assertEqual(orig.sal[0].group_address, orig.sal[0].group_address)
+		self.assertEqual(r, None)
 
 
