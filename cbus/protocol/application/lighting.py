@@ -32,6 +32,14 @@ class LightingSAL(object):
 	def __init__(self, packet=None, group_address=None):
 		self.packet = packet
 		self.group_address = group_address
+		
+		assert packet != None, 'packet must not be none.'
+		
+		if self.packet.application == None:
+			# no application set on the packet, set it.
+			self.packet.application = APP_LIGHTING
+		elif self.packet.application != APP_LIGHTING:
+			raise ValueError, 'packet has a different application set already. cannot have multiple application SAL in the same packet.'
 	
 	@classmethod
 	def decode(cls, data, packet):

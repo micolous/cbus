@@ -58,8 +58,8 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 			return PCIErrorPacket(), data
 		
 		if data[0] in CONFIRMATION_CODES:
-			success = line[1] == '.'
-			code = line[0]
+			success = data[1] == '.'
+			code = data[0]
 			data = data[2:]
 			return ConfirmationPacket(code, success), data
 			
@@ -148,14 +148,14 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 	if destination_address_type == DAT_PP:
 		# decode as point-to-point packet
 		#return PointToPointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
-		pass
+		raise NotImplementedError, 'Point-to-point'
 	elif destination_address_type == DAT_PM:
 		# decode as point-to-multipoint packet
 		p = PointToMultipointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
 	elif destination_address_type == DAT_PPM:
 		# decode as point-to-point-to-multipoint packet
 		#return PointToPointToMultipointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
-		pass
+		raise NotImplementedError, 'Point-to-multipoint'
 
 	if not server_packet and confirmation:
 		p.confirmation = confirmation

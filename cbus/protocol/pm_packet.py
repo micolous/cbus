@@ -24,12 +24,12 @@ class PointToMultipointPacket(BasePacket):
 	level_request = False
 	group_address = None
 	application = None
-	sal = []
 	
 	def __init__(self, checksum=True, priority_class=CLASS_4, application=None, status_request=False):
 		super(PointToMultipointPacket, self).__init__(checksum, None, DAT_PM, 0, False, priority_class)
 		self.application = application
 		self.status_request = status_request
+		self.sal = []
 		
 	
 	@classmethod
@@ -95,9 +95,12 @@ class PointToMultipointPacket(BasePacket):
 			o = [0xFF] + l + [packet.application, packet.group_address]
 		
 		else:
+			assert self.application != None, 'application must not be None'
+			a = int(self.application)
+			assert 0 <= a <= 0xFF, 'application must be in range 0..255 (got %r)' % a
 			# encode the remainder
 			o = [
-				self.application,
+				a,
 				0,
 			]
 			for x in self.sal:

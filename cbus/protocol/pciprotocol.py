@@ -23,6 +23,15 @@ from cbus.common import *
 from base64 import b16encode, b16decode
 from traceback import print_exc
 from collections import Iterable
+from cbus.protocol.packet import decode_packet
+from cbus.protocol.base_packet import BasePacket, SpecialServerPacket
+from cbus.protocol.po_packet import PowerOnPacket
+from cbus.protocol.pm_packet import PointToMultipointPacket
+from cbus.protocol.dm_packet import DeviceManagementPacket
+from cbus.protocol.confirm_packet import ConfirmationPacket
+from cbus.protocol.error_packet import PCIErrorPacket
+from cbus.protocol.application.lighting import *
+
 
 __all__ = ['PCIProtocol']
 
@@ -59,38 +68,7 @@ class PCIProtocol(LineReceiver):
 		log.msg("recv: %r" % line)
 		
 		try:
-			if line == '~~~':
-				self.on_reset()
-				return
-			
-			while line[0] == '!':
-				# buffer is full / invalid checksum, some requests have been dropped!
-				# (serial interface guide s4.3.3; page 28)
-				self.on_pci_cannot_accept_data()
-				line = line[1:]
-				if not line:
-					return
-			
-			while line[0] == '+':
-				self.on_pci_power_up()
-				line = line[1:]
-				if not line:
-					return
-			
-			while line[0] in CONFIRMATION_CODES:
-				# this is blind, doesn't know if it was ok...
-				success = line[1] == '.'
-				
-				self.on_confirmation(line[0], success)
-				
-				# shift across for the remainder
-				line = line[2:]
-				if not line:
-					return
-			
-			# TODO: handle other bus events properly.
-			while line:
-				line = self.decode_cbus_event(line)
+			self.decode_cbus_event(line)
 		except Exception:
 			# caught exception.  dump stack trace to log and move on
 			log.msg("recv: caught exception. line state = %r" % line)
@@ -109,129 +87,53 @@ class PCIProtocol(LineReceiver):
 		:rtype: str or NoneType
 		
 		"""
-		event_string = line.strip()
-		for x in event_string:
-			if x not in HEX_CHARS:
-				# fail, invalid characters
-				log.msg("invalid character %r in event %r, dropping event" % (x, event_string))
+		
+		while line:
+			last_line = line
+			p, line = decode_packet(line, checksum=True, server_packet=True)
+			
+			if line == last_line:
+				# infinite loop!
+				log.msg('dce: bug: infinite loop detected on %r', line)
 				return
+			
+			# decode special packets
+			if p == None:
+				log.msg("dce: packet == None")
+				continue
 				
-		# decode string
-		event_bytes = b16decode(event_string)
-		
-		event_code = ord(event_bytes[0])
-		
-		if event_code >= 0xC0:
-			# there is an MMI of length [0] - C0 (quick start page 13)
-			event_length = ord(event_bytes[0]) - 0xC0
-			event_data = event_bytes[1:event_length]
-			
-			# get the remainder
-			event_bytes = event_bytes[event_length+1:]
-			
-			# parse information we know...
-			application = ord(event_data[1])
-			
-			self.on_mmi(application, event_data)
-			
-			return event_bytes
-		elif event_code == POINT_TO_MULTIPOINT:
-			# this is a point to multipoint message
-			source_addr = ord(event_bytes[1])
-			application = ord(event_bytes[2])
-			routing = ord(event_bytes[3])
-			
-			
-			if application == APP_LIGHTING:
-				# lighting event.
-				lighting_event = ord(event_bytes[4])
-				group_addr = ord(event_bytes[5])
+			if isinstance(p, SpecialServerPacket):
+				if isinstance(p, PCIErrorPacket):
+					self.on_pci_cannot_accept_data()
+					continue
+				elif isinstance(p, ConfirmationPacket):
+					self.on_confirmation(p.code, p.success)
+					continue
 				
-				if lighting_event in LIGHT_RAMP_RATES.keys():
-					#checksum = ord(event_bytes[7])
-					
-					duration = ramp_rate_to_duration(lighting_event)
-					level = ord(event_bytes[6]) / 255.
-					
-					self.on_lighting_group_ramp(source_addr, group_addr, duration, level)
-					event_bytes = event_bytes[7:]
-					
-				elif lighting_event & LIGHT_LABEL == LIGHT_LABEL:
-					# label event (lighting application, s2.6.5 p11)
-					length = lighting_event | LIGHT_LABEL
-					
-					assert length >= 3, 'LIGHT_LABEL event with length < 3 (%d)' % length
-					
-					options = ord(event_bytes[6])
-					language_code = ord(event_bytes[7])
-					data = event_bytes[8:5+length]
-					
-					# these are things the doc says are required
-					assert options & 0x01 == 0, "bit 0 of options is non-zero (must be 0 for lighting)"
-					assert options & 0x08 == 0, "bit 3 of options is non-zero (must be 0 for lighting)"
-					assert options & 0x10 == 0, "bit 5 of options is non-zero (reserved)"
-					
-					action = (options & 0x06) >> 1
-					flavour = (options & 0x60) >> 5
-					event_bytes = event_bytes[5+length:]
-
-					
-					if action == 0:
-						# text label
-						self.on_lighting_label_text(source_addr, group_addr, flavour, language_code, event_bytes)
-					# TODO: implement icons properly
-					#elif action == 1:
-					#	# predefined icon
-					#	# TODO: decode image
-					#	self.on_lighting_label_predefined_icon(source_addr, group_addr, flavour, language_code, event_bytes)
-					#elif action == 2:
-					#	# load dynamic icon
-					#	# TODO: decode image
-					#	self.on_lighting_label_load_dynamic_icon(source_addr, group_addr, flavour, language_code, event_bytes)
-					#elif action == 3:
-					#	# set preferred language
-					#	self.on_lighting_label_set_preferred_language(source_addr, group_addr, flavour, language_code)
-					
-					
-					
-				else:
-					#checksum = ord(event_bytes[6])
-					if lighting_event == LIGHT_ON:
-						self.on_lighting_group_on(source_addr, group_addr)
-					elif lighting_event == LIGHT_OFF:
-						self.on_lighting_group_off(source_addr, group_addr)
-					elif lighting_event == LIGHT_TERMINATE_RAMP:
-						self.on_lighting_group_terminate_ramp(source_addr, group_addr)
-
+				log.msg('dce: unhandled SpecialServerPacket')
+			elif isinstance(p, PointToMultipointPacket):
+				for s in p.sal:
+					if isinstance(s, LightingSAL):
+						# lighting application
+						if isinstance(s, LightingRampSAL):
+							self.on_lighting_group_ramp(p.source_address, s.group_address, s.duration, s.level)
+						elif isinstance(s, LightingOnSAL):
+							self.on_lighting_group_on(p.source_address, s.group_address)
+						elif isinstance(s, LightingOffSAL):
+							self.on_lighting_group_off(p.source_address, s.group_address)
+						elif isinstance(s, LightingTerminateRampSAL):
+							self.on_lighting_group_terminate_ramp(p.source_address, s.group_address)
+						else:
+							log.msg('dce: unhandled lighting SAL type: %r', s)
+							break
+				
 					else:
-						log.msg("unsupported lighting event: %r, dropping event %r" % (lighting_event, event_bytes))
-						return
-					
-					event_bytes = event_bytes[6:]
-			
-				if len(event_bytes) > 1:
-					# this is a chained lighting command
-					log.msg('recv: chained lighting event: pushing %r back on the stack' % event_bytes)
-					
-					event_bytes = "%02X%02X%02X%02X%s" % (
-						event_code,
-						source_addr,
-						application,
-						routing,
-						b16encode(event_bytes)
-					)
-					return event_bytes
-				else:
-					return
-					
+						log.msg('dce: unhandled SAL type: %r', s)
+						break
+				
 			else:
-				# unknown application
-				log.msg("unsupported PTMP application: %r, dropping event %r" % (application, event_bytes))
-				return
-		else:
-			# unknown event
-			log.msg("unsupported event code: %r, dropping event %r" % (event_code, event_bytes))
-			return
+				log.msg('dce: unhandled other packet %r', p)
+				continue
 	
 	
 	# event handlers
@@ -395,9 +297,14 @@ class PCIProtocol(LineReceiver):
 		Sends a packet of CBus data.
 		
 		"""
-		if type(cmd) != str:
-			# must be an iterable of ints
-			cmd = ''.join([chr(x) for x in cmd])
+		if isinstance(cmd, BasePacket):
+			encode = checksum = False
+			cmd = '\\' + cmd.encode()
+		else:
+			log.msg('send: cmd is not BasePacket!')
+			if type(cmd) != str:
+				# must be an iterable of ints
+				cmd = ''.join([chr(x) for x in cmd])
 		
 		if checksum:
 			cmd = add_cbus_checksum(cmd)
@@ -468,15 +375,11 @@ class PCIProtocol(LineReceiver):
 			# maximum 9 group addresses per packet
 			raise ValueError, 'group_addr iterable length is > 9 (%r)' % len(group_addr)
 		
-		# validate GAs
-		d = [POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE]
-		
+		p = PointToMultipointPacket(application=APP_LIGHTING)
 		for ga in group_addr:
-			if not validate_ga(ga):
-				raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, ga)
-			d += [LIGHT_ON, ga]
-			
-		return self._send(d)
+			p.sal.append(LightingOnSAL(p, ga))
+		
+		return self._send(p)
 	
 	def lighting_group_off(self, group_addr):
 		"""
@@ -497,16 +400,13 @@ class PCIProtocol(LineReceiver):
 		if len(group_addr) > 9:
 			# maximum 9 group addresses per packet
 			raise ValueError, 'group_addr iterable length is > 9 (%r)' % len(group_addr)
-		
-		# validate GAs
-		d = [POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE]
-		
+
+		p = PointToMultipointPacket(application=APP_LIGHTING)
 		for ga in group_addr:
-			if not validate_ga(ga):
-				raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, ga)
-			d += [LIGHT_OFF, ga]
-			
-		return self._send(d)
+			p.sal.append(LightingOffSAL(p, ga))
+		
+		return self._send(p)
+		
 	
 	def lighting_group_ramp(self, group_addr, duration, level=1.0):
 		"""
@@ -529,19 +429,10 @@ class PCIProtocol(LineReceiver):
 		:rtype: string
 		
 		"""
-		if not validate_ga(group_addr):
-			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
-			
-		if not (0.0 <= level <= 1.0):
-			raise ValueError, 'Ramp level is out of bounds.  Must be between 0.0 and 1.0 (got %r).' % level
+		p = PointToMultipointPacket(application=APP_LIGHTING)
+		p.sal.append(LightingRampSAL(p, group_addr, duration, level))
+		return self._send(p)
 		
-		if not validate_ramp_rate(duration):
-			raise ValueError, 'Duration is out of bounds, must be between %d and %d (got %r)' % (MIN_RAMP_RATE, MAX_RAMP_RATE, duration)
-		
-		d = (POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE, \
-			duration_to_ramp_rate(duration), group_addr, int(level * 255))
-		
-		return self._send(d)
 	
 	def lighting_group_terminate_ramp(self, group_addr):
 		"""
@@ -553,14 +444,21 @@ class PCIProtocol(LineReceiver):
 		:returns: Single-byte string with code for the confirmation event.
 		:rtype: string
 		"""
+
+		if not isinstance(group_addr, Iterable):
+			group_addr = [group_addr]
 		
-		if not validate_ga(group_addr):
-			raise ValueError, 'group_addr out of range (%d - %d), got %r' % (MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr)
+		group_addr = [int(g) for g in group_addr]
 		
-		d = (POINT_TO_MULTIPOINT, APP_LIGHTING, ROUTING_NONE, \
-			LIGHT_TERMINATE_RAMP, group_addr)
-			
-		return self._send(d)
+		if len(group_addr) > 9:
+			# maximum 9 group addresses per packet
+			raise ValueError, 'group_addr iterable length is > 9 (%r)' % len(group_addr)
+		
+		p = PointToMultipointPacket(application=APP_LIGHTING)
+		for ga in group_addr:
+			p.sal.append(LightingTerminateRampSAL(p, ga))
+		
+		return self._send(p)
 		
 	
 	#def recall(self, unit_addr, param_no, count):

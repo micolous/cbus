@@ -21,7 +21,6 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 from twisted.internet import reactor
 from cbus.common import *
-from base64 import b16encode, b16decode
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.base_packet import BasePacket, SpecialClientPacket
 from cbus.protocol.reset_packet import ResetPacket
@@ -333,11 +332,11 @@ class PCIServerProtocol(LineReceiver):
 		
 		"""
 		
-		p = PointToMultipointPacket()
+		p = PointToMultipointPacket(application=APP_LIGHTING)
 		p.source_address = source_addr
 		p.sal.append(LightingOnSAL(p, group_addr))
 		p.checksum = self.checksum
-		return self._send(p, checksum=False)
+		return self._send(p)
 	
 	def lighting_group_off(self, source_addr, group_addr):
 		"""
@@ -353,11 +352,11 @@ class PCIServerProtocol(LineReceiver):
 		:rtype: string
 				
 		"""
-		p = PointToMultipointPacket()
+		p = PointToMultipointPacket(application=APP_LIGHTING)
 		p.source_address = source_addr
 		p.sal.append(LightingOffSAL(p, group_addr))
 		p.checksum = self.checksum
-		return self._send(p, checksum=False)
+		return self._send(p)
 
 	
 	def lighting_group_ramp(self, source_addr, group_addr, duration, level=1.0):
@@ -390,7 +389,7 @@ class PCIServerProtocol(LineReceiver):
 		p.source_address = source_addr
 		p.sal.append(LightingRampSAL(p, group_addr, duration, level))
 		p.checksum = self.checksum
-		return self._send(p, checksum=False)
+		return self._send(p)
 
 
 	def lighting_group_terminate_ramp(self, source_addr, group_addr):
@@ -406,11 +405,11 @@ class PCIServerProtocol(LineReceiver):
 		:returns: Single-byte string with code for the confirmation event.
 		:rtype: string
 		"""
-		p = PointToMultipointPacket()
+		p = PointToMultipointPacket(application=APP_LIGHTING)
 		p.source_address = source_addr
 		p.sal.append(LightingTerminateRampSAL(p, group_addr))
 		p.checksum = self.checksum
-		return self._send(p, checksum=False)
+		return self._send(p)
 
 		
 if __name__ == '__main__':
