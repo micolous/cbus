@@ -23,6 +23,19 @@ class DeviceManagementPacket(BasePacket):
 	parameter = None
 	value = None
 	
+	def __init__(self, checksum=True, priority_class=CLASS_2, parameter=None, value=None):
+		super(DeviceManagementPacket, self).__init__(
+			checksum,
+			None,
+			DAT_PPM,
+			0,
+			True,
+			priority_class
+		)
+		
+		self.parameter = parameter
+		self.value = value
+	
 	@classmethod
 	def decode_packet(cls, data, checksum, flags, destination_address_type, rc, dp, priority_class):
 		packet = cls(checksum, flags, destination_address_type, rc, dp, priority_class)

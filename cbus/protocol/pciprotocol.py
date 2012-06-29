@@ -24,13 +24,14 @@ from base64 import b16encode, b16decode
 from traceback import print_exc
 from collections import Iterable
 from cbus.protocol.packet import decode_packet
-from cbus.protocol.base_packet import BasePacket, SpecialServerPacket
+from cbus.protocol.base_packet import BasePacket, SpecialServerPacket, SpecialClientPacket
 from cbus.protocol.po_packet import PowerOnPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.dm_packet import DeviceManagementPacket
 from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.application.lighting import *
+from cbus.protocol.reset_packet import ResetPacket
 
 
 __all__ = ['PCIProtocol']
@@ -292,14 +293,22 @@ class PCIProtocol(LineReceiver):
 		
 		return o
 	
-	def _send(self, cmd, encode=True, checksum=True, confirmation=True):
+	def _send(self, cmd, encode=True, checksum=True, confirmation=True, basic_mode=False):
 		"""
 		Sends a packet of CBus data.
 		
 		"""
 		if isinstance(cmd, BasePacket):
 			encode = checksum = False
-			cmd = '\\' + cmd.encode()
+
+			if isinstance(cmd, SpecialClientPacket):
+				basic_mode = True
+				confirmation = False
+				
+			cmd = cmd.encode()
+			
+			if not basic_mode:
+				cmd = '\\' + cmd
 		else:
 			log.msg('send: cmd is not BasePacket!')
 			if type(cmd) != str:
@@ -336,15 +345,18 @@ class PCIProtocol(LineReceiver):
 		# MMI calls aren't needed to get events from light switches and other device on the network.
 		
 		# full system reset
-		self._send('~~~', encode=False, checksum=False, confirmation=False)
+		self._send(ResetPacket())
 		
 		# serial user interface guide sect 10.2
 		# Set application address 1 to 38 (lighting)
-		self._send('A3210038', encode=False, checksum=False)
+		#self._send('A3210038', encode=False, checksum=False)
+		self._send(DeviceManagementPacket(checksum=False, parameter=0x21, value=0x38), basic_mode=True)
 		
 		# Interface options #3 set to 02
 		# "LOCAL_SAL".
-		self._send('A3420002', encode=False, checksum=False)
+		#self._send('A3420002', encode=False, checksum=False)
+		self._send(DeviceManagementPacket(checksum=False, parameter=0x42, value=0x02), basic_mode=True)
+		
 		
 		# Interface options #1
 		# = 0x59 / 0101 1001
@@ -353,7 +365,9 @@ class PCIProtocol(LineReceiver):
 		# 4: SMART
 		# 5: MONITOR
 		# 6: IDMON
-		self._send('A3300059', encode=False, checksum=False)
+		#self._send('A3300059', encode=False, checksum=False)
+		self._send(DeviceManagementPacket(checksum=False, parameter=0x30, value=0x59), basic_mode=True)
+
 	
 	def lighting_group_on(self, group_addr):
 		"""

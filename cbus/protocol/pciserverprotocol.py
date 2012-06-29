@@ -164,6 +164,7 @@ class PCIServerProtocol(LineReceiver):
 						log.msg('dce: unhandled SAL type: %r' % s)
 						return remainder
 		elif isinstance(p, DeviceManagementPacket):
+			# TODO: send proper confirmation, from p55 of serial interface guide
 			if p.parameter == 0x21:
 				# application address 1
 				application_addr1 = p.value
