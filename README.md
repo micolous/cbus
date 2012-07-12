@@ -14,7 +14,12 @@ Currently only supports the [C-Bus Serial PC Interface (PCI), 5500PC](http://www
 
 This is a reimplementation of the PCI serial protocol from scratch.
 
-It does **not** use the `libcbm` library/DLL from Clipsal.  Unfortunately, the `libcbm` module only runs on `ia32` systems, and is only available as a static library.
+It does **not** use the `libcbm` library/DLL from Clipsal, or C-Gate:
 
-As such, it should run on any Python supported platform (with the exeception of DBus components which don't work properly on Windows).
+ * The `libcbm` module only runs on `x86_32` systems, and is only available as a static library (closed source).  
+ * C-Gate requires an OS and architecture specific closed source serial library (SerialIO), the Java runtime, and itself has various licensing restrictions.
+
+As such, it should run on any Python supported platform, with the exeception of `dbus` (IPC server) components which don't work properly on Windows. 
+
+The software itself has been primarily developed on Linux with on armhf, x86_32 and x86_64 systems.
 

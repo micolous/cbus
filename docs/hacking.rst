@@ -20,6 +20,15 @@ Comparison to ``libcbm``
 
 ``libcbus`` also includes an abstraction daemon called ``cdbusd`` which will allow multiple applications to simultaneously use the PCI.  This daemon requires D-Bus, which is not available on Windows.  Other components of ``libcbus`` will continue to function.
 
+Comparison to C-Gate
+====================
+
+C-Gate is Clipsal's own C-Bus control software.  It is a closed source application written in Java, that uses the SerialIO library (also closed source) or sockets to communicate with a PCI.
+
+Toolkit itself uses C-Gate in order to communicate with the PCI.  It supports a wide range of operations through it's own protocol, including reprogramming the network.
+
+However, the SerialIO library included with C-Gate is only available on 32-bit platforms, and even then only on Windows and ancient versions of Linux.
+
 CNI / network protocol
 ======================
 
