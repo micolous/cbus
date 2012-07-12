@@ -65,7 +65,20 @@ It appears to use the driver ``silabser.sys`` on Windows, which corresponds to a
 * ``166A:0305``: C-Bus C-Touch Spectrum Colour Touchscreen (`C-5000CT2`_)
 * ``166A:0401``: C-Bus Architectural Dimmer (L51xx series)
 
-Of these, in Linux, only the generic adapter and `5500PCU`_ are supported by the ``cp210x`` kernel module.
+Linux kernel module
+-------------------
+
+The ``cp210x`` kernel module in Linux 2.6.30 and later supports this chipset.  However, only the generic adapter and `5500PCU`_ device IDs are included with the kernel for versions before 3.2.22 and 3.5-rc6.
+
+Your distribution vendor may backport the patches in to other kernel versions.
+
+To see which devices your kernel supports, run the following command::
+
+	$ /sbin/modinfo cp210x | grep v166A
+
+If the following is returned, you only have support for the `5500PCU`_::
+
+	alias:          usb:v166Ap0303d*dc*dsc*dp*ic*isc*ip*
 
 .. _5500PC: http://www2.clipsal.com/cis/technical/product_groups/cbus/system_units_and_accessories/pc_interface
 .. _5500PCU: http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=5500PCU&ref=
