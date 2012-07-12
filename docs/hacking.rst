@@ -37,7 +37,7 @@ The C-Bus Toolkit software has a CNI (network) interface mode.  This is really j
 Setting up a fake CNI and sniffing the protocol
 ===============================================
 
-If you want to see how Toolkit interacts with a Serial PCI, use the ``tcp_serial_redirect.py`` script from the 'pySerial example scripts`_.  This can be run even on a non-Windows machine, for dealing with pesky 100 different revisions of PL2303 USB-Serial adapters that require different and conflicting Windows drivers.  For example::
+If you want to see how Toolkit interacts with a Serial PCI, use the ``tcp_serial_redirect.py`` script from the `pySerial example scripts`_.  This can be run even on a non-Windows machine, for dealing with pesky 100 different revisions of PL2303 USB-Serial adapters that require different and conflicting Windows drivers.  For example::
 
     $ python tcp_serial_redirect.py -p /dev/ttyUSB0 -P 22222
 	
