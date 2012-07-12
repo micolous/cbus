@@ -45,7 +45,7 @@ Congratulations, you now have turned your computer and a `5500PC`_ into a `5500C
 
 Go into Toolkit, set the Default Interface type to "IP Address (CNI)" with the IP and port of the machine running the serial redirector.
 
-You can then use tools like Wireshark to monitor interactions with the C-Bus PCI, instead of using kernel hacks to sniff serial, other redirects, or wireing up your own serial sniffer device.  This will aid if you wish to use undocumented commands, or isolate issues in the Clipsal documentation.
+You can then use tools like `Wireshark`_ to monitor interactions with the C-Bus PCI, instead of using kernel hacks to sniff serial, other redirects, or wireing up your own serial sniffer device.  This will aid if you wish to use undocumented commands, or isolate issues in the Clipsal documentation.
 
 You could also use this with tools like C-Gate to get a higher level interface with the C-Bus PCI.
 
@@ -89,3 +89,4 @@ If the following is returned, you only have support for the `5500PCU`_::
 .. _5500PACA: http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=5500PACA&ref=
 .. _5000CT2: http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=5000CT2WB&ref=
 .. _C-5000CT2: http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=C-5000CTDL2&ref=
+.. _Wireshark: http://www.wireshark.org/
