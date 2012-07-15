@@ -13,6 +13,7 @@ Contents:
    introduction
    status
    hacking
+   cni-discovery
    cbus
    cbus.daemon
    cbus.protocol
