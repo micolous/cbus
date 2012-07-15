@@ -48,8 +48,10 @@ Values are in big-endian format (network byte order)::
 
 Product IDs:
 	
-* ``0x01``: CNI2
-* ``0x03``: WISER
+* ``01``: CNI2
+* ``02``: Hidden -- Toolkit ignores packets with this product ID.  May be used for internal development.
+* ``03``: WISER
+* Other values: "unknown"
 	
 Example packet data::
 
@@ -72,10 +74,3 @@ Example packet data::
 	0x80, 0x01, 0x00, 0x02, 0x66, 0x1e
 
 	b = "\xcb\x81\x00\x00\x00\x00\x00\x01\x81\x01\x00\x01\x03\x81\x0b\x00\x02'\x11\x81\x1d\x00\x01\x00\x80\x01\x00\x02f" + '\x1e'
-
-
-reply format   (client 2 then client 1)
-
-
-
-
