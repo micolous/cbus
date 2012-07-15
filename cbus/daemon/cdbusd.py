@@ -23,7 +23,16 @@ The service exposes itself on the service au.id.micolous.cbus.CBusService.
 """
 
 # from http://twistedmatrix.com/trac/attachment/ticket/1352/dbus-twisted.py
+import twisted.internet.error
 from twisted.internet import glib2reactor
+
+# installing the glib2 reactor breaks sphinx autodoc
+# this patches around the issue.
+try:
+	glib2reactor.install()
+except twisted.internet.error.ReactorAlreadyInstalledError:
+	pass
+	
 from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ClientEndpoint
@@ -216,8 +225,6 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 	context = mainloop.get_context()"""
 
 def main():
-	#glib2reactor.install()
-	
 	DBusGMainLoop(set_as_default=True)
 
 	parser = OptionParser(usage='%prog')

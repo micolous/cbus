@@ -25,9 +25,15 @@ import dbus
 import gobject
 import sys
 from optparse import OptionParser
-from dbus.mainloop.glib import DBusGMainLoop
+import twisted.internet.error
+from twisted.internet import glib2reactor
 
-DBusGMainLoop(set_as_default=True)
+# installing the glib2 reactor breaks sphinx autodoc
+# this patches around the issue.
+try:
+	glib2reactor.install()
+except twisted.internet.error.ReactorAlreadyInstalledError:
+	pass
 
 from cbus.daemon.cdbusd import DBUS_INTERFACE, DBUS_SERVICE, DBUS_PATH
 from twisted.internet.protocol import Factory
