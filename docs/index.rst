@@ -14,10 +14,8 @@ Contents:
    status
    hacking
    cni-discovery
-   cbus
-   cbus.daemon
-   cbus.protocol
-   cbus.toolkit
+   daemons
+   dump_labels
    modules
 
 
@@ -25,6 +23,5 @@ Contents:
 Indices and tables
 ==================
 
-* :ref:`modules`
 * :ref:`search`
 

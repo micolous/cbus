@@ -1,21 +1,27 @@
 #!/usr/bin/env python
+# cbus/common.py - Constants and common functions used in the CBUS protocol.
+# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+#
+# This library is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
-cbus/common.py - Constants and common functions used in the CBUS protocol.
-Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+cbus.common defines various common helper utilities used by the library, and
+constants required to communicate with the C-Bus network.
 
-This library is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this library.  If not, see <http://www.gnu.org/licenses/>.
+The majority of the functionality shouldn't be needed by your own application,
+however it is used internally within the protocol encoders and decoders.
 """
+
 from base64 import b16encode, b16decode
 
 HEX_CHARS = "0123456789ABCDEF"
@@ -159,12 +165,35 @@ BRIDGE_LENGTHS = {
 }
 
 def duration_to_ramp_rate(seconds):
+	"""
+	Converts a given duration into a ramp rate code.
+	
+	:param seconds: The number of seconds that the ramp is over.
+	:type seconds: int
+	
+	:returns: The ramp rate code for the duration given.
+	:rtype: int
+	
+	:throws ValueError: If the given duration is too long and cannot be represented.
+	"""
 	for k, v in sorted(LIGHT_RAMP_RATES.iteritems(), cmp=lambda x, y: cmp(x[0], y[0])):
 		if seconds <= v:
 			return k
 	raise ValueError, 'That duration is too long!'
 
 def ramp_rate_to_duration(rate):
+	"""
+	Converts a given ramp rate code into a duration in seconds.
+	
+	:param rate: The ramp rate code to convert.
+	:type rate: int
+	
+	:returns: The number of seconds the ramp runs over.
+	:rtype: int
+	
+	:throws KeyError: If the given ramp rate code is invalid.
+	"""
+	
 	return LIGHT_RAMP_RATES[rate]
 
 def cbus_checksum(i, b16=False):
@@ -172,6 +201,15 @@ def cbus_checksum(i, b16=False):
 	Calculates the checksum of a C-Bus command string.
 	
 	Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
+	
+	:param i: The C-Bus data to calculate the checksum of.
+	:type i: str
+	
+	:param b16: Indicates that the input is in base16 (network) format, and that the return should be in base16 format.
+	:type b16: bool
+	
+	:returns: The checksum value of the given input
+	:rtype: int (if b16=False), str (if b16=True)
 	"""
 	if b16:
 		if i[0] == '\\':
@@ -190,10 +228,28 @@ def cbus_checksum(i, b16=False):
 	return c
 
 def add_cbus_checksum(i):
+	"""
+	Appends a C-Bus checksum to a given message.
+	
+	:param i: The C-Bus message to append a checksum to.  Must not be in base16 format.
+	:type i: str
+	
+	:returns: The C-Bus message with the checksum appended to it.
+	:rtype: str
+	"""
 	c = cbus_checksum(i)
 	return i + chr(c)
 	
 def validate_cbus_checksum(i):
+	"""
+	Verifies a C-Bus checksum from a given message.
+	
+	:param i: The C-Bus message to verify the checksum of.  Must be in base16 format.
+	:type i: str
+	
+	:returns: True if the checksum is correct, False otherwise.
+	:rtype: bool
+	"""
 	c = i[-2:]
 	d = i[:-2]
 	
@@ -215,5 +271,14 @@ def validate_ga(group_addr):
 	return MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR
 
 def validate_ramp_rate(duration):
+	"""
+	Validates the given ramp rate.
+	
+	:param duration: A duration, in seconds, to check if it is within the allowed duration constraints.
+	:type duration: int
+	
+	:returns: True if the duration is within range, False otherwise.
+	:rtype: bool
+	"""
 	return MIN_RAMP_RATE <= duration <= MAX_RAMP_RATE
 

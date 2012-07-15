@@ -38,6 +38,8 @@ setup(
 		'console_scripts': [
 			'cbz_dump_labels = cbus.toolkit.dump_labels:main',
 			'cdbusd = cbus.daemon.cdbusd:main',
+			'dbuspcid = cbus.daemon.dbuspcid:main',
+			'staged = cbus.daemon.staged:main',
 		]
 	},
 	

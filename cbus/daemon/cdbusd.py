@@ -24,8 +24,6 @@ The service exposes itself on the service au.id.micolous.cbus.CBusService.
 
 # from http://twistedmatrix.com/trac/attachment/ticket/1352/dbus-twisted.py
 from twisted.internet import glib2reactor
-glib2reactor.install()
-
 from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ClientEndpoint
@@ -39,7 +37,6 @@ import gobject
 from dbus.mainloop.glib import DBusGMainLoop
 from optparse import OptionParser
 
-DBusGMainLoop(set_as_default=True)
 
 __all__ = [
 	'DBUS_INTERFACE',
@@ -219,6 +216,10 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 	context = mainloop.get_context()"""
 
 def main():
+	#glib2reactor.install()
+	
+	DBusGMainLoop(set_as_default=True)
+
 	parser = OptionParser(usage='%prog')
 	parser.add_option('-D', '--daemon', action='store_true', dest='daemon', default=False, help='Start as a daemon [default: %default]')
 	parser.add_option('-P', '--pid', dest='pid_file', default='/var/run/cdbusd.pid', help='Location to write the PID file.  Only has effect in daemon mode.  [default: %default]')

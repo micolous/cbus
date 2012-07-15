@@ -40,7 +40,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'cbus'
+project = u'libcbus'
 copyright = u'2012, Michael Farrell'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -240,3 +240,5 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
+
+autoclass_content = 'both'

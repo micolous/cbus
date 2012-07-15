@@ -1,20 +1,11 @@
 cbus Package
 ============
 
-:mod:`common` Module
---------------------
+This is the package where all C-Bus modules are defined.
 
-.. automodule:: cbus.common
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Subpackages
------------
 
 .. toctree::
-
-    cbus.daemon
-    cbus.protocol
-    cbus.toolkit
+	cbus.common
+	cbus.protocol
+	cbus.toolkit
 
