@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-libcbus/common.py - Constants and common functions used in the CBUS protocol.
+cbus/common.py - Constants and common functions used in the CBUS protocol.
 Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 
 This library is free software: you can redistribute it and/or modify
