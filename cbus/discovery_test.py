@@ -39,7 +39,7 @@ class CNIDiscoveryProtocol(DatagramProtocol):
 		
 	def startProtocol(self):
 		"Called when transport is connected"
-		#self.transport.joinGroup('255.255.255.255')
+		pass
 	
 	def stopProtocol(self):
 		"called after the transport is teared down"
@@ -57,7 +57,17 @@ class CNIDiscoveryProtocol(DatagramProtocol):
 			print "Query Message."
 			
 			# respond to it with a standard message.
-			d = b16decode('CB810000000000058101000103810B00022711811D00010080010002661E')
+			d = b16decode(
+				'CB810000' + # CBUS_DISCOVERY_REPLY
+				#'00000005' + 
+				'20E8F552' +
+				'81010001' +
+				'05' +      # 01 == CNI2, 02 == invalid (doesn't show in toolkit), 03 == WISER, 04 == "unknown"
+				'810B0002' +
+				'2721' +   # port  (uint16 big endian)
+				'811D0001' +
+				'00' + # unknown
+				'80010002661E')
 			self.write(d, host, port)
 			
 		elif message_type == CBUS_DISCOVERY_REPLY:
@@ -79,6 +89,6 @@ class CNIDiscoveryProtocol(DatagramProtocol):
 		
 if __name__ == '__main__':
 	print "listening"
-	#reactor.listenMulticast(20050, CNIDiscoveryProtocol(), listenMultiple=True)
 	CNIDiscoveryProtocol()
 	reactor.run()
+
