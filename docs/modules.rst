@@ -1,5 +1,5 @@
-cbus
-====
+libcbus module index
+====================
 
 .. toctree::
    :maxdepth: 4
