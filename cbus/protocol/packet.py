@@ -145,7 +145,7 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 		p = DeviceManagementPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
 	
 	
-	if destination_address_type == DAT_PP:
+	elif destination_address_type == DAT_PP:
 		# decode as point-to-point packet
 		#return PointToPointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
 		raise NotImplementedError, 'Point-to-point'
@@ -155,7 +155,7 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 	elif destination_address_type == DAT_PPM:
 		# decode as point-to-point-to-multipoint packet
 		#return PointToPointToMultipointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
-		raise NotImplementedError, 'Point-to-multipoint'
+		raise NotImplementedError, 'Point-to-point-tomultipoint'
 
 	if not server_packet and confirmation:
 		p.confirmation = confirmation

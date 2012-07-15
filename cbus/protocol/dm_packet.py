@@ -38,7 +38,7 @@ class DeviceManagementPacket(BasePacket):
 	
 	@classmethod
 	def decode_packet(cls, data, checksum, flags, destination_address_type, rc, dp, priority_class):
-		packet = cls(checksum, flags, destination_address_type, rc, dp, priority_class)
+		packet = cls(checksum, priority_class)
 		
 		# serial interface guide s10.2
 		# A3 pp 00 vv
