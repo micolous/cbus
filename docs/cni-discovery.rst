@@ -33,7 +33,7 @@ Discovery Reply
 
 Replies are sent back to the querying client on port 20050.
 
-Values are in big-endian format (network byte order).
+Values are in big-endian format (network byte order)::
 
 	char[4]  magic      = 0xcb, 0x81, 0x00, 0x00   CBUS_DISCOVERY_REPLY
 	char[4]  unknown1   = 0x00, 0x00, 0x00, 0x01   //  0x20, 0xe8, 0xf5, 0x52
@@ -48,8 +48,8 @@ Values are in big-endian format (network byte order).
 
 Product IDs:
 	
- * ``0x01``: CNI2
- * ``0x03``: WISER
+* ``0x01``: CNI2
+* ``0x03``: WISER
 	
 Example packet data::
 
