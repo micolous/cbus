@@ -1,10 +1,9 @@
-.. cbus documentation master file, created by
-   sphinx-quickstart on Mon May 21 23:41:34 2012.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Welcome to libcbus' documentation!
+==================================
 
-Welcome to cbus's documentation!
-================================
+Project Page / Source repository: https://github.com/micolous/cbus
+
+libcbus is a set of Python libraries for interacting with Clipsal C-Bus.
 
 Contents:
 
