@@ -15,3 +15,5 @@ application, up to the MTU of the C-Bus network.
 	:maxdepth: 2
 	
 	cbus.protocol.application.lighting
+	cbus.protocol.application.temperature
+
