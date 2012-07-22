@@ -16,12 +16,13 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from cbus.protocol.application.lighting import LightingApplication
+from cbus.protocol.application.temperature import TemperatureApplication
+from cbus.common import *
 
 
 APPLICATIONS = {
-	0x38: LightingApplication,
-
-
+	APP_LIGHTING: LightingApplication,
+	APP_TEMPERATURE: TemperatureApplication,
 }
 
 

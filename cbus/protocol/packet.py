@@ -108,10 +108,11 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 	if checksum:
 		# check the checksum
 		if not validate_cbus_checksum(data):
+			real_checksum = get_real_cbus_checksum(data)
 			if strict:
-				raise ValueError, "C-Bus checksum incorrect and strict mode is enabled: %r." % data
+				raise ValueError, "C-Bus checksum incorrect (expected %r) and strict mode is enabled: %r." % (real_checksum, data)
 			else:
-				warnings.warn("C-Bus checksum failure in data %r" % data, UserWarning)
+				warnings.warn("C-Bus checksum incorrect (expected %r) in data %r" % (real_checksum, data), UserWarning)
 		
 		# strip checksum
 		data = data[:-2]

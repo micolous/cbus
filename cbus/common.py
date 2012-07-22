@@ -37,9 +37,13 @@ POINT_TO_POINT = 0x06
 
 # Applications
 APP_LIGHTING = 0x38
+APP_TEMPERATURE = 0x19
 
 # Routing buffer
 ROUTING_NONE = 0x00
+
+# temperature broadcast commands.
+TEMPERATURE_BROADCAST = 0x02
 
 # lighting application commands.
 LIGHT_ON = 0x79
@@ -256,6 +260,18 @@ def validate_cbus_checksum(i):
 	cc = cbus_checksum(d, b16=True)
 	#print "%r: %r == %r ? %r" % (d, c, cc, c == cc)
 	return c == cc
+
+def get_real_cbus_checksum(i):
+	"""
+	Calculates the supposedly correct cbus checksum for a message.
+	
+	Assumes input of a base16 encoded message with the checksum ignored.
+	
+	"""
+	d = i[:-2]
+	cc = cbus_checksum(d, b16=True)
+	return cc
+	
 
 def validate_ga(group_addr):
 	"""
