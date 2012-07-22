@@ -140,7 +140,7 @@ class EncodeDecodeTests(unittest.TestCase):
 		self.assertEqual(len(orig.sal), len(d.sal))
 		
 		self.assertIsInstance(d.sal[0], LightingOnSAL)
-		self.assertEqual(orig.sal[0].group_address, orig.sal[0].group_address)
+		self.assertEqual(orig.sal[0].group_address, d.sal[0].group_address)
 		self.assertEqual(r, None)
 
 
