@@ -79,13 +79,23 @@ def main():
 			no['applications'][int(application.Address)] = ao
 	
 		for unit in network.Unit:
+			# find the channel configuration
+			channels = []
+			for parameter in unit.PP:
+				if parameter.attrib['Name'] == 'GroupAddress':
+					ch = parameter.attrib['Value'].split(' ')
+					[channels.append(int('0%s' % (c[2:]) if len(c) == 3 else (c[2:]), 16)) for c in ch]
+					
+					#print channels
+					#print parameter.attrib['Name'], '=', parameter.attrib['Value']
 			no['units'][int(unit.Address)] = {
 				'name': unicode(unit.TagName),
 				'address': int(unit.Address),
 				'unittype': unicode(unit.UnitType),
 				'unitname': unicode(unit.UnitName),
 				'serial': unicode(unit.SerialNumber),
-				'catalog': unicode(unit.CatalogNumber)
+				'catalog': unicode(unit.CatalogNumber),
+				'groups': channels
 			}
 	
 		o[int(network.Address)] = no
