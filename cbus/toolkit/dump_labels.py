@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-scripts/toolkit/dump_labels.py - Dumps group address and unit metadata from a Toolkit CBZ.
+toolkit/dump_labels.py - Dumps group address and unit metadata from a Toolkit CBZ.
 Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 
 This library is free software: you can redistribute it and/or modify
@@ -34,21 +34,21 @@ def main():
 
 	if options.input == None:
 		parser.error('Input filename not given.')
-	
+
 	if options.output == None:
 		parser.error('Output filename not given.')
-		
+
 	if options.pretty:
 		try:
 			pretty = int(options.pretty)
 		except ValueError:
 			parser.error('Pretty-printing spaces value is not a number.')
-		
+
 		if pretty < 0:
 			parser.error('Pretty-printing spaces value must not be negative.')
 	else:
 		pretty = None
-	
+
 	cbz = CBZ(options.input)
 	of = open(options.output, 'wb')
 
@@ -72,12 +72,12 @@ def main():
 				'description': unicode(application.Description),
 				'groups': {}
 			}
-		
+
 			for group in application.Group:
 				ao['groups'][int(group.Address)] = unicode(group.TagName)
-		
+
 			no['applications'][int(application.Address)] = ao
-	
+
 		for unit in network.Unit:
 			# find the channel configuration
 			channels = []
@@ -85,7 +85,7 @@ def main():
 				if parameter.attrib['Name'] == 'GroupAddress':
 					ch = parameter.attrib['Value'].split(' ')
 					[channels.append(int('0%s' % (c[2:]) if len(c) == 3 else (c[2:]), 16)) for c in ch]
-					
+
 					#print channels
 					#print parameter.attrib['Name'], '=', parameter.attrib['Value']
 			no['units'][int(unit.Address)] = {
@@ -97,7 +97,7 @@ def main():
 				'catalog': unicode(unit.CatalogNumber),
 				'groups': channels
 			}
-	
+
 		o[int(network.Address)] = no
 
 	# dump structure as json.
