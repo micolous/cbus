@@ -4,6 +4,5 @@ python:
   - "2.6"
   - "2.7"
 install:
-  - "apt-get install -y python-gobject python-dbus"
-  - "pip install -r requirements.txt --use-mirrors"
+  - "pip install -r requirements-nodbus.txt --use-mirrors"
 script: nosetests
