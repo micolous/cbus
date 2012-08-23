@@ -19,14 +19,34 @@
 import unittest
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
+from cbus.protocol.application.lighting import LightingOffSAL
 
-class PMSerialInterfaceGuideTests(unittest.TestCase):
-	def runTest(self):
-		p, m = decode_packet('\\05FF007A38004Ag', server_packet=False)
-		
-		self.assertIsInstance(p, PointToMultipointPacket)
-		self.assertEqual(p.status_request, True)
-		self.assertEqual(p.application, 0x38)
-		self.assertEqual(p.group_address, 0)
-		self.assertEqual(m, None)
+def S4_2_9_2_Test():
+	"Serial interface guide s4.2.9.2 (page 23) test"
+	# first test
+	p, m = decode_packet('\\0538000108BAg', server_packet=False)
+	
+	assert isinstance(p, PointToMultipointPacket)
+	assert p.status_request == False
+	assert p.application == 0x38
+	assert len(p.sal) == 1
+	
+	assert isinstance(p.sal[0], LightingOffSAL)
+	assert p.sal[0].group_address == 8
+	
+	assert p.confirmation == 'g'
+	
+	assert m == None
+	
+	# second test
+	p, m = decode_packet('\\05FF007A38004Ah', server_packet=False)
+	
+	assert isinstance(p, PointToMultipointPacket)
+	assert p.status_request == True
+	assert p.application == 0x38
+	assert p.group_address == 0
+	assert p.confirmation == 'h'
+	
+	# no remainder
+	assert m == None
 
