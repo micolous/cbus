@@ -14,6 +14,8 @@ application, up to the MTU of the C-Bus network.
 .. toctree::
 	:maxdepth: 2
 	
+	cbus.protocol.application.clock
+	cbus.protocol.application.enable
 	cbus.protocol.application.lighting
 	cbus.protocol.application.temperature
 
