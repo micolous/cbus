@@ -73,9 +73,9 @@ If more lines come back, then your kernel supports all the hardware that is know
 Unit Tests
 ==========
 
-There's some basic unit tests that are written that require you have the `nosetests` package (`nose` on pip).
+There's some basic unit tests that are written that require you have the ``nosetests`` package (``nose`` on pip).
 
-When you run `nosetests`, it will discover all the unit tests in the package and try to run them.
+When you run ``nosetests``, it will discover all the unit tests in the package and try to run them.
 
 I'm targetting Python 2.6 and 2.7 at this time.  I'll have a look into Python 3 support when some more backend libraries that this project requires work on Python 3.  Patches still welcome.
 

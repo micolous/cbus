@@ -141,3 +141,33 @@ def lighting_encode_decode_test():
 	assert r == None
 
 
+def lighting_encode_decode_client_test():
+	"self-made tests of encode then decode, with packets from a client."
+	
+	orig = PointToMultipointPacket(application=APP_LIGHTING)
+	orig.sal.append(LightingOnSAL(orig, 27))
+	
+	data = orig.encode()
+
+	d, r = decode_packet(data, server_packet=False)
+	assert isinstance(orig, PointToMultipointPacket)		
+	assert len(orig.sal) == len(d.sal)
+	
+	assert isinstance(d.sal[0], LightingOnSAL)
+	assert orig.sal[0].group_address == d.sal[0].group_address
+	
+	# ensure there is no remaining data to be parsed
+	assert r == None
+	
+def issue2_test():
+	"Handle the null lighting packet described in Issue #2."
+	# lighting packet from the server, lighting application, source address 0x06
+	# sometimes cbus units emit these null lighting commands because of an off-by-one issue?
+	p, r = decode_packet('05063800BD')
+	
+	assert isinstance(p, PointToMultipointPacket)
+	assert p.application == 0x38
+	assert p.source_address == 0x06
+	assert len(p.sal) == 0
+	
+	assert r == None
