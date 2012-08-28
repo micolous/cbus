@@ -1,5 +1,5 @@
 pyserial==2.6
-git+https://github.com/micolous/configparser_plus.git@v1.0#egg=configparser_plus
 lxml
 Twisted>=12.0.0
-
+configparser
+argparse

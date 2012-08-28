@@ -26,7 +26,7 @@ DEFAULT_CONFIG = {'staged': {}}
 RESERVED_SECTIONS = ('staged', )
 TRIGGER_RESERVED_KEYS = ('label', 'ga')
 
-from configparser_plus import ConfigParserPlus
+from configparser import ConfigParser
 import dbus
 import gobject
 import sys
@@ -176,7 +176,8 @@ def boot(daemon_enable, pid_file, session_bus=False, settings_file=DEFAULT_CONFI
 	if daemon_enable:
 		raise ValueError, "daemon mode not supported yet"
 	
-	config = ConfigParserPlus(DEFAULT_CONFIG)
+	config = ConfigParser()
+	config.read_dict(DEFAULT_CONFIG)
 	
 	if not config.read(settings_file):
 		print "cannot read settings file %r" % settings_file
