@@ -36,11 +36,16 @@ POINT_TO_POINT = 0x06
 #POINT_TO_46 = '\\46'
 
 # Applications
+APP_CLOCK = 0xDF
+APP_ENABLE = 0xCB
 APP_LIGHTING = 0x38
 APP_TEMPERATURE = 0x19
 
 # Routing buffer
 ROUTING_NONE = 0x00
+
+# Enable control application commands.
+ENABLE_SET_NETWORK_VARIABLE = 0x02
 
 # temperature broadcast commands.
 TEMPERATURE_BROADCAST = 0x02

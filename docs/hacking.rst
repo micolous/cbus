@@ -2,32 +2,20 @@
 Hacking
 *******
 
-Information about using the hardware.
+Information about using the hardware and software.
 
 Official documentation
 ======================
 
 Official serial protocol documentation is available from Clipsal's website: http://training.clipsal.com/downloads/OpenCBus/OpenCBusProtocolDownloads.html
 
-At present, we support a subset of the "lighting" application only.
+You should generally implement software in conjunction with reading these guides.  This library provides a fairly low level API for parsing and generating CBus packets, and understanding what is happening on a lower level is needed when understanding use of this library.
 
-Comparison to ``libcbm``
-========================
+There is a large amount of documentation in there that says "these items are deprecated and shouldn't be used".  I've noticed a lot that C-Gate and Toolkit will interact with the hardware in these "deprecated" ways...
 
-``libcbm`` supports to C-Bus protocol completely, including conforming to the various "protocol certification levels".  It is closed source and written in C, and only will work with ia32 Windows and Linux systems.  It is distributed for Linux as a static library in an RPM.
+This doesn't mean implement the library to talk this way.  You should implement it properly.  Just be aware than when working with implementing a fake PCI or parsing out packets that Clipsal's software generated, be aware they'll do strange and undocumented things.
 
-``libcbus`` supports only the lighting application (at present).  It is open source (LGPL3+) and written in Python, and will work with any Python supported platform.
 
-``libcbus`` also includes an abstraction daemon called ``cdbusd`` which will allow multiple applications to simultaneously use the PCI.  This daemon requires D-Bus, which is not available on Windows.  Other components of ``libcbus`` will continue to function.
-
-Comparison to C-Gate
-====================
-
-C-Gate is Clipsal's own C-Bus control software.  It is a closed source application written in Java, that uses the SerialIO library (also closed source) or sockets to communicate with a PCI.
-
-Toolkit itself uses C-Gate in order to communicate with the PCI.  It supports a wide range of operations through it's own protocol, including reprogramming the network.
-
-However, the SerialIO library included with C-Gate is only available on 32-bit platforms, and even then only on Windows and ancient versions of Linux.
 
 CNI / network protocol
 ======================
@@ -79,6 +67,19 @@ To see which devices your kernel supports, run the following command::
 If the following is returned, you only have support for the `5500PCU`_::
 
 	alias:          usb:v166Ap0303d*dc*dsc*dp*ic*isc*ip*
+
+If more lines come back, then your kernel supports all the hardware that is known about at this time.
+
+Unit Tests
+==========
+
+There's some basic unit tests that are written that require you have the ``nosetests`` package (``nose`` on pip).
+
+When you run ``nosetests``, it will discover all the unit tests in the package and try to run them.
+
+I'm targetting Python 2.6 and 2.7 at this time.  I'll have a look into Python 3 support when some more backend libraries that this project requires work on Python 3.  Patches still welcome.
+
+When implementing a new application, you should copy all of the examples given in the documentation of that application into some tests for that application.  Be careful though, in some instances I have found errors in Clipsal's documentation, so double check to make sure that the examples are correct.  If you find errors in Clipsal's documentation, you should email them about it.
 
 .. _5500PC: http://www2.clipsal.com/cis/technical/product_groups/cbus/system_units_and_accessories/pc_interface
 .. _5500PCU: http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=5500PCU&ref=

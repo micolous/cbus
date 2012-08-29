@@ -15,59 +15,48 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.application.temperature import *
 from cbus.common import *
 
-class TemperatureBroadcastApplicationGuideTests(unittest.TestCase):
-	def runTest(self):
-		"Example in temperature broadcast application guide, s9.11"
-		# Temperature of 25 degrees at group 5
-		# note, the guide actually states that there is a checksum, but no
-		# checksum is actually on the packet!
-		p, r = decode_packet('\\05190002056477g', server_packet=False)
-		
-		self.assertIsInstance(p, PointToMultipointPacket)
-		self.assertEqual(len(p.sal), 1)
-		
-		#print "p.sal = %r" % p.sal
-		
-		self.assertIsInstance(p.sal[0], TemperatureBroadcastSAL)
-		self.assertEqual(p.sal[0].group_address, 5)
-		self.assertEqual(p.sal[0].temperature, 25)
-		
-		
-		## check that it encodes properly again
-		self.assertEqual(p.encode(), '05190002056477')
-		self.assertEqual(p.confirmation, 'g')
-		
-		
+def S9_11_Test():
+	"Example in temperature broadcast application guide, s9.11"
+	# Temperature of 25 degrees at group 5
+	# note, the guide actually states that there is a checksum, but no
+	# checksum is actually on the packet!
+	p, r = decode_packet('\\05190002056477g', server_packet=False)
+	
+	assert isinstance(p, PointToMultipointPacket)
+	assert len(p.sal) == 1
 
+	assert isinstance(p.sal[0], TemperatureBroadcastSAL)
+	assert p.sal[0].group_address == 5
+	assert p.sal[0].temperature == 25
+	
+	## check that it encodes properly again
+	assert p.encode() == '05190002056477'
+	assert p.confirmation == 'g'
 
-class EncodeDecodeTests(unittest.TestCase):
-	def runTest(self):
-		"self-made tests of encode then decode"
-		
-		orig = PointToMultipointPacket(application=APP_TEMPERATURE)
-		orig.source_address = 5
-		orig.sal.append(TemperatureBroadcastSAL(orig, 10, 0.5))
-		orig.sal.append(TemperatureBroadcastSAL(orig, 11, 56))
-		
-		
-		data = orig.encode()
+def temperature_encode_decode_test():
+	"self-made tests of encode then decode"
+	
+	orig = PointToMultipointPacket(application=APP_TEMPERATURE)
+	orig.source_address = 5
+	orig.sal.append(TemperatureBroadcastSAL(orig, 10, 0.5))
+	orig.sal.append(TemperatureBroadcastSAL(orig, 11, 56))
+	
+	data = orig.encode()
 
-		d, r = decode_packet(data)
-		self.assertIsInstance(orig, PointToMultipointPacket)		
-		self.assertEqual(orig.source_address, d.source_address)
-		self.assertEqual(len(orig.sal), len(d.sal))
-		
-		for x in range(len(d.sal)):
-			self.assertIsInstance(d.sal[x], TemperatureBroadcastSAL)
-			self.assertEqual(orig.sal[x].group_address, d.sal[x].group_address)
-			self.assertEqual(orig.sal[x].temperature, d.sal[x].temperature)
-		
-		self.assertEqual(r, None)
-			
-
+	d, r = decode_packet(data)
+	assert isinstance(orig, PointToMultipointPacket)		
+	assert orig.source_address == d.source_address
+	assert len(orig.sal) == len(d.sal)
+	
+	for x in range(len(d.sal)):
+		assert isinstance(d.sal[x], TemperatureBroadcastSAL)
+		assert orig.sal[x].group_address == d.sal[x].group_address
+		assert orig.sal[x].temperature == d.sal[x].temperature
+	
+	# ensure there is no remaining data to be parsed
+	assert r == None

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/testpm_packet.py - Point to Multipoint packet tests
+# cbus/protocol/application/testenable.py - Enable control unit tests
 # Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify
@@ -15,38 +15,23 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-
-import unittest
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
-from cbus.protocol.application.lighting import LightingOffSAL
+from cbus.protocol.application.enable import *
+from cbus.common import *
 
-def S4_2_9_2_Test():
-	"Serial interface guide s4.2.9.2 (page 23) test"
-	# first test
-	p, m = decode_packet('\\0538000108BAg', server_packet=False)
+def S8_11_Test():
+	"Example in enable control application guide, s8.11 (page 7)"
+	# Set the network variable 0x37 to 0x82
+	p, r = decode_packet('\\05CB0002378275g', server_packet=False)
 	
 	assert isinstance(p, PointToMultipointPacket)
-	assert p.status_request == False
-	assert p.application == 0x38
 	assert len(p.sal) == 1
-	
-	assert isinstance(p.sal[0], LightingOffSAL)
-	assert p.sal[0].group_address == 8
-	
-	assert p.confirmation == 'g'
-	
-	assert m == None
-	
-	# second test
-	p, m = decode_packet('\\05FF007A38004Ah', server_packet=False)
-	
-	assert isinstance(p, PointToMultipointPacket)
-	assert p.status_request == True
-	assert p.application == 0x38
-	assert p.group_address == 0
-	assert p.confirmation == 'h'
-	
-	# no remainder
-	assert m == None
 
+	assert isinstance(p.sal[0], EnableSetNetworkVariableSAL)
+	assert p.sal[0].variable == 0x37
+	assert p.sal[0].value == 0x82
+	
+	## check that it encodes properly again
+	assert p.encode() == '05CB0002378275'
+	assert p.confirmation == 'g'
