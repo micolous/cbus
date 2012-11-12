@@ -96,6 +96,13 @@ class CBusProtocolHandler(PCIProtocol):
 	def on_lighting_group_terminate_ramp(self, source_addr, group_addr):
 		if not self.cbus_api: return
 		self.cbus_api.on_lighting_group_terminate_ramp(source_addr, group_addr)
+
+	def timesync(self, frequency):
+		# setup timesync in the future.
+		reactor.callLater(frequency, self.timesync, frequency)
+
+		# send time packets
+		self.clock_datetime_now()
 		
 		
 class CBusService(dbus.service.Object):
@@ -156,7 +163,8 @@ class CBusService(dbus.service.Object):
 
 		# TODO: implement return response
 		return self.pci.identify(unit_addr, attribute)
-	
+
+	# signals are automatically fired by the twisted reactor and passed into dbus, so these methods have no logic
 	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='sb')
 	def on_confirmation(self, code, success):
 		pass
@@ -192,7 +200,7 @@ class CBusProtocolHandlerFactory(Factory):
 	def buildProtocol(self, addr):
 		return self.protocol
 
-def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
+def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus, timesync):
 	if session_bus:
 		bus = dbus.SessionBus()
 	else:
@@ -209,7 +217,10 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 		point = TCP4ClientEndpoint(reactor, addr[0], int(addr[1]))
 		d = point.connect(CBusProtocolHandlerFactory(protocol))
 		
-	
+	# setup time loop if applicable
+	if timesync > 0:
+		# in one second, start timesync loop
+		reactor.callLater(1, protocol.timesync, timesync) 
 	
 	
 	
@@ -278,7 +289,7 @@ def main():
 		help='Send time synchronisation packets every n seconds (or 0 to disable). [default: %(default)s seconds]'
 	)
 	
-	option, args = parser.parse_args()
+	option = parser.parse_args()
 	
 	if option.serial_pci and option.tcp_pci:
 		parser.error('Both serial and TCP CBus PCI addresses were specified!  Use only one...')
@@ -296,7 +307,7 @@ def main():
 	else:
 		log.startLogging(sys.stdout)
 	
-	reactor.callWhenRunning(boot_dbus, serial_mode, addr, option.daemon, option.pid_file, option.session_bus)
+	reactor.callWhenRunning(boot_dbus, serial_mode, addr, option.daemon, option.pid_file, option.session_bus, option.timesync)
 	reactor.run()
 
 		

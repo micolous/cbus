@@ -31,7 +31,9 @@ from cbus.protocol.dm_packet import DeviceManagementPacket
 from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.application.lighting import *
+from cbus.protocol.application.clock import *
 from cbus.protocol.reset_packet import ResetPacket
+from datetime import datetime
 
 
 __all__ = ['PCIProtocol']
@@ -127,7 +129,11 @@ class PCIProtocol(LineReceiver):
 						else:
 							log.msg('dce: unhandled lighting SAL type: %r', s)
 							break
-				
+					elif isinstance(s, ClockSAL):
+						if isinstance(s, ClockRequestSAL):
+							self.on_clock_request(p.source_address)
+						elif isinstance(s, ClockUpdateSAL):
+							self.on_clock_update(p.source_address, s.variable, s.val)
 					else:
 						log.msg('dce: unhandled SAL type: %r', s)
 						break
@@ -278,6 +284,25 @@ class PCIProtocol(LineReceiver):
 		
 		"""
 		log.msg("recv: PCI power-up notification")
+
+	def on_clock_request(self, source_addr):
+		"""
+		Event called when a unit requests time from the network.
+
+		:param source_addr: Source address of the unit requesting time.
+		:type source_addr: int
+		"""
+		log.msg('recv: clock request from %d' % (source_addr,))
+
+	def on_clock_update(self, source_addr, variable, val):
+		"""
+		Event called when a unit sends time to the network.
+
+		:param source_addr: Source address of the unit requesting time.
+		:type source_addr: int
+		
+		"""
+		log.msg('recv: clock update from %d of %r' % (source_addr, val))
 	
 	# other things.	
 	
@@ -472,6 +497,18 @@ class PCIProtocol(LineReceiver):
 		for ga in group_addr:
 			p.sal.append(LightingTerminateRampSAL(p, ga))
 		
+		return self._send(p)
+
+	def clock_datetime_now(self):
+		"""
+		Sends the system's local time to the CBus network.
+		"""
+
+		p = PointToMultipointPacket(application=APP_CLOCK)
+		now = datetime.now()
+		p.sal.append(ClockUpdateSAL(p, CLOCK_DATE, now.date()))
+		p.sal.append(ClockUpdateSAL(p, CLOCK_TIME, now.time()))
+
 		return self._send(p)
 		
 	

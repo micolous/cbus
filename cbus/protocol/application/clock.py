@@ -114,11 +114,11 @@ class ClockUpdateSAL(ClockSAL):
 	
 	@property
 	def is_date(self):
-		return self.variable == 2
+		return self.variable == CLOCK_DATE
 	
 	@property
 	def is_time(self):
-		return self.variable == 1
+		return self.variable == CLOCK_TIME
 	
 	def __init__(self, packet, variable, val):
 		"""
@@ -149,7 +149,7 @@ class ClockUpdateSAL(ClockSAL):
 		val = data[1:data_length]
 		data = data[data_length:]
 		
-		if variable == 0x02:
+		if variable == CLOCK_DATE:
 			# date (23.5.1.2)
 			# length must be 0x06
 			if data_length != 0x06:
@@ -162,7 +162,7 @@ class ClockUpdateSAL(ClockSAL):
 			
 			return cls(packet, variable, date(year, month, day)), data
 		
-		elif variable == 0x01:
+		elif variable == CLOCK_TIME:
 			# time (23.5.1.1)
 			# length must be 0x05
 			if data_length != 0x05:
@@ -180,11 +180,11 @@ class ClockUpdateSAL(ClockSAL):
 			return None, data[data_length:]
 	
 	def encode(self):
-		if self.variable == 0x01:
+		if self.variable == CLOCK_TIME:
 			# time
 			# TODO: implement DST flag
 			val = pack('>BBBB', self.val.hour, self.val.minute, self.val.second, 255)
-		elif self.variable == 0x02:
+		elif self.variable == CLOCK_DATE:
 			# date
 			val = pack('>HBBB', self.val.year, self.val.month, self.val.day, self.val.weekday())
 		else:
