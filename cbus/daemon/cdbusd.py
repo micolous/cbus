@@ -219,8 +219,9 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus, timesync):
 		
 	# setup time loop if applicable
 	if timesync > 0:
-		# in one second, start timesync loop
-		reactor.callLater(1, protocol.timesync, timesync) 
+		# in ten seconds, start timesync loop
+		# TODO: have this fire after the connection is established instead
+		reactor.callLater(10, protocol.timesync, timesync) 
 	
 	
 	
