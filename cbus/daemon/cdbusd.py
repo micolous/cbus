@@ -44,7 +44,7 @@ import dbus
 import dbus.service
 import gobject
 from dbus.mainloop.glib import DBusGMainLoop
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 
 __all__ = [
@@ -227,15 +227,56 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 def main():
 	DBusGMainLoop(set_as_default=True)
 
-	parser = OptionParser(usage='%prog')
-	parser.add_option('-D', '--daemon', action='store_true', dest='daemon', default=False, help='Start as a daemon [default: %default]')
-	parser.add_option('-P', '--pid', dest='pid_file', default='/var/run/cdbusd.pid', help='Location to write the PID file.  Only has effect in daemon mode.  [default: %default]')
+	parser = ArgumentParser(usage='%(prog)s')
+
+	group = parser.add_argument_group('Daemon options')
+	group.add_argument('-D', '--daemon',
+		action='store_true',
+		dest='daemon',
+		default=False,
+		help='Start as a daemon [default: %(default)s]'
+	)
 	
-	parser.add_option('-s', '--serial-pci', dest='serial_pci', default=None, help='Serial port where the PCI is located.  Either this or -t must be specified.')
-	parser.add_option('-t', '--tcp-pci', dest='tcp_pci', default=None, help='IP address and TCP port where the PCI is located (CNI).  Either this or -s must be specified.')
-	parser.add_option('-S', '--session-bus', action='store_true', dest='session_bus', default=False, help='Bind to the session bus instead of the system bus [default: %default]')
+	group.add_argument('-P', '--pid',
+		dest='pid_file',
+		default='/var/run/cdbusd.pid',
+		help='Location to write the PID file.  Only has effect in daemon mode.  [default: %(default)s]'
+	)
+
+	group.add_argument('-S', '--session-bus',
+		action='store_true',
+		dest='session_bus',
+		default=False,
+		help='Bind to the session bus instead of the system bus [default: %(default)s]'
+	)
 	
-	parser.add_option('-l', '--log-file', dest='log', default=None, help='Destination to write logs [default: stdout]')
+	group.add_argument('-l', '--log-file',
+		dest='log',
+		default=None,
+		help='Destination to write logs [default: stdout]'
+	)
+
+	group = parser.add_argument_group('PCI options')
+
+	group.add_argument('-s', '--serial-pci',
+		dest='serial_pci',
+		default=None,
+		help='Serial port where the PCI is located.  Either this or -t must be specified.'
+	)
+	
+	group.add_argument('-t', '--tcp-pci',
+		dest='tcp_pci',
+		default=None,
+		help='IP address and TCP port where the PCI is located (CNI).  Either this or -s must be specified.'
+	)
+	
+	group = parser.add_argument_group('Extras')
+	group.add_argument('-T', '--timesync',
+		dest='timesync',
+		type=int,
+		default=300,
+		help='Send time synchronisation packets every n seconds (or 0 to disable). [default: %(default)s seconds]'
+	)
 	
 	option, args = parser.parse_args()
 	
