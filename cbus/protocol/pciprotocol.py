@@ -499,15 +499,19 @@ class PCIProtocol(LineReceiver):
 		
 		return self._send(p)
 
-	def clock_datetime_now(self):
+	def clock_datetime(self, when=datetime.now()):
 		"""
 		Sends the system's local time to the CBus network.
+
+		:param when: The time and date to send to the CBus network.  Defaults to current local time.
+		:type when: datetime.datetime
+		
 		"""
 
 		p = PointToMultipointPacket(application=APP_CLOCK)
-		now = datetime.now()
-		p.sal.append(ClockUpdateSAL(p, CLOCK_DATE, now.date()))
-		p.sal.append(ClockUpdateSAL(p, CLOCK_TIME, now.time()))
+		
+		p.sal.append(ClockUpdateSAL(p, CLOCK_DATE, when.date()))
+		p.sal.append(ClockUpdateSAL(p, CLOCK_TIME, when.time()))
 
 		return self._send(p)
 		

@@ -17,21 +17,32 @@ You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from optparse import OptionParser
+from argparse import ArgumentParser, FileType
 import json
 import pydot
 
 def generate_graph(input, output):
-	with open(input, 'rb') as i:
-		networks = json.load(i)
-	graph = pydot.Dot(input.replace('.', '_'), graph_type='digraph')
+	"""
+	Generates a Graphviz DOT graph for the given network.
+
+	:param input: Input file-like object to read the network data from, in JSON format from the dump_labels tool.
+	:type input: file
+
+	:param output: Output file name to write the graph to.
+	:type output: str
+	"""
+	networks = json.load(input)
+	
+	# warning: pydot has a bad case of the stupid and doesn't sanitise
+	# inputs correctly.
+	graph = pydot.Dot(output.replace('.', '_').replace('-', '_'), graph_type='digraph')
 
 	# create groups for networks
 	for network_id, network in networks.iteritems():
 		loads = set()
 
-		subgraph = pydot.Subgraph('Network %s' % network_id)
-		cluster = pydot.Cluster('Network %s' % network_id)
+		subgraph = pydot.Subgraph('Network_%s' % network_id)
+		#cluster = pydot.Cluster('Network %s' % network_id)
 
 		for unit_id, unit in network['units'].iteritems():
 			node = pydot.Node(unit['name'])
@@ -48,22 +59,27 @@ def generate_graph(input, output):
 			subgraph.add_node(node)
 
 
-		cluster.add_subgraph(subgraph)
-		graph.add_subgraph(cluster)
+		#cluster.add_subgraph(subgraph)
+		graph.add_subgraph(subgraph)
 
-
-
-
-
+	# Dot.write must be a file name to write to -- not a file-like
+	# object.
 	graph.write(output)
 
 
 
 def main():
-	parser = OptionParser(usage='%prog -i input.json -o output.dot', version='%prog 1.0')
-	parser.add_option('-o', '--output', dest='output', metavar='FILE', help='write dot output to FILE')
-	parser.add_option('-i', '--input', dest='input', metavar='FILE', help='read JSON dump from FILE')
-	options, args = parser.parse_args()
+	parser = ArgumentParser(usage='%(prog)s -i input.json -o output.dot', version='1.0', description="""\
+		Creates a Graphviz dot-file describing a CBus network.  """, epilog="""\
+		Render the output of this tool to an image with a command like:
+
+		python -m cbus.toolkit.dump_labels -i mynetwork.cbz -o mynetwork.json;
+		python -m cbus.toolkit.graph -i mynetwork.json -o mynetwork.dot;
+		fdp mynetwork.dot -Tpng -o mynetwork.png;
+""")
+	parser.add_argument('-o', '--output', dest='output', metavar='FILE', help='write dot output to FILE')
+	parser.add_argument('-i', '--input', dest='input', metavar='FILE', type=file, help='read JSON dump from FILE')
+	options = parser.parse_args()
 
 	if options.input == None:
 		parser.error('Input filename not given.')

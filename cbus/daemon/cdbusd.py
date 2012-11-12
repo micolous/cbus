@@ -102,7 +102,7 @@ class CBusProtocolHandler(PCIProtocol):
 		reactor.callLater(frequency, self.timesync, frequency)
 
 		# send time packets
-		self.clock_datetime_now()
+		self.clock_datetime()
 		
 		
 class CBusService(dbus.service.Object):
