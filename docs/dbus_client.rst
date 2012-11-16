@@ -7,6 +7,8 @@ The recommended way to interact with libcbus is through cdbusd and it's D-Bus AP
 
 It allows many applications, written in any language with D-Bus bindings to interact with the network with one PCI.
 
+It abstracts away the majority of C-Bus protocol details and provides D-Bus methods and events for interacting with the network.
+
 This document describes the interface au.id.micolous.cbus.CBusInterface.
 
 Included in this document is examples of syntax for use with mdbus2, a command-line D-Bus testing tool.  Types are given in D-Bus notation.
@@ -18,7 +20,10 @@ Included in this document is examples of syntax for use with mdbus2, a command-l
 
 	:param group_addr: Group addresses to turn on lights for, up to 9.
 	:type group_addr: ay
-	
+
+	:returns: Single-byte string with code for the confirmation event.
+	:rtype: s
+
 	.. code-block:: sh
 
 		# Turn on lights for GA 1 and 2.
@@ -30,9 +35,9 @@ Included in this document is examples of syntax for use with mdbus2, a command-l
 	
 	:param group_addr: Group addresses to turn off lights for, up to 9.
 	:type group_addr: ay
-		
+
 	:returns: Single-byte string with code for the confirmation event.
-	:rtype: string
+	:rtype: s
 
 	.. code-block:: sh
 
@@ -50,16 +55,32 @@ Included in this document is examples of syntax for use with mdbus2, a command-l
 	A duration of 0 will ramp "instantly" to the given level.
 
 	:param group_addr: The group address to ramp.
-	:type group_addr: int
+	:type group_addr: y
 	:param duration: Duration, in seconds, that the ramp should occur over.
-	:type duration: int
+	:type duration: n
 	:param level: An amount between 0.0 and 1.0 indicating the brightness to set.
-	:type level: float
+	:type level: d
 	
 	:returns: Single-byte string with code for the confirmation event.
-	:rtype: string
+	:rtype: s
 
 	.. code-block:: sh
 	
 		# Fades GA 5 to 45% brightness over 12 seconds.
 		mdbus2 -s au.id.micolous.cbus.CBusService / au.id.micolous.cbus.CBusInterface.lighting_group_ramp 5 12 0.45
+
+.. method:: lighting_group_terminate_ramp(group_addr)
+
+	Stops ramping a group address at the current point.
+	
+	:param group_addr: Group address to stop ramping of.
+	:type group_addr: y
+	
+	:returns: Single-byte string with code for the confirmation event.
+	:rtype: s
+
+	.. code-block:: sh
+
+		# Stops ramping on GA 5
+		mdbus2 -s au.id.micolous.cbus.CBusService / au.id.micolous.cbus.CBusInterface.lighting_group_terminate_ramp 5
+
