@@ -103,6 +103,9 @@ class CBusProtocolHandler(PCIProtocol):
 
 		# send time packets
 		self.clock_datetime()
+
+	def on_clock_request(self, source_addr):
+		self.clock_datetime()
 		
 		
 class CBusService(dbus.service.Object):
@@ -200,7 +203,7 @@ class CBusProtocolHandlerFactory(Factory):
 	def buildProtocol(self, addr):
 		return self.protocol
 
-def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus, timesync):
+def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus, timesync, no_clock):
 	if session_bus:
 		bus = dbus.SessionBus()
 	else:
@@ -222,7 +225,9 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus, timesync):
 		# in ten seconds, start timesync loop
 		# TODO: have this fire after the connection is established instead
 		reactor.callLater(10, protocol.timesync, timesync) 
-	
+
+	if no_clock:
+		protocol.on_clock_request = lambda x: None
 	
 	
 	
@@ -289,6 +294,13 @@ def main():
 		default=300,
 		help='Send time synchronisation packets every n seconds (or 0 to disable). [default: %(default)s seconds]'
 	)
+
+	group.add_argument('-C', '--no-clock',
+		dest='no_clock',
+		action='store_true',
+		default=False,
+		help='Do not respond to Clock Request SAL messages with the system time (ie: do not provide the CBus network the time when requested).  Enable if your machine does not have a reliable time source, or you have another device on the CBus network providing time services. [default: %(default)s]'
+	)
 	
 	option = parser.parse_args()
 	
@@ -308,7 +320,7 @@ def main():
 	else:
 		log.startLogging(sys.stdout)
 	
-	reactor.callWhenRunning(boot_dbus, serial_mode, addr, option.daemon, option.pid_file, option.session_bus, option.timesync)
+	reactor.callWhenRunning(boot_dbus, serial_mode, addr, option.daemon, option.pid_file, option.session_bus, option.timesync, option.no_clock)
 	reactor.run()
 
 		

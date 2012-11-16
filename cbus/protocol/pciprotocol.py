@@ -499,7 +499,7 @@ class PCIProtocol(LineReceiver):
 		
 		return self._send(p)
 
-	def clock_datetime(self, when=datetime.now()):
+	def clock_datetime(self, when=None):
 		"""
 		Sends the system's local time to the CBus network.
 
@@ -507,6 +507,8 @@ class PCIProtocol(LineReceiver):
 		:type when: datetime.datetime
 		
 		"""
+		if when == None:
+			when = datetime.now()
 
 		p = PointToMultipointPacket(application=APP_CLOCK)
 		
