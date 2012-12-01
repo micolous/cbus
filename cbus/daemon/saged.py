@@ -102,7 +102,7 @@ if __name__ == '__main__':
 	#	help='Root path of the sage webserver.  Used to serve the accompanying javascript and HTML content [default: %(default)s]'
 	#)
 	
-	parser.add_argument('-l', '--listen-addr',
+	parser.add_argument('-h', '--listen-addr',
 		dest='listen_addr',
 		default='127.0.0.1',
 		help='IP address to listen the web server on [default: %(default)s]'
