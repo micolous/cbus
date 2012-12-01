@@ -23,7 +23,7 @@ The service exposes itself on the service au.id.micolous.cbus.CBusService.
 """
 
 # from http://twistedmatrix.com/trac/attachment/ticket/1352/dbus-twisted.py
-from cbus.twisted_error import *
+from cbus.twisted_errors import *
 from twisted.internet import glib2reactor
 
 # installing the glib2 reactor breaks sphinx autodoc
