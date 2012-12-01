@@ -53,7 +53,7 @@ class SageProtocol(WebSocketServerProtocol):
 			('on_lighting_group_ramp', self.on_lighting_group_ramp)
 		):
 			api.add_signal_receiver(
-				m,
+				handler_function=m,
 				signal_name=n
 			)
 	def on_lighting_group_on(self, source_addr, group_addr):
