@@ -59,7 +59,7 @@
 				
 			
 				// do some websockets connection here.
-				sage = new SageClient('ws://172.26.1.1:8887');
+				sage = new SageClient(project.saged);
 				sage.onConnect = function() {
 					$.mobile.loading('hide');
 				};

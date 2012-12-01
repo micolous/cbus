@@ -45,6 +45,32 @@ class SageProtocol(WebSocketServerProtocol):
 		global api
 		self.api = api
 		
+		# wire up events so we can handle events from cdbusd and populate to clients
+		
+		for n, m in (
+			('on_lighting_group_on', self.on_lighting_group_on),
+			('on_lighting_group_off', self.on_lighting_group_off),
+			('on_lighting_group_ramp', self.on_lighting_group_ramp)
+		):
+			api.add_signal_receiver(
+				m,
+				bus_name=DBUS_SERVICE,
+				path=DBUS_PATH,
+				signal_name=n
+			)
+	def on_lighting_group_on(self, source_addr, group_addr):
+		self.send_object(dict(cmd='lighting_group_on', args=[source_addr, group_addr]))
+	
+	def on_lighting_group_off(self, source_addr, group_addr):
+		self.send_object(dict(cmd='lighting_group_off', args=[source_addr, group_addr]))
+	
+	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
+		self.send_object(dict(cmd='lighting_group_ramp', args=[source_addr, group_addr, duration, level]))
+
+	
+	def send_object(self, obj):
+		self.send(dumps(obj))
+	
 	def onMessage(self, msg, binary):
 		msg = loads(msg)
 		
