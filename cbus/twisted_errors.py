@@ -24,5 +24,7 @@ try:
 	ReactorAlreadyInstalledError = twisted.internet.error.ReactorAlreadyInstalledError
 except AttributeError:
 	# old (10?) versions of twisted raise AssertionError instead of ReactorAlreadyInstalledError
+	# Though autobahn doesn't work with Twisted 10.  So will only assist with some issues...
+	# Debian 6 has Twisted 10.  May be other issues.  Note requirements file states Twisted 12 minimum.
 	ReactorAlreadyInstalledError = AssertionError
 

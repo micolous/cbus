@@ -5,3 +5,4 @@ PyGObject
 dbus-python
 argparse
 configparser
+autobahn

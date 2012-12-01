@@ -29,7 +29,7 @@ except ReactorAlreadyInstalledError:
 from cbus.daemon.cdbusd import DBUS_INTERFACE, DBUS_SERVICE, DBUS_PATH
 from twisted.internet import reactor
 from twisted.python import log 
-from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, listenWS
+from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, listenWS, createWsUrl
 from json import loads, dumps
 from argparse import ArgumentParser
 import sys
@@ -84,10 +84,11 @@ class SageProtocol(WebSocketServerProtocol):
 		#self.sendMessage(dumps(msg))
 		
 
-def boot(port=8080):
-	factory = WebSocketServerFactory('ws://0.0.0.0:%d' % port, debug=False)
+def boot(listen_addr='127.0.0.1', port=8080):
+	uri = createWsUrl(listen_addr, port)
+	factory = WebSocketServerFactory(uri, debug=False)
 	factory.protocol = SageProtocol
-	listenWS(factory)
+	listenWS(factory, interface=listen_addr)
 	
 	reactor.run()
 
@@ -101,6 +102,12 @@ if __name__ == '__main__':
 	#	help='Root path of the sage webserver.  Used to serve the accompanying javascript and HTML content [default: %(default)s]'
 	#)
 	
+	parser.add_argument('-l', '--listen-addr',
+		dest='listen_addr',
+		default='127.0.0.1',
+		help='IP address to listen the web server on [default: %(default)s]'
+	)
+	
 	parser.add_argument('-p', '--port',
 		dest='port',
 		type=int,
@@ -111,10 +118,11 @@ if __name__ == '__main__':
 	parser.add_argument('-l', '--log',
 		dest='log_target',
 		type=file,
-		default=sys.stdout
+		default=sys.stdout,
+		help='Log target [default: %(default)s]'
 	)
 	
 	option = parser.parse_args()
 	
 	log.startLogging(option.log_target)
-	boot(option.port)
+	boot(option.listen_addr, option.port)

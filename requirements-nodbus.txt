@@ -3,3 +3,4 @@ lxml
 Twisted>=12.0.0
 configparser
 argparse
+autobahn
