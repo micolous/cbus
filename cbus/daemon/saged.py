@@ -54,8 +54,6 @@ class SageProtocol(WebSocketServerProtocol):
 		):
 			api.add_signal_receiver(
 				m,
-				bus_name=DBUS_SERVICE,
-				path=DBUS_PATH,
 				signal_name=n
 			)
 	def on_lighting_group_on(self, source_addr, group_addr):
