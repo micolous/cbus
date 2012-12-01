@@ -36,7 +36,7 @@ import sys
 
 class SageProtocol(WebSocketServerProtocol):
 	def __init__(self, *args, **kwargs):
-		super(SageProtocol, self).__init__(*args, **kwargs)
+		#super(SageProtocol, self).__init__(*args, **kwargs)
 		
 		# now create a connection to the dbus service
 		obj = bus.get_object(DBUS_SERVICE, DBUS_PATH)
