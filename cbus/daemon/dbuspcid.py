@@ -17,14 +17,14 @@
 
 """
 `fakepci` allows you to create a fake CNI (TCP PCI) or serial PCI that connects
-to cdbusd.
+to cdbusd.  This allows non-DBus CBus clients to connect to a PCI through sharing.
 
 """
 
 import dbus
 import gobject
 import sys
-from optparse import OptionParser
+from argparse import ArgumentParser
 import twisted.internet.error
 from twisted.internet import glib2reactor
 
@@ -108,13 +108,47 @@ def boot(serial_mode, addr, daemon_enable, pid_file, session_bus=False):
 	
 
 def main():
-	parser = OptionParser(usage='%prog')
-	parser.add_option('-D', '--daemon',  action='store_true', dest='daemon', default=False, help='Start as a daemon [default: %default]')
-	parser.add_option('-P', '--pid', dest='pid_file', default='/var/run/cdbusd.pid', help='Location to write the PID file.  Only has effect in daemon mode.  [default: %default]')
-	parser.add_option('-s', '--serial-pci', dest='serial_pci', default=None, help='Serial port to listen on.  Either this or -t must be specified.')
-	parser.add_option('-t', '--tcp-pci', dest='tcp_pci', default=None, help='TCP port to listen on (CNI).  Either this or -s must be specified.')
-	parser.add_option('-S', '--session-bus', action='store_true', dest='session_bus', default=False, help='Bind to the session bus instead of the system bus [default: %default]')
-	parser.add_option('-l', '--log-file', dest='log', default=None, help='Destination to write logs [default: stdout]')
+	parser = ArgumentParser(usage='%(prog)s')
+
+	group = parser.add_argument_group('Daemon options')
+
+	group.add_argument('-D', '--daemon',
+		action='store_true',
+		dest='daemon',
+		default=False,
+		help='Start as a daemon [default: %(default)s]')
+		
+	group.add_argument('-P', '--pid',
+		dest='pid_file',
+		default='/var/run/cdbusd.pid',
+		help='Location to write the PID file.  Only has effect in daemon mode.  [default: %(default)s]'
+	)
+
+	group.add_argument('-S', '--session-bus',
+		action='store_true',
+		dest='session_bus',
+		default=False,
+		help='Bind to the session bus instead of the system bus [default: %(default)s]'
+	)
+	
+	group.add_argument('-l', '--log-file',
+		dest='log',
+		default=None,
+		help='Destination to write logs [default: stdout]'
+	)
+
+	group = parser.add_argument_group('PCI Options')
+	parser.add_argument('-s', '--serial-pci',
+		dest='serial_pci',
+		default=None,
+		help='Serial port to listen on.  Either this or -t must be specified.'
+	)
+	
+	parser.add_argument('-t', '--tcp-pci',
+		dest='tcp_pci',
+		default=None,
+		help='TCP port to listen on (CNI).  Either this or -s must be specified.'
+	)
 	
 	options, args = parser.parse_args()
 	

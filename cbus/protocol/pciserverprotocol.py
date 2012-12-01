@@ -31,6 +31,7 @@ from cbus.protocol.dm_packet import DeviceManagementPacket
 from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.application.lighting import *
+from cbus.protocol.application.clock import *
 
 __all__ = ['PCIServerProtocol']
 
@@ -159,7 +160,13 @@ class PCIServerProtocol(LineReceiver):
 						else:
 							log.msg('dce: unhandled lighting SAL type: %r' % s)
 							return remainder
-					
+					elif isinstance(s, ClockSAL):
+						if isinstance(s, ClockUpdateSAL):
+							self.on_clock_update(s.variable, s.val)
+						elif isinstance(s, ClockRequestSAL):
+							self.on_clock_request()
+						else:
+							log.msg('dce: unhandled clock SAL type: %r' % s)
 					else:
 						log.msg('dce: unhandled SAL type: %r' % s)
 						return remainder
@@ -274,8 +281,26 @@ class PCIServerProtocol(LineReceiver):
 		:param group_addr: Group address ramp being terminated.
 		:type group_addr: int
 		"""
-		log.msg("recv: lighting terminate ramy: %d" % group_addr)
-	
+		log.msg("recv: lighting terminate ramp: %d" % group_addr)
+
+	def on_clock_request(self):
+		"""
+		Event called when a clock application "request time" is recieved.
+		"""
+		log.msg("recv: clock request")
+
+	def on_clock_update(self, variable, val):
+		"""
+		Event called when a clock application "update time" is recieved.
+
+		:param variable: Clock variable to update.
+		:type variable: int
+
+		:param val: Clock value
+		:type variable: datetime.date or datetime.time
+		"""
+		log.msg("recv: clock update: %r" % val)
+		
 	# other things.	
 	
 	def _send(self, cmd, checksum=True, nl=True):

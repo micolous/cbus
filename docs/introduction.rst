@@ -47,7 +47,7 @@ However, the SerialIO library included with C-Gate is only available on 32-bit p
 So where does libcbus come in?
 ==============================
 
-libcbus primarily provides three ways to communicate with C-Bus, with varying levels of complexity:
+libcbus primarily provides three ways to communicate with C-Bus, with varying levels of complexity and abstraction:
 
 * A low level API which allows direct encoding and decoding of packets.  It exposes parts of the packet as classes with attributes.
 * A medium level API which handles access to the CBus PCI through the Twisted networking library and PySerial.  You can insert your own protocol handler, or work with the lower level API in order to access the library at a level that suits you.  There are both server (FakePCI) and client interfaces.

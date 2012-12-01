@@ -16,6 +16,7 @@ Contents:
    cni-discovery
    daemons
    dump_labels
+   dbus_client
    modules
 
 

@@ -44,7 +44,7 @@ import dbus
 import dbus.service
 import gobject
 from dbus.mainloop.glib import DBusGMainLoop
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 
 __all__ = [
@@ -96,6 +96,16 @@ class CBusProtocolHandler(PCIProtocol):
 	def on_lighting_group_terminate_ramp(self, source_addr, group_addr):
 		if not self.cbus_api: return
 		self.cbus_api.on_lighting_group_terminate_ramp(source_addr, group_addr)
+
+	def timesync(self, frequency):
+		# setup timesync in the future.
+		reactor.callLater(frequency, self.timesync, frequency)
+
+		# send time packets
+		self.clock_datetime()
+
+	def on_clock_request(self, source_addr):
+		self.clock_datetime()
 		
 		
 class CBusService(dbus.service.Object):
@@ -156,7 +166,8 @@ class CBusService(dbus.service.Object):
 
 		# TODO: implement return response
 		return self.pci.identify(unit_addr, attribute)
-	
+
+	# signals are automatically fired by the twisted reactor and passed into dbus, so these methods have no logic
 	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='sb')
 	def on_confirmation(self, code, success):
 		pass
@@ -192,7 +203,7 @@ class CBusProtocolHandlerFactory(Factory):
 	def buildProtocol(self, addr):
 		return self.protocol
 
-def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
+def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus, timesync, no_clock):
 	if session_bus:
 		bus = dbus.SessionBus()
 	else:
@@ -209,8 +220,14 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 		point = TCP4ClientEndpoint(reactor, addr[0], int(addr[1]))
 		d = point.connect(CBusProtocolHandlerFactory(protocol))
 		
-	
-	
+	# setup time loop if applicable
+	if timesync > 0:
+		# in ten seconds, start timesync loop
+		# TODO: have this fire after the connection is established instead
+		reactor.callLater(10, protocol.timesync, timesync) 
+
+	if no_clock:
+		protocol.on_clock_request = lambda x: None
 	
 	
 	
@@ -227,17 +244,65 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus=False):
 def main():
 	DBusGMainLoop(set_as_default=True)
 
-	parser = OptionParser(usage='%prog')
-	parser.add_option('-D', '--daemon', action='store_true', dest='daemon', default=False, help='Start as a daemon [default: %default]')
-	parser.add_option('-P', '--pid', dest='pid_file', default='/var/run/cdbusd.pid', help='Location to write the PID file.  Only has effect in daemon mode.  [default: %default]')
+	parser = ArgumentParser(usage='%(prog)s')
+
+	group = parser.add_argument_group('Daemon options')
+	group.add_argument('-D', '--daemon',
+		action='store_true',
+		dest='daemon',
+		default=False,
+		help='Start as a daemon [default: %(default)s]'
+	)
 	
-	parser.add_option('-s', '--serial-pci', dest='serial_pci', default=None, help='Serial port where the PCI is located.  Either this or -t must be specified.')
-	parser.add_option('-t', '--tcp-pci', dest='tcp_pci', default=None, help='IP address and TCP port where the PCI is located (CNI).  Either this or -s must be specified.')
-	parser.add_option('-S', '--session-bus', action='store_true', dest='session_bus', default=False, help='Bind to the session bus instead of the system bus [default: %default]')
+	group.add_argument('-P', '--pid',
+		dest='pid_file',
+		default='/var/run/cdbusd.pid',
+		help='Location to write the PID file.  Only has effect in daemon mode.  [default: %(default)s]'
+	)
+
+	group.add_argument('-S', '--session-bus',
+		action='store_true',
+		dest='session_bus',
+		default=False,
+		help='Bind to the session bus instead of the system bus [default: %(default)s]'
+	)
 	
-	parser.add_option('-l', '--log-file', dest='log', default=None, help='Destination to write logs [default: stdout]')
+	group.add_argument('-l', '--log-file',
+		dest='log',
+		default=None,
+		help='Destination to write logs [default: stdout]'
+	)
+
+	group = parser.add_argument_group('PCI options')
+
+	group.add_argument('-s', '--serial-pci',
+		dest='serial_pci',
+		default=None,
+		help='Serial port where the PCI is located.  Either this or -t must be specified.'
+	)
 	
-	option, args = parser.parse_args()
+	group.add_argument('-t', '--tcp-pci',
+		dest='tcp_pci',
+		default=None,
+		help='IP address and TCP port where the PCI is located (CNI).  Either this or -s must be specified.'
+	)
+	
+	group = parser.add_argument_group('Extras')
+	group.add_argument('-T', '--timesync',
+		dest='timesync',
+		type=int,
+		default=300,
+		help='Send time synchronisation packets every n seconds (or 0 to disable). [default: %(default)s seconds]'
+	)
+
+	group.add_argument('-C', '--no-clock',
+		dest='no_clock',
+		action='store_true',
+		default=False,
+		help='Do not respond to Clock Request SAL messages with the system time (ie: do not provide the CBus network the time when requested).  Enable if your machine does not have a reliable time source, or you have another device on the CBus network providing time services. [default: %(default)s]'
+	)
+	
+	option = parser.parse_args()
 	
 	if option.serial_pci and option.tcp_pci:
 		parser.error('Both serial and TCP CBus PCI addresses were specified!  Use only one...')
@@ -255,7 +320,7 @@ def main():
 	else:
 		log.startLogging(sys.stdout)
 	
-	reactor.callWhenRunning(boot_dbus, serial_mode, addr, option.daemon, option.pid_file, option.session_bus)
+	reactor.callWhenRunning(boot_dbus, serial_mode, addr, option.daemon, option.pid_file, option.session_bus, option.timesync, option.no_clock)
 	reactor.run()
 
 		
