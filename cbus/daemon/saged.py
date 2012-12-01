@@ -15,14 +15,15 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import dbus, gobject, twisted.internet.error
+import dbus, gobject
+from cbus.twisted_errors import *
 from twisted.internet import glib2reactor
 
 # installing the glib2 reactor breaks sphinx autodoc
 # this patches around the issue.
 try:
 	glib2reactor.install()
-except twisted.internet.error.ReactorAlreadyInstalledError:
+except ReactorAlreadyInstalledError:
 	pass
 
 from cbus.daemon.cdbusd import DBUS_INTERFACE, DBUS_SERVICE, DBUS_PATH

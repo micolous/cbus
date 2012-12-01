@@ -23,14 +23,14 @@ The service exposes itself on the service au.id.micolous.cbus.CBusService.
 """
 
 # from http://twistedmatrix.com/trac/attachment/ticket/1352/dbus-twisted.py
-import twisted.internet.error
+from cbus.twisted_error import *
 from twisted.internet import glib2reactor
 
 # installing the glib2 reactor breaks sphinx autodoc
 # this patches around the issue.
 try:
 	glib2reactor.install()
-except twisted.internet.error.ReactorAlreadyInstalledError:
+except ReactorAlreadyInstalledError:
 	pass
 	
 from twisted.internet import reactor

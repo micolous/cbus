@@ -25,14 +25,14 @@ import dbus
 import gobject
 import sys
 from argparse import ArgumentParser
-import twisted.internet.error
+from cbus.twisted_errors import *
 from twisted.internet import glib2reactor
 
 # installing the glib2 reactor breaks sphinx autodoc
 # this patches around the issue.
 try:
 	glib2reactor.install()
-except twisted.internet.error.ReactorAlreadyInstalledError:
+except ReactorAlreadyInstalledError:
 	pass
 
 from cbus.daemon.cdbusd import DBUS_INTERFACE, DBUS_SERVICE, DBUS_PATH
