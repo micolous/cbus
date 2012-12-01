@@ -14,6 +14,7 @@ Contents:
    status
    hacking
    cni-discovery
+   wiser-swf-protocol
    daemons
    dump_labels
    dbus_client
