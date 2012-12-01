@@ -36,11 +36,11 @@ import sys
 
 class SageProtocol(WebSocketServerProtocol):
 	def __init__(self, *args, **kwargs):
+		# only works on new style classes
 		#super(SageProtocol, self).__init__(*args, **kwargs)
 		
 		# now create a connection to the dbus service
-		obj = bus.get_object(DBUS_SERVICE, DBUS_PATH)
-		self.api = dbus.Interface(obj, DBUS_INTERFACE)
+		self.api = kwargs.pop('api')
 		
 	def onMessage(self, msg, binary):
 		msg = loads(msg)
@@ -84,10 +84,19 @@ class SageProtocol(WebSocketServerProtocol):
 		#self.sendMessage(dumps(msg))
 		
 
-def boot(listen_addr='127.0.0.1', port=8080):
+def boot(listen_addr='127.0.0.1', port=8080, session_bus=False):
+	
+	if session_bus:
+		bus = dbus.SessionBus()
+	else:
+		bus = dbus.SystemBus()
+		
+	obj = bus.get_object(DBUS_SERVICE, DBUS_PATH)
+	api = dbus.Interface(obj, DBUS_INTERFACE)
+	
 	uri = createWsUrl(listen_addr, port)
 	factory = WebSocketServerFactory(uri, debug=False)
-	factory.protocol = SageProtocol
+	factory.protocol = SageProtocol(api=api)
 	listenWS(factory, interface=listen_addr)
 	
 	reactor.run()
@@ -122,7 +131,14 @@ if __name__ == '__main__':
 		help='Log target [default: %(default)s]'
 	)
 	
+	group.add_argument('-S', '--session-bus',
+		action='store_true',
+		dest='session_bus',
+		default=False,
+		help='Bind to the session bus instead of the system bus [default: %(default)s]'
+	)
+	
 	option = parser.parse_args()
 	
 	log.startLogging(option.log_target)
-	boot(option.listen_addr, option.port)
+	boot(option.listen_addr, option.port, option.session_bus)
