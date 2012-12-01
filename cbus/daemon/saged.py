@@ -34,7 +34,10 @@ from json import loads, dumps
 from argparse import ArgumentParser
 import sys
 
+# attach dbus to the same glib event loop
+from dbus.mainloop.glib import DBusGMainLoop
 api = None
+
 
 class SageProtocol(WebSocketServerProtocol):
 	def __init__(self, *args, **kwargs):
@@ -113,6 +116,7 @@ class SageProtocol(WebSocketServerProtocol):
 
 def boot(listen_addr='127.0.0.1', port=8080, session_bus=False):
 	global api
+	DBusGMainLoop(set_as_default=True)
 	
 	if session_bus:
 		bus = dbus.SessionBus()
