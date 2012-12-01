@@ -34,13 +34,16 @@ from json import loads, dumps
 from argparse import ArgumentParser
 import sys
 
+api = None
+
 class SageProtocol(WebSocketServerProtocol):
 	def __init__(self, *args, **kwargs):
 		# only works on new style classes
 		#super(SageProtocol, self).__init__(*args, **kwargs)
 		
 		# now create a connection to the dbus service
-		self.api = kwargs.pop('api')
+		global api
+		self.api = api
 		
 	def onMessage(self, msg, binary):
 		msg = loads(msg)
@@ -85,6 +88,7 @@ class SageProtocol(WebSocketServerProtocol):
 		
 
 def boot(listen_addr='127.0.0.1', port=8080, session_bus=False):
+	global api
 	
 	if session_bus:
 		bus = dbus.SessionBus()
@@ -96,7 +100,7 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False):
 	
 	uri = createWsUrl(listen_addr, port)
 	factory = WebSocketServerFactory(uri, debug=False)
-	factory.protocol = SageProtocol(api=api)
+	factory.protocol = SageProtocol
 	listenWS(factory, interface=listen_addr)
 	
 	reactor.run()
