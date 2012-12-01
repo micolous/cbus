@@ -131,7 +131,7 @@ if __name__ == '__main__':
 		help='Log target [default: %(default)s]'
 	)
 	
-	group.add_argument('-S', '--session-bus',
+	parser.add_argument('-S', '--session-bus',
 		action='store_true',
 		dest='session_bus',
 		default=False,
