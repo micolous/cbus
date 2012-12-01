@@ -52,7 +52,7 @@ class SageProtocol(WebSocketServerProtocol):
 			('on_lighting_group_off', self.on_lighting_group_off),
 			('on_lighting_group_ramp', self.on_lighting_group_ramp)
 		):
-			api.add_signal_receiver(
+			api.connect_to_signal(
 				handler_function=m,
 				signal_name=n
 			)
