@@ -4,6 +4,8 @@ Wiser SWF XMLSocket Protocol
 
 The Wiser is a rebadged SparkLAN 802.11b/g/draft-n WiFi Router with custom firmware.  Believe it could be either a WRTR-205GN (based on firmware information) or WRTR-502GN (based on what is available information online).  It runs an embedded Linux system, with an expanded web interface for hosting Flash/XMLSocket based control of CBus.
 
+According to the source code release from Clipsal, this runs Linux 2.6.17.14.  The kernel configuration indicates that the board is a ``fv13xx`` ARM system.
+
 This is also used by the iPhone version of the control software.
 
 At the moment this is a rather unorganised set of notes while I'm still figuring out the protocol.
@@ -39,6 +41,8 @@ There is a basic authentication system in place on some of the sockets.  This ca
 	It appears that the authentication key is always the same regardless of reboots or different HTTP interface passwords.  As the XMLSocket protocol is out-of-band from the HTTP interface, this is the **only** authentication step performed for clients.
 	
 	As a result, changing passwords in the web interface are not an effective measure for preventing access to the CBus XMLSocket protocol.
+	
+	I do not have enough information at this time about Wiser internals to be able to assess how this authentication key is generated.
 
 There is now enough information to connect to the XMLSocket service on port 8888 of the Wiser (or "port" in ``local_config.xml``).
 	
