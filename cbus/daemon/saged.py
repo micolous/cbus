@@ -81,7 +81,7 @@ class SageProtocol(WebSocketServerProtocol):
 
 	
 	def send_object(self, obj):
-		print dumps(obj)
+		#print dumps(obj)
 		self.sendMessage(dumps(obj))
 	
 	def onMessage(self, msg, binary):
