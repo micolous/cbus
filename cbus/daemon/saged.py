@@ -81,6 +81,7 @@ class SageProtocol(WebSocketServerProtocol):
 
 	
 	def send_object(self, obj):
+		print dumps(obj)
 		self.sendMessage(dumps(obj))
 	
 	def onMessage(self, msg, binary):
@@ -117,6 +118,11 @@ class SageProtocol(WebSocketServerProtocol):
 			group = int(args[0])
 			
 			self.api.lighting_group_terminate_ramp(group)
+		elif cmd == 'get_light_states':
+			args = [int(x) for x in args]
+			states = [float(x) for x in self.api.get_light_states(args)]
+			
+			self.send_object(dict(cmd='light_states', args=[dict(zip(args, states))]))
 		else:
 			print 'unknown command: %r' % cmd
 			return

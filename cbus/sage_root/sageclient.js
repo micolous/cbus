@@ -54,6 +54,10 @@ var SageClient = (function() {
 		console.log('SageClient: Default onLightingGroupRamp handler: src=' + src+ ', ga=' + ga + ', duration=' + duration + ', level=' + level);
 	};
 	
+	SageClient.prototype.onLightStates = function(states) {
+		console.log('SageClient: Default onLightStates handler: ' + states);
+	};
+	
 	SageClient.prototype.handleMessage = function(e) {
 		msg = JSON.parse(e.data);
 		//console.log('SageClient: message from server: cmd=' + msg.cmd + ', args=' + msg.args);
@@ -70,6 +74,10 @@ var SageClient = (function() {
 
 			case 'lighting_group_ramp':
 				this.onLightingGroupRamp(msg.args[0], msg.args[1], msg.args[2], msg.args[3]);
+				break;
+			
+			case 'light_states':
+				this.onLightStates(msg.args[0]);
 				break;
 
 			default:
@@ -98,6 +106,10 @@ var SageClient = (function() {
 	
 	SageClient.prototype.lightingGroupTerminateRamp = function(group_addr) {
 		this._sendMessage('lighting_group_terminate_ramp', [group_addr]);
+	};
+	
+	SageClient.prototype.getLightStates = function(group_addrs) {
+		this._sendMessage('get_light_states', group_addrs);
 	};
 	
 	return SageClient;

@@ -39,6 +39,7 @@ from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.internet.serialport import SerialPort
 from twisted.python import log
 from cbus.protocol.pciprotocol import PCIProtocol
+from cbus.common import validate_ga
 import sys
 import dbus
 import dbus.service
@@ -116,30 +117,46 @@ class CBusService(dbus.service.Object):
 	def __init__(self, bus, protocol, object_path=DBUS_PATH):
 		self.pci = protocol
 		self.pci.cbus_api = self
+		
+		self._lighting_state = {}
 		dbus.service.Object.__init__(self, bus, object_path)
 	
+	
+	def set_light_state(self, group_address, level):
+		self._lighting_state[group_address] = level
+		
+	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ay', out_signature='ad')
+	def get_light_states(self, group_addresses):
+		# validate group addresses
+		if not all((validate_ga(x) for x in group_addresses)):
+			raise ValueError, 'Group address(es) (is/are) invalid!'
+			
+		return [self._lighting_state.get(x, 0.) for x in group_addresses]
 
 	#@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ay', out_signature='s')
-	def lighting_group_on(self, group_addr):
+	def lighting_group_on(self, group_addrs):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_on
 		"""
-		return self.pci.lighting_group_on(group_addr)
+		[self.set_light_state(x, 1.) for x in group_addrs]
+		return self.pci.lighting_group_on(group_addrs)
 		
 	#@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ay', out_signature='s')
-	def lighting_group_off(self, group_addr):
+	def lighting_group_off(self, group_addrs):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_off
 		"""
-		return self.pci.lighting_group_off(group_addr)
+		[self.set_light_state(x, 0.) for x in group_addrs]
+		return self.pci.lighting_group_off(group_addrs)
 
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
 	def lighting_group_terminate_ramp(self, group_addr):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_terminate_ramp
 		"""
+		# TODO: handle recording of state
 		return self.pci.lighting_group_terminate_ramp(group_addr)
 		
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ynd', out_signature='s')
@@ -147,6 +164,8 @@ class CBusService(dbus.service.Object):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_ramp
 		"""
+		# FIXME: This records the final value of the dim in the state.
+		self.set_light_state(group_addr, level)
 		return self.pci.lighting_group_ramp(group_addr, duration, level)
 		
 	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='yyy', out_signature='s')
@@ -182,15 +201,15 @@ class CBusService(dbus.service.Object):
 			
 	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yynd')
 	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
-		pass
+		self.set_light_state(group_addr, level)
 			
 	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
 	def on_lighting_group_on(self, source_addr, group_addr):
-		pass
+		self.set_light_state(group_addr, 1.)
 			
 	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
 	def on_lighting_group_off(self, source_addr, group_addr):
-		pass
+		self.set_light_state(group_addr, 0.)
 
 	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
 	def on_lighting_group_terminate_ramp(self, source_addr, group_addr):

@@ -72,9 +72,12 @@ $('#pgMain').live('pageinit', function(evt) {
 	
 
 	// do some websockets connection here.
+	var first_connect = true;
 	sage = new SageClient(project.saged);
 	sage.onConnect = function() {
 		$.mobile.loading('hide');
+		if (first_connect)
+			changeLocation(0);
 	};
 	
 	sage.onLightingGroupOff = function (src, ga) {
@@ -89,6 +92,12 @@ $('#pgMain').live('pageinit', function(evt) {
 		setLevel(ga, level);
 	};
 	
+	sage.onLightStates = function(states) {
+		$.each(states, function(k, v) {
+			setLevel(k, v);
+		});
+	};
+	
 	sage.onDisconnect = function (e) {
 		$.mobile.loading('show', {text: 'Reconnecting...', textVisible: true});
 		console.log('Connection failed (' + e.code + '), reconnecting...');
@@ -96,8 +105,6 @@ $('#pgMain').live('pageinit', function(evt) {
 	}
 	
 	sage.connect();
-	
-	changeLocation(0);
 });
 
 
@@ -174,6 +181,9 @@ function changeLocation(location_id) {
 			$('#switchContainer').append(fieldcontainer);
 		}
 	});
+	
+	// get current lighting state from server
+	sage.getLightStates(Object.keys(project.widgets));
 	
 	// change footer bar
 	$('#locations ul li').removeClass('ui-btn-active');
