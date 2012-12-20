@@ -25,8 +25,10 @@ function wireEvents() {
 		if ($(this).hasClass('suspended')) return;
 		if (this.value == 0) {
 			sage.lightingGroupOff([this.dataset.groupAddress]);
+			setLevel(this.dataset.groupAddress, 0);
 		} else {
 			sage.lightingGroupOn([this.dataset.groupAddress]);
+			setLevel(this.dataset.groupAddress, 1);
 		}
 	});
 	
@@ -39,7 +41,7 @@ function wireEvents() {
 			$(this).data('timer', null);
 		}
 		
-		$(this).data('timer', setTimeout('sage.lightingGroupRamp(' + this.dataset.groupAddress + ', 0, ' + (this.value / 100) + ');$(this).data(\'timer\', null);', 500));
+		$(this).data('timer', setTimeout('setLevel(' + this.dataset.groupAddress + ',' + (this.value/100) + ');sage.lightingGroupRamp(' + this.dataset.groupAddress + ', 0, ' + (this.value / 100) + ');$(this).data(\'timer\', null);', 500));
 	});
 }
 
@@ -139,7 +141,30 @@ function changeLocation(location_id) {
 						$('<option>').attr('value', 1).text('On')
 					)
 				);
-				
+			} else if (v.type == 'switch_slider') {
+				var slider = 
+					
+				fieldcontainer.append($('<select>')
+					.attr('data-role', 'slider')
+					.attr('data-group-address', k)
+					.attr('data-widget-type', 'switch')
+					.attr('id', 'w' + k)
+					.attr('name', 'w' + k)
+					.append(
+						$('<option>').attr('value', 0).text('Off'),
+						$('<option>').attr('value', 1).text('On')
+					)
+				).append($('<input type="range">')
+					.attr('name', 'w' + k)
+					.attr('id', 'w' + k)
+					.attr('data-highlight', 'true')
+					.attr('data-group-address', k)
+					.attr('data-widget-type', 'slider')
+					.attr('value', '0')
+					.attr('min', '0')
+					.attr('max', '100')
+				);
+			
 			} else {
 				console.log('unknown widget type ' + v.type + '!');
 			}
@@ -160,20 +185,31 @@ function changeLocation(location_id) {
 }
 
 function setLevel(ga, level) {
-	$('[data-group-address=' + parseInt(ga) + '][data-widget-type=slider]').each(function(i, d) {
-		// is a slider
+	ga = parseInt(ga);
+	
+	// stop updates first
+	$('[data-group-address=' + ga + ']').each(function(i, d) {
 		$(this).addClass('suspended');
+	});
+
+	$('[data-group-address=' + ga + '][data-widget-type=slider]').each(function(i, d) {
+		// is a slider
 		this.value = level * 100;
-		$(this).slider('refresh').removeClass('suspended');
+		$(this).slider('refresh');
 	
 	});
-	$('[data-group-address=' + parseInt(ga) + '][data-widget-type=switch]').each(function(i, d) {
-		// is a slider
-		$(this).addClass('suspended');		
+
+	$('[data-group-address=' + ga + '][data-widget-type=switch]').each(function(i, d) {
+		// is a switch	
 		this.selectedIndex = (level > 0) ? 1 : 0;
-		$(this).slider('refresh').removeClass('suspended');
+		$(this).slider('refresh');
 	
-	});	
+	});
+	
+	// resume updates
+	$('[data-group-address=' + ga + ']').each(function(i, d) {
+		$(this).removeClass('suspended');
+	});
 }
 
 
