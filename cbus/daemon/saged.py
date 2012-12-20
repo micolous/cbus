@@ -28,15 +28,21 @@ except ReactorAlreadyInstalledError:
 
 from cbus.daemon.cdbusd import DBUS_INTERFACE, DBUS_SERVICE, DBUS_PATH
 from twisted.internet import reactor
-from twisted.python import log 
-from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, listenWS, createWsUrl
+from twisted.python import log
+from twisted.web.server import Site
+from twisted.web.static import File
+from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, createWsUrl
+from autobahn.resource import WebSocketResource, HTTPChannelHixie76Aware
 from json import loads, dumps
 from argparse import ArgumentParser
 import sys
+from os.path import dirname, join, abspath
 
 # attach dbus to the same glib event loop
 from dbus.mainloop.glib import DBusGMainLoop
 api = Factory = None
+
+DEFAULT_SAGE_ROOT = abspath(join(dirname(__file__), '..', 'sage_root'))
 
 
 class SageProtocol(WebSocketServerProtocol):
@@ -129,7 +135,7 @@ class SageProtocol(WebSocketServerProtocol):
 		self.factory.clients.remove(self)
 		
 
-def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, hixie_76=False):
+def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DEFAULT_SAGE_ROOT):
 	global api
 	global factory
 	DBusGMainLoop(set_as_default=True)
@@ -144,10 +150,18 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, hixie_76=False):
 	
 	uri = createWsUrl(listen_addr, port)
 	factory = WebSocketServerFactory(uri, debug=False)
-	factory.setProtocolOptions(allowHixie76=hixie_76)
+	factory.setProtocolOptions(allowHixie76=True)
 	factory.protocol = SageProtocol
 	factory.clients = []
-	listenWS(factory, interface=listen_addr)
+	
+	resource = WebSocketResource(factory)
+	
+	root = File(sage_www_root)
+	root.putChild('saged', resource)
+	
+	site = Site(root)
+	site.protocol = HTTPChannelHixie76Aware
+	reactor.listenTCP(port, site, interface=listen_addr)
 	
 	reactor.run()
 
@@ -188,16 +202,15 @@ if __name__ == '__main__':
 		help='Bind to the session bus instead of the system bus [default: %(default)s]'
 	)
 	
-	parser.add_argument('-7', '--hixie-76',
-		action='store_true',
-		dest='hixie_76',
-		default=False,
-		help='Enable support for the older WebSockets Hixie-76 draft protocol (required for iOS) [default: %(default)s]'
+	parser.add_argument('-r', '--sage-root',
+		dest='sage_www_root',
+		default=DEFAULT_SAGE_ROOT,
+		help='Root path where sage www resources are stored [default: %(default)s]'
 	)
 	
 	option = parser.parse_args()
 	
 	log.startLogging(option.log_target)
-	boot(option.listen_addr, option.port, option.session_bus, option.hixie_76)
+	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root)
 	
 	
