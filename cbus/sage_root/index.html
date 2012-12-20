@@ -9,139 +9,24 @@
 		<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
 		<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
 		<script src="sageclient.js"></script>
-		<script type="text/javascript">
-			var sage = null;
-			var project = null;
-			
-			function wireEvents() {
-				$('.lighting-switch').on('change', function(e) {
-					if (this.value == 0) {
-						sage.lightingGroupOff([this.dataset.groupAddress]);
-					} else {
-						sage.lightingGroupOn([this.dataset.groupAddress]);
-					}
-				});
-				
-				$('.lighting-slider').on('change', function(e) {
-					oldtimer = $(this).data('timer');
-					if (oldtimer != null) {
-						clearTimeout(oldtimer);
-						$(this).data('timer', null);
-					}
-					
-					$(this).data('timer', setTimeout('sage.lightingGroupRamp(' + this.dataset.groupAddress + ', 0, ' + (this.value / 100) + ');$(this).data(\'timer\', null);', 500));
-				});
-			}
-			
-			$('#pgMain').live('pageinit', function(evt) {
-				$.mobile.loading('show', {text: 'Connecting to server...', textVisible: true});
-				
-				// load up project definition
-				project_req = $.ajax('./project.json', { async: false });
-
-				project = JSON.parse(project_req.responseText);
-				
-				// now iterate through groups and set them up in the UI
-				$('#locations').empty();
-				$.each(project.locations, function(k, v) {
-					$('#locations').append(
-						$('<li>').append(
-							$('<a>')
-								.text(v)
-								.data('location-id', k)
-								.on('click', function() { changeLocation($(this).data('location-id')); })
-						)
-					)
-				});
-				
-				$('#locations li').trigger('create');
-				
-				
-			
-				// do some websockets connection here.
-				sage = new SageClient(project.saged);
-				sage.onConnect = function() {
-					$.mobile.loading('hide');
-				};
-				sage.connect();
-				
-				changeLocation(0);
-			});
-			
-			
-			function changeLocation(location_id) {
-				location_id = location_id * 1;
-				console.log('changing to location ' + location_id);
-				// clear old fields
-				$('#switchContainer').empty();
-				
-				// populate fields
-				$.each(project.widgets, function(k, v) {
-					if (v.locations.indexOf(location_id) >= 0) {
-						// this is a location for me, populate!
-						fieldcontainer = $('<div data-role="fieldcontain">');
-						
-						// add label
-						fieldcontainer.append($('<label for="w' + k + '">').text(v.name));
-						
-						// add widget
-						if (v.type == 'slider') {
-							fieldcontainer.append($('<input class="lighting-slider" type="range">')
-								.attr('name', 'w' + k)
-								.attr('id', 'w' + k)
-								.attr('data-highlight', 'true')
-								.attr('data-group-address', k)
-								.attr('value', '0')
-								.attr('min', '0')
-								.attr('max', '100')
-							);
-						
-						} else if (v.type == 'switch') {
-							fieldcontainer.append($('<select class="lighting-switch">')
-								.attr('data-role', 'slider')
-								.attr('data-group-address', k)
-								.attr('id', 'w' + k)
-								.attr('name', 'w' + k)
-								.append(
-									$('<option>').attr('value', 0).text('Off'),
-									$('<option>').attr('value', 1).text('On')
-								)
-							);
-							
-						} else {
-							console.log('unknown widget type ' + v.type + '!');
-						}
-						
-						
-						
-						$('#switchContainer').append(fieldcontainer);
-					}
-				});
-				
-				$('#switchContainer').trigger('create');
-				wireEvents();
-			}
-			
-		
-		</script>
+		<script src="sageui.js"></script>
 	</head>
 	
 	<body>
+		<!-- define a basic view for the javascript to manipulate -->
 		<div data-role="page" id="pgMain">
-			<div data-role="header">
+			<div data-role="header" data-position="fixed">
 				<h1>sage lighting controller (experimental!)</h1>
 			</div>
 			
 			<div data-role="content">
-				
 				<div id="switchContainer"></div>
-				
 			</div>
 			
 			
-			<div data-role="footer">
-				<div data-role="navbar">
-					<ul id="locations">
+			<div data-role="footer" data-position="fixed">
+				<div data-role="navbar" id="locations">
+					<ul>
 						<li></li>
 						<li></li>
 					</ul>

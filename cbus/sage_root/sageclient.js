@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
+ 
+function delegate(that, thatMethod) { return function() { return thatMethod.apply(that, arguments); } }
 
 var SageClient = (function() {
 	var _uri;
@@ -27,22 +29,54 @@ var SageClient = (function() {
 	SageClient.prototype.connect = function() {
 		_socket = new WebSocket(_uri);
 		
-		_socket.onopen = this.onConnect;
-		
-		_socket.onclose = function(e) {
-			console.log("connection closed (" + e.code + ")");
-		};
-		
-		_socket.onmessage = this.handleMessage;
+		_socket.onopen = delegate(this, this.onConnect);
+		_socket.onclose = delegate(this, this.onDisconnect);
+		_socket.onmessage = delegate(this, this.handleMessage);
 	};
 	
 	SageClient.prototype.onConnect = function() {
 		console.log('SageClient: Connected to server ' + _uri);
 	};
 	
+	SageClient.prototype.onDisconnect = function(e) {
+		console.log("SageClient: connection closed (" + e.code + ")");
+	};
+		
+	SageClient.prototype.onLightingGroupOn = function(src, ga) {
+		console.log('SageClient: Default onLightingGroupOn handler: src=' + src + ', ga=' + ga);
+	};
+
+	SageClient.prototype.onLightingGroupOff = function(src, ga) {
+		console.log('SageClient: Default onLightingGroupOff handler: src=' + src + ', ga=' + ga);
+	};
+
+	SageClient.prototype.onLightingGroupRamp = function(src, ga, duration, level) {
+		console.log('SageClient: Default onLightingGroupRamp handler: src=' + src+ ', ga=' + ga + ', duration=' + duration + ', level=' + level);
+	};
+	
 	SageClient.prototype.handleMessage = function(e) {
 		msg = JSON.parse(e.data);
-		console.log('message from server: cmd=' + msg.cmd + ', args=' + msg.args);
+		//console.log('SageClient: message from server: cmd=' + msg.cmd + ', args=' + msg.args);
+
+		console.log('SageClient: recieved server event: ' + msg.cmd + '(' + msg.args + ')');
+		switch (msg.cmd) {
+			case 'lighting_group_on':
+				this.onLightingGroupOn(msg.args[0], msg.args[1]);
+				break;
+
+			case 'lighting_group_off':
+				this.onLightingGroupOff(msg.args[0], msg.args[1]);
+				break;
+
+			case 'lighting_group_ramp':
+				this.onLightingGroupRamp(msg.args[0], msg.args[1], msg.args[2], msg.args[3]);
+				break;
+
+			default:
+				console.log('SageClient: Unhandled event type!');
+				break;
+		}
+		
 	};
 	
 	SageClient.prototype._sendMessage = function(cmd, args) {

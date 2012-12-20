@@ -1,8 +1,12 @@
 pyserial==2.6
 lxml
-Twisted>=12.0.0
-PyGObject
-dbus-python
+Twisted>=12.0.0a
+
+# a requirement, but you should install this from packages as it lacks a setup.py
+#python-dbus
+# also should be installed from packages
+#PyGObject
+
 argparse
 configparser
 autobahn

@@ -36,7 +36,7 @@ import sys
 
 # attach dbus to the same glib event loop
 from dbus.mainloop.glib import DBusGMainLoop
-api = None
+api = Factory = None
 
 
 class SageProtocol(WebSocketServerProtocol):
@@ -59,18 +59,23 @@ class SageProtocol(WebSocketServerProtocol):
 				handler_function=m,
 				signal_name=n
 			)
+		
+		global factory
+		self.factory = factory
+		self.factory.clients.append(self)
+		
 	def on_lighting_group_on(self, source_addr, group_addr):
-		self.send_object(dict(cmd='lighting_group_on', args=[source_addr, group_addr]))
+		self.send_object(dict(cmd='lighting_group_on', args=[int(source_addr), int(group_addr)]))
 	
 	def on_lighting_group_off(self, source_addr, group_addr):
-		self.send_object(dict(cmd='lighting_group_off', args=[source_addr, group_addr]))
+		self.send_object(dict(cmd='lighting_group_off', args=[int(source_addr), int(group_addr)]))
 	
 	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
-		self.send_object(dict(cmd='lighting_group_ramp', args=[source_addr, group_addr, duration, level]))
+		self.send_object(dict(cmd='lighting_group_ramp', args=[int(source_addr), int(group_addr), int(duration), float(level)]))
 
 	
 	def send_object(self, obj):
-		self.send(dumps(obj))
+		self.sendMessage(dumps(obj))
 	
 	def onMessage(self, msg, binary):
 		msg = loads(msg)
@@ -108,14 +113,25 @@ class SageProtocol(WebSocketServerProtocol):
 			self.api.lighting_group_terminate_ramp(group)
 		else:
 			print 'unknown command: %r' % cmd
+			return
 		
-		print repr(msg)
+		#print repr(msg)
+		
+		# now send the message to other nodes
+		args = [None] + args
+		for c in self.factory.clients:
+			if c != self:
+				c.send_object(dict(cmd=cmd, args=args))
 		
 		#self.sendMessage(dumps(msg))
+	
+	def onConnectionLost(self, reason):
+		self.factory.clients.remove(self)
 		
 
-def boot(listen_addr='127.0.0.1', port=8080, session_bus=False):
+def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, hixie_76=False):
 	global api
+	global factory
 	DBusGMainLoop(set_as_default=True)
 	
 	if session_bus:
@@ -128,7 +144,9 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False):
 	
 	uri = createWsUrl(listen_addr, port)
 	factory = WebSocketServerFactory(uri, debug=False)
+	factory.setProtocolOptions(allowHixie76=hixie_76)
 	factory.protocol = SageProtocol
+	factory.clients = []
 	listenWS(factory, interface=listen_addr)
 	
 	reactor.run()
@@ -160,7 +178,7 @@ if __name__ == '__main__':
 		dest='log_target',
 		type=file,
 		default=sys.stdout,
-		help='Log target [default: %(default)s]'
+		help='Log target [default: stdout]'
 	)
 	
 	parser.add_argument('-S', '--session-bus',
@@ -170,7 +188,16 @@ if __name__ == '__main__':
 		help='Bind to the session bus instead of the system bus [default: %(default)s]'
 	)
 	
+	parser.add_argument('-7', '--hixie-76',
+		action='store_true',
+		dest='hixie_76',
+		default=False,
+		help='Enable support for the older WebSockets Hixie-76 draft protocol (required for iOS) [default: %(default)s]'
+	)
+	
 	option = parser.parse_args()
 	
 	log.startLogging(option.log_target)
-	boot(option.listen_addr, option.port, option.session_bus)
+	boot(option.listen_addr, option.port, option.session_bus, option.hixie_76)
+	
+	
