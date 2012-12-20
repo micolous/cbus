@@ -54,20 +54,19 @@ $('#pgMain').live('pageinit', function(evt) {
 	project = JSON.parse(project_req.responseText);
 	
 	// now iterate through groups and set them up in the UI
-	$('#locations ul').empty();
+	$('#locations').empty().trigger('destroy');
 	$.each(project.locations, function(k, v) {
-		$('#locations ul').append(
-			$('<li>').append(
-				$('<a>')
-					.text(v)
-					.attr('data-location-id', k)
-					.data('location-id', k)
-					.on('click', function() { changeLocation($(this).data('location-id')); })
-			)
+		$('#locations').append(
+			$('<button>')
+				.text(v)
+				.attr('data-location-id', k)
+				.data('location-id', k)
+				.on('click', function() { changeLocation($(this).data('location-id')); })
+			
 		)
 	});
 	
-	$('#locations').trigger('destroy').trigger('create');
+	$('#locations').trigger('create');
 	
 	
 
@@ -76,8 +75,13 @@ $('#pgMain').live('pageinit', function(evt) {
 	sage = new SageClient(project.saged);
 	sage.onConnect = function() {
 		$.mobile.loading('hide');
-		if (first_connect)
+		if (first_connect) {
 			changeLocation(0);
+			first_connect = false;
+		} else {
+			// update lights from while we were gone
+			sage.getLightStates(Object.keys(project.widgets));
+		}
 	};
 	
 	sage.onLightingGroupOff = function (src, ga) {
