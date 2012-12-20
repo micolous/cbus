@@ -26,6 +26,10 @@ var SageClient = (function() {
 		_uri = uri;
 	};
 	
+	SageClient.prototype.hasWebsockets = function() {
+		return window.WebSocket != null;
+	};
+	
 	SageClient.prototype.connect = function() {
 		_socket = new WebSocket(_uri);
 		

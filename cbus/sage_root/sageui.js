@@ -73,42 +73,50 @@ $('#pgMain').live('pageinit', function(evt) {
 	// do some websockets connection here.
 	var first_connect = true;
 	sage = new SageClient(project.saged);
-	sage.onConnect = function() {
+	
+	if (!sage.hasWebsockets()) {
+		// no websockets available, die
 		$.mobile.loading('hide');
-		if (first_connect) {
-			changeLocation(0);
-			first_connect = false;
-		} else {
-			// update lights from while we were gone
-			sage.getLightStates(Object.keys(project.widgets));
+		$('#locations').empty();
+		$('#switchContainer').text('Sorry!  sage requires WebSockets, which is unavailable on your web browser.  Please upgrade or change browser to one that supports WebSockets.');
+	} else {
+		sage.onConnect = function() {
+			$.mobile.loading('hide');
+			if (first_connect) {
+				changeLocation(0);
+				first_connect = false;
+			} else {
+				// update lights from while we were gone
+				sage.getLightStates(Object.keys(project.widgets));
+			}
+		};
+
+		sage.onLightingGroupOff = function (src, ga) {
+			setLevel(ga, 0);
+		};
+
+		sage.onLightingGroupOn = function (src, ga) {
+			setLevel(ga, 1);
+		};
+
+		sage.onLightingGroupRamp = function (src, ga, duration, level) {
+			setLevel(ga, level);
+		};
+
+		sage.onLightStates = function(states) {
+			$.each(states, function(k, v) {
+				setLevel(k, v);
+			});
+		};
+
+		sage.onDisconnect = function (e) {
+			$.mobile.loading('show', {text: 'Reconnecting...', textVisible: true});
+			console.log('Connection failed (' + e.code + '), reconnecting...');
+			setTimeout('sage.connect()', 1000);
 		}
-	};
-	
-	sage.onLightingGroupOff = function (src, ga) {
-		setLevel(ga, 0);
-	};
-	
-	sage.onLightingGroupOn = function (src, ga) {
-		setLevel(ga, 1);
-	};
-	
-	sage.onLightingGroupRamp = function (src, ga, duration, level) {
-		setLevel(ga, level);
-	};
-	
-	sage.onLightStates = function(states) {
-		$.each(states, function(k, v) {
-			setLevel(k, v);
-		});
-	};
-	
-	sage.onDisconnect = function (e) {
-		$.mobile.loading('show', {text: 'Reconnecting...', textVisible: true});
-		console.log('Connection failed (' + e.code + '), reconnecting...');
-		setTimeout('sage.connect()', 1000);
+
+		sage.connect();
 	}
-	
-	sage.connect();
 });
 
 
