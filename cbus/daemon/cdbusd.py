@@ -222,7 +222,7 @@ class CBusProtocolHandlerFactory(Factory):
 	def buildProtocol(self, addr):
 		return self.protocol
 
-def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus, timesync, no_clock):
+def boot_dbus(serial_mode, addr, session_bus, timesync, no_clock):
 	if session_bus:
 		bus = dbus.SessionBus()
 	else:
@@ -252,10 +252,7 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus, timesync, no_
 	
 	"""mainloop = gobject.MainLoop()
 	
-	if daemonise:
-		assert pid_file, 'Running in daemon mode means pid_file must be specified.'
-		from daemon import daemonize
-		daemonize(pid_file)
+
 	
 	gobject.threads_init()
 	context = mainloop.get_context()"""
@@ -263,7 +260,7 @@ def boot_dbus(serial_mode, addr, daemonise, pid_file, session_bus, timesync, no_
 def main():
 	DBusGMainLoop(set_as_default=True)
 
-	parser = ArgumentParser(usage='%(prog)s')
+	parser = ArgumentParser()
 
 	group = parser.add_argument_group('Daemon options')
 	group.add_argument('-D', '--daemon',
@@ -292,7 +289,7 @@ def main():
 		help='Destination to write logs [default: stdout]'
 	)
 
-	group = parser.add_argument_group('PCI options')
+	group = parser.add_mutually_exclusive_group(required=True)
 
 	group.add_argument('-s', '--serial-pci',
 		dest='serial_pci',
@@ -334,12 +331,24 @@ def main():
 	else:
 		parser.error('No CBus PCI address was specified!  (See -s or -t option)')
 		
+	if option.daemon and not option.pid_file:
+		parser.error('Running in daemon mode requires a PID file be specified.')
+				
 	if option.log:
 		log.startLogging(option.log)
 	else:
 		log.startLogging(sys.stdout)
 	
-	reactor.callWhenRunning(boot_dbus, serial_mode, addr, option.daemon, option.pid_file, option.session_bus, option.timesync, option.no_clock)
+	reactor.callWhenRunning(boot_dbus, serial_mode, addr, option.session_bus, option.timesync, option.no_clock)
+
+	# TODO: replace this with twistd.
+	if option.daemon:
+		# this module is only needed if daemonising.
+		from daemon import daemonize
+		daemonize(option.pid_file)
+
+
+
 	reactor.run()
 
 		
