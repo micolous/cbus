@@ -1,0 +1,2 @@
+#!/bin/sh
+mdbus2 -s au.id.micolous.cbus.CBusService / au.id.micolous.cbus.CBusInterface.lighting_group_on "(${1})"
