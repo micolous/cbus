@@ -49,9 +49,16 @@ $('#pgMain').live('pageinit', function(evt) {
 	$.mobile.loading('show', {text: 'Connecting to server...', textVisible: true});
 	
 	// load up project definition
-	project_req = $.ajax('./project.json', { async: false });
-
-	project = JSON.parse(project_req.responseText);
+	try {
+		project_req = $.ajax('./project.json', { async: false });
+		project = JSON.parse(project_req.responseText);
+	} catch (ex) {
+		$.mobile.loading('hide');
+		$('#locations').empty();
+		$('#switchContainer').text('Sorry!  project.json seems to be missing or have a syntax error, so sage cannot start.  The error was: ' + ex);
+		return;
+	}
+	
 	
 	// now iterate through groups and set them up in the UI
 	$('#locations').empty().trigger('destroy');

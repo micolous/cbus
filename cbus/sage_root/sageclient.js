@@ -27,11 +27,16 @@ var SageClient = (function() {
 	};
 	
 	SageClient.prototype.hasWebsockets = function() {
-		return window.WebSocket != null;
+		return window.WebSocket != null || window.MozWebSocket != null;
 	};
 	
 	SageClient.prototype.connect = function() {
-		_socket = new WebSocket(_uri);
+		if (window.MozWebSocket != null) {
+			// firefox <= 10.0
+			_socket = new MozWebSocket(_uri);
+		} else {
+			_socket = new WebSocket(_uri);
+		}
 		
 		_socket.onopen = delegate(this, this.onConnect);
 		_socket.onclose = delegate(this, this.onDisconnect);

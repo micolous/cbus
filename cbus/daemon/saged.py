@@ -33,6 +33,11 @@ from twisted.web.server import Site
 from twisted.web.static import File
 from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, createWsUrl
 from autobahn.resource import WebSocketResource, HTTPChannelHixie76Aware
+from zope.interface import implements
+from twisted.cred.portal import IRealm, Portal
+from twisted.cred.checkers import FilePasswordDB
+from twisted.web.resource import IResource
+from twisted.web.guard import HTTPAuthSessionWrapper, DigestCredentialFactory, BasicCredentialFactory
 from json import loads, dumps
 from argparse import ArgumentParser
 import sys
@@ -43,6 +48,17 @@ from dbus.mainloop.glib import DBusGMainLoop
 api = Factory = None
 
 DEFAULT_SAGE_ROOT = abspath(join(dirname(__file__), '..', 'sage_root'))
+
+class SageRealm(object):
+	implements(IRealm)
+	
+	def __init__(self, root):
+		self.root = root
+	
+	def requestAvatar(self, avatarId, mind, *interfaces):
+		if IResource in interfaces:
+			return (IResource, self.root, lambda: None)
+		raise NotImplementedError('Only IResource interface is supported')
 
 
 class SageProtocol(WebSocketServerProtocol):
@@ -141,7 +157,7 @@ class SageProtocol(WebSocketServerProtocol):
 		self.factory.clients.remove(self)
 		
 
-def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DEFAULT_SAGE_ROOT):
+def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DEFAULT_SAGE_ROOT, auth_realm=None, auth_passwd=None):
 	global api
 	global factory
 	DBusGMainLoop(set_as_default=True)
@@ -164,6 +180,12 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DE
 	
 	root = File(sage_www_root)
 	root.putChild('saged', resource)
+	
+	if auth_realm != None and auth_passwd != None:
+		portal = Portal(SageRealm(root), [FilePasswordDB(auth_passwd)])
+		credentialFactories = [BasicCredentialFactory(auth_realm), DigestCredentialFactory('sha1', auth_realm)]
+		root = HTTPAuthSessionWrapper(portal, credentialFactories)
+		
 	
 	site = Site(root)
 	site.protocol = HTTPChannelHixie76Aware
@@ -214,9 +236,23 @@ if __name__ == '__main__':
 		help='Root path where sage www resources are stored [default: %(default)s]'
 	)
 	
+	group = parser.add_argument_group('Authentication options')
+	
+	group.add_argument('-R', '--realm',
+		dest='auth_realm',
+		default='saged',
+		help='HTTP authorisation realm to use for authenticating clients [default: %(default)s]'
+	)
+	
+	group.add_argument('-P', '--passwd',
+		dest='auth_passwd',
+		required=False,
+		help='If specified, a passwd(5)-formatted password list to authenticate users with (though with plain-text passwords).  If not specified, no authentication will be used with this saged instance.  Note: due to a bug in Chrome (#123862), it cannot connect to password-protected WebSockets instances.'
+	)
+	
 	option = parser.parse_args()
 	
 	log.startLogging(option.log_target)
-	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root)
+	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root, option.auth_realm, option.auth_passwd)
 	
 	
