@@ -10,3 +10,4 @@ Twisted>=12.0.0a
 argparse
 configparser
 autobahn
+passlib

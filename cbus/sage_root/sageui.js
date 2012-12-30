@@ -134,10 +134,18 @@ function changeLocation(location_id) {
 	$('#switchContainer').empty();
 	
 	// populate fields
+	var weights = {};
 	$.each(project.widgets, function(k, v) {
-		if (v.locations.indexOf(location_id) >= 0) {
+		if (v.locations[location_id] != undefined) {
+			// create a weight array if it doesn't exist so that the elements may be sorted
+			if (weights[v.locations[location_id]] == undefined) {
+				weights[v.locations[location_id]] = new Array();
+			}
+			
 			// this is a location for me, populate!
 			fieldcontainer = $('<div data-role="fieldcontain">');
+			weights[v.locations[location_id]].push(fieldcontainer);
+
 			
 			// add label
 			fieldcontainer.append($('<label for="w' + k + '">').text(v.name));
@@ -197,9 +205,17 @@ function changeLocation(location_id) {
 			
 			
 			
-			$('#switchContainer').append(fieldcontainer);
+			//$('#switchContainer').append(fieldcontainer);
 		}
 	});
+	
+	$.each(weights, function(k, v) {
+		$.each(v, function(i, w) {
+			$('#switchContainer').append(w);
+		});
+	});
+	
+	
 	
 	// get current lighting state from server
 	sage.getLightStates(Object.keys(project.widgets));

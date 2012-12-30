@@ -35,9 +35,9 @@ from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, 
 from autobahn.resource import WebSocketResource, HTTPChannelHixie76Aware
 from zope.interface import implements
 from twisted.cred.portal import IRealm, Portal
-from twisted.cred.checkers import FilePasswordDB
+from cbus.twisted_passlib import ApachePasswordDB
 from twisted.web.resource import IResource
-from twisted.web.guard import HTTPAuthSessionWrapper, DigestCredentialFactory, BasicCredentialFactory
+from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
 from json import loads, dumps
 from argparse import ArgumentParser
 import sys
@@ -182,8 +182,8 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DE
 	root.putChild('saged', resource)
 	
 	if auth_realm != None and auth_passwd != None:
-		portal = Portal(SageRealm(root), [FilePasswordDB(auth_passwd)])
-		credentialFactories = [BasicCredentialFactory(auth_realm), DigestCredentialFactory('sha1', auth_realm)]
+		portal = Portal(SageRealm(root), [ApachePasswordDB(auth_passwd)])
+		credentialFactories = [BasicCredentialFactory(auth_realm),]
 		root = HTTPAuthSessionWrapper(portal, credentialFactories)
 		
 	
@@ -247,7 +247,7 @@ if __name__ == '__main__':
 	group.add_argument('-P', '--passwd',
 		dest='auth_passwd',
 		required=False,
-		help='If specified, a passwd(5)-formatted password list to authenticate users with (though with plain-text passwords).  If not specified, no authentication will be used with this saged instance.  Note: due to a bug in Chrome (#123862), it cannot connect to password-protected WebSockets instances.'
+		help='If specified, a htpasswd password list to authenticate users with.  If not specified, no authentication will be used with this saged instance.  Note: due to a bug in Chrome (#123862), it cannot connect to password-protected WebSockets instances.'
 	)
 	
 	option = parser.parse_args()
