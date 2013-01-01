@@ -146,6 +146,7 @@ class SageProtocol(WebSocketServerProtocol):
 		#print repr(msg)
 		
 		# now send the message to other nodes
+		# TODO: fix this so it has the nice sanitised output
 		args = [None] + args
 		for c in self.factory.clients:
 			if c != self:
