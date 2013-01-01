@@ -99,11 +99,15 @@ $('#pgMain').live('pageinit', function(evt) {
 		};
 
 		sage.onLightingGroupOff = function (src, ga) {
-			setLevel(ga, 0);
+			$.each(ga, function(k, v) {
+				setLevel(v, 0);
+			});
 		};
 
 		sage.onLightingGroupOn = function (src, ga) {
-			setLevel(ga, 1);
+			$.each(ga, function(k, v) {
+				setLevel(v, 1);
+			});
 		};
 
 		sage.onLightingGroupRamp = function (src, ga, duration, level) {

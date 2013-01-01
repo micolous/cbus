@@ -87,10 +87,10 @@ class SageProtocol(WebSocketServerProtocol):
 		self.factory.clients.append(self)
 		
 	def on_lighting_group_on(self, source_addr, group_addr):
-		self.send_object(dict(cmd='lighting_group_on', args=[int(source_addr), int(group_addr)]))
+		self.send_object(dict(cmd='lighting_group_on', args=[int(source_addr), [int(group_addr)]]))
 	
 	def on_lighting_group_off(self, source_addr, group_addr):
-		self.send_object(dict(cmd='lighting_group_off', args=[int(source_addr), int(group_addr)]))
+		self.send_object(dict(cmd='lighting_group_off', args=[int(source_addr), [int(group_addr)]]))
 	
 	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
 		self.send_object(dict(cmd='lighting_group_ramp', args=[int(source_addr), int(group_addr), int(duration), float(level)]))
