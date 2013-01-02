@@ -113,13 +113,14 @@ class SageProtocol(WebSocketServerProtocol):
 			groups = [int(x) for x in args[0]]
 			
 			self.api.lighting_group_on(groups)
+			args = [groups]
 		elif cmd == 'lighting_group_off':
 			# handle lighting group off
 			print 'lighting group off %r' % args[0]
 			groups = [int(x) for x in args[0]]
 			
 			self.api.lighting_group_off(groups)
-			
+			args = [groups]
 		elif cmd == 'lighting_group_ramp':
 			# handle lighting ramp
 			print 'lighting group ramp group=%s, duration=%s, level=%s' % (args[0], args[1], args[2])
@@ -128,17 +129,21 @@ class SageProtocol(WebSocketServerProtocol):
 			level = float(args[2])
 			
 			self.api.lighting_group_ramp(group, duration, level)
-			
+			args = [group, duration, level]
 		elif cmd == 'lighting_group_terminate_ramp':
 			print 'lighting group terminate ramp group=%s' % args[0]
 			group = int(args[0])
 			
 			self.api.lighting_group_terminate_ramp(group)
+			args = [group]
 		elif cmd == 'get_light_states':
 			args = [int(x) for x in args]
 			states = [float(x) for x in self.api.get_light_states(args)]
 			
 			self.send_object(dict(cmd='light_states', args=[dict(zip(args, states))]))
+			
+			# don't want to broadcast the request onto the network again.
+			return
 		else:
 			print 'unknown command: %r' % cmd
 			return
@@ -146,7 +151,7 @@ class SageProtocol(WebSocketServerProtocol):
 		#print repr(msg)
 		
 		# now send the message to other nodes
-		# TODO: fix this so it has the nice sanitised output
+		# make sure args is sanitised before this point...
 		args = [None] + args
 		for c in self.factory.clients:
 			if c != self:
