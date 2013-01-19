@@ -62,39 +62,10 @@ class SageRealm(object):
 
 
 class SageProtocol(WebSocketServerProtocol):
-	def __init__(self, *args, **kwargs):
-		# only works on new style classes
-		#super(SageProtocol, self).__init__(*args, **kwargs)
-		
-		# now create a connection to the dbus service
-		global api
-		self.api = api
-		
-		# wire up events so we can handle events from cdbusd and populate to clients
-		
-		for n, m in (
-			('on_lighting_group_on', self.on_lighting_group_on),
-			('on_lighting_group_off', self.on_lighting_group_off),
-			('on_lighting_group_ramp', self.on_lighting_group_ramp)
-		):
-			api.connect_to_signal(
-				handler_function=m,
-				signal_name=n
-			)
-		
-		global factory
-		self.factory = factory
+	def onConnect(self, request):
+		super(SageProtocol, self).connectionRequest(request)
 		self.factory.clients.append(self)
-		
-	def on_lighting_group_on(self, source_addr, group_addr):
-		self.send_object(dict(cmd='lighting_group_on', args=[int(source_addr), [int(group_addr)]]))
-	
-	def on_lighting_group_off(self, source_addr, group_addr):
-		self.send_object(dict(cmd='lighting_group_off', args=[int(source_addr), [int(group_addr)]]))
-	
-	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
-		self.send_object(dict(cmd='lighting_group_ramp', args=[int(source_addr), int(group_addr), int(duration), float(level)]))
-
+		self.api = self.factory.api
 	
 	def send_object(self, obj):
 		#print dumps(obj)
@@ -153,17 +124,62 @@ class SageProtocol(WebSocketServerProtocol):
 		# now send the message to other nodes
 		# make sure args is sanitised before this point...
 		args = [None] + args
-		for c in self.factory.clients:
-			if c != self:
-				c.send_object(dict(cmd=cmd, args=args))
+		self.factory.broadcast_object(dict(cmd=cmd, args=args))
+		
+		#for c in self.factory.clients:
+		#	if c != self:
+		#		c.send_object(dict(cmd=cmd, args=args))
 		
 		#self.sendMessage(dumps(msg))
 	
-	def onConnectionLost(self, reason):
+	def connectionLost(self, reason):
 		self.factory.clients.remove(self)
+		super(SageProtocol, self).connectionLost(reason)
 		
 
-def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DEFAULT_SAGE_ROOT, auth_realm=None, auth_passwd=None):
+class SageProtocolFactory(WebSocketServerFactory):
+	def __init__(self, *args, **kwargs):
+		self.api = kwargs.pop('api', None)
+		
+		super(SageProtocolFactory, self).__init__(*args, **kwargs)
+		self.clients = []
+		
+		# wire up events so we can handle events from cdbusd and populate to clients
+		
+		for n, m in (
+			('on_lighting_group_on', self.on_lighting_group_on),
+			('on_lighting_group_off', self.on_lighting_group_off),
+			('on_lighting_group_ramp', self.on_lighting_group_ramp)
+		):
+			api.connect_to_signal(
+				handler_function=m,
+				signal_name=n
+			)
+	
+	def broadcast_object(self, msg, exceptClient=None):
+		# format into json once
+		msg = dumps(msg)
+		
+		# broadcast
+		for client in self.clients:
+			if exceptClient == None or exceptClient != client:
+				client.sendMessage(msg)
+		
+	def on_lighting_group_on(self, source_addr, group_addr):
+		self.broadcast_object(dict(cmd='lighting_group_on', args=[int(source_addr), [int(group_addr)]]))
+	
+	def on_lighting_group_off(self, source_addr, group_addr):
+		self.broadcast_object(dict(cmd='lighting_group_off', args=[int(source_addr), [int(group_addr)]]))
+	
+	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
+		self.broadcast_object(dict(cmd='lighting_group_ramp', args=[int(source_addr), int(group_addr), int(duration), float(level)]))
+
+
+
+	
+		
+		
+def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DEFAULT_SAGE_ROOT, auth_realm=None, auth_passwd=None, allow_ga=None, deny_ga=None):
 	global api
 	global factory
 	DBusGMainLoop(set_as_default=True)
@@ -177,7 +193,7 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DE
 	api = dbus.Interface(obj, DBUS_INTERFACE)
 	
 	uri = createWsUrl(listen_addr, port)
-	factory = WebSocketServerFactory(uri, debug=False)
+	factory = SageProtocolFactory(uri, debug=False, api=api)
 	factory.setProtocolOptions(allowHixie76=True)
 	factory.protocol = SageProtocol
 	factory.clients = []
@@ -256,9 +272,23 @@ if __name__ == '__main__':
 		help='If specified, a htpasswd password list to authenticate users with.  If not specified, no authentication will be used with this saged instance.  Note: due to a bug in Chrome (#123862), it cannot connect to password-protected WebSockets instances.'
 	)
 	
+	group = parser.add_mutually_exclusive_group('Access control options')
+	
+	group.add_argument('-a', '--allow-ga',
+		dest='allow_ga',
+		required=False,
+		help='If specified, a comma seperated list of group addresses to allow "change" access to.  Other group addresses will be denied access.  saged will always report activities denied group addresses on the network.'
+	)
+	
+	group.add_argument('-d', '--deny-ga',
+		dest='deny_ga',
+		required=False,
+		help='If specified, a comma seperated list of group addresses to deny "change" access to.  Other group addresses will be allowed access.  saged will always report activities denied group addresses on the network.'
+	)
+	
 	option = parser.parse_args()
 	
 	log.startLogging(option.log_target)
-	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root, option.auth_realm, option.auth_passwd)
+	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root, option.auth_realm, option.auth_passwd, option.allow_ga, option.deny_ga)
 	
 	
