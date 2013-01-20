@@ -152,7 +152,7 @@ function changeLocation(location_id) {
 
 			
 			// add label
-			fieldcontainer.append($('<label for="w' + k + '">').text(v.name));
+			fieldcontainer.append($('<label>').attr('for', 'w' + k).text(v.name));
 			
 			// add widget
 			if (v.type == 'slider') {
