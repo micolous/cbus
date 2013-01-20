@@ -63,7 +63,7 @@ class SageRealm(object):
 
 class SageProtocol(WebSocketServerProtocol):
 	def onConnect(self, request):
-		super(SageProtocol, self).connectionRequest(request)
+		WebSocketServerProtocol.onConnect(self, request)
 		self.factory.clients.append(self)
 		self.api = self.factory.api
 	
@@ -134,14 +134,18 @@ class SageProtocol(WebSocketServerProtocol):
 	
 	def connectionLost(self, reason):
 		self.factory.clients.remove(self)
-		super(SageProtocol, self).connectionLost(reason)
+		WebSocketServerProtocol.connectionLost(self, reason)
 		
 
 class SageProtocolFactory(WebSocketServerFactory):
 	def __init__(self, *args, **kwargs):
+		# pop api parameter off
 		self.api = kwargs.pop('api', None)
 		
-		super(SageProtocolFactory, self).__init__(*args, **kwargs)
+		WebSocketServerFactory.__init__(self, *args, **kwargs)
+
+		
+		
 		self.clients = []
 		
 		# wire up events so we can handle events from cdbusd and populate to clients
@@ -272,7 +276,7 @@ if __name__ == '__main__':
 		help='If specified, a htpasswd password list to authenticate users with.  If not specified, no authentication will be used with this saged instance.  Note: due to a bug in Chrome (#123862), it cannot connect to password-protected WebSockets instances.'
 	)
 	
-	group = parser.add_mutually_exclusive_group('Access control options')
+	group = parser.add_mutually_exclusive_group()
 	
 	group.add_argument('-a', '--allow-ga',
 		dest='allow_ga',
