@@ -71,6 +71,11 @@ class SageProtocol(WebSocketServerProtocol):
 		#print dumps(obj)
 		self.sendMessage(dumps(obj))
 	
+	def send_states(self, *groups):
+		states = [float(x) for x in self.api.get_light_states(groups)]
+		self.send_object(dict(cmd='light_states', args=[dict(zip(groups, states))]))
+		
+	
 	def onMessage(self, msg, binary):
 		msg = loads(msg)
 		
@@ -83,14 +88,28 @@ class SageProtocol(WebSocketServerProtocol):
 			print "lighting group on %r" % args[0]
 			groups = [int(x) for x in args[0]]
 			
-			self.api.lighting_group_on(groups)
+			if all((self.factory.allowed_by_policy(x) for x in groups)):
+				self.api.lighting_group_on(groups)
+			else:
+				# group address denied by policy
+				# return current light states
+				self.send_states(*groups)
+				return
+				
 			args = [groups]
 		elif cmd == 'lighting_group_off':
 			# handle lighting group off
 			print 'lighting group off %r' % args[0]
 			groups = [int(x) for x in args[0]]
 			
-			self.api.lighting_group_off(groups)
+			if all((self.factory.allowed_by_policy(x) for x in groups)):
+				self.api.lighting_group_off(groups)
+			else:
+				# group address denied by policy
+				# return current light states
+				self.send_states(*groups)
+				return
+			
 			args = [groups]
 		elif cmd == 'lighting_group_ramp':
 			# handle lighting ramp
@@ -99,7 +118,11 @@ class SageProtocol(WebSocketServerProtocol):
 			duration = int(args[1])
 			level = float(args[2])
 			
-			self.api.lighting_group_ramp(group, duration, level)
+			if self.factory.allowed_by_policy(group):
+				self.api.lighting_group_ramp(group, duration, level)
+			else:
+				self.send_states(group)
+				return
 			args = [group, duration, level]
 		elif cmd == 'lighting_group_terminate_ramp':
 			print 'lighting group terminate ramp group=%s' % args[0]
@@ -109,9 +132,7 @@ class SageProtocol(WebSocketServerProtocol):
 			args = [group]
 		elif cmd == 'get_light_states':
 			args = [int(x) for x in args]
-			states = [float(x) for x in self.api.get_light_states(args)]
-			
-			self.send_object(dict(cmd='light_states', args=[dict(zip(args, states))]))
+			self.send_states(*args)
 			
 			# don't want to broadcast the request onto the network again.
 			return
@@ -145,6 +166,8 @@ class SageProtocolFactory(WebSocketServerFactory):
 	def __init__(self, *args, **kwargs):
 		# pop api parameter off
 		self.api = kwargs.pop('api', None)
+		self.allow_ga = kwargs.pop('allow_ga', None)
+		self.deny_ga = kwargs.pop('deny_ga', None)
 		
 		kwargs['server'] = 'saged/0.1.0 (libcbus)'
 		
@@ -183,6 +206,21 @@ class SageProtocolFactory(WebSocketServerFactory):
 	
 	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
 		self.broadcast_object(dict(cmd='lighting_group_ramp', args=[int(source_addr), int(group_addr), int(duration), float(level)]))
+		
+	def allowed_by_policy(self, group_address):
+		"""
+		Check what the policy for the group address should be.
+		
+		Returns True to allow, False to deny.
+		"""
+		
+		if self.allow_ga != None:
+			return group_address in self.allow_ga
+		elif self.deny_ga != None:
+			return group_address not in self.deny_ga
+		else:
+			return True
+		
 
 
 
@@ -190,6 +228,8 @@ class SageProtocolFactory(WebSocketServerFactory):
 		
 		
 def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DEFAULT_SAGE_ROOT, auth_realm=None, auth_passwd=None, allow_ga=None, deny_ga=None, no_www=False):
+
+	assert not (allow_ga and deny_ga), 'Must not specify both deny and allow rules for group addresses'
 	global api
 	global factory
 	DBusGMainLoop(set_as_default=True)
@@ -203,7 +243,7 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DE
 	api = dbus.Interface(obj, DBUS_INTERFACE)
 	
 	uri = createWsUrl(listen_addr, port)
-	factory = SageProtocolFactory(uri, debug=False, api=api)
+	factory = SageProtocolFactory(uri, debug=False, api=api, allow_ga=allow_ga, deny_ga=deny_ga)
 	factory.setProtocolOptions(allowHixie76=True, webStatus=False)
 	factory.protocol = SageProtocol
 	factory.clients = []
@@ -309,6 +349,12 @@ if __name__ == '__main__':
 	option = parser.parse_args()
 	
 	log.startLogging(option.log_target)
+	
+	if option.allow_ga != None:
+		option.allow_ga = option.allow_ga.split(',')
+	if option.deny_ga != None:
+		option.deny_ga = option.deny_ga.split(',')
+		
 	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root, option.auth_realm, option.auth_passwd, option.allow_ga, option.deny_ga, option.no_www)
 	
 	
