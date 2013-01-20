@@ -351,9 +351,9 @@ if __name__ == '__main__':
 	log.startLogging(option.log_target)
 	
 	if option.allow_ga != None:
-		option.allow_ga = option.allow_ga.split(',')
+		option.allow_ga = [int(x) for x in option.allow_ga.split(',')]
 	if option.deny_ga != None:
-		option.deny_ga = option.deny_ga.split(',')
+		option.deny_ga = [int(x) for x in option.deny_ga.split(',')]
 		
 	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root, option.auth_realm, option.auth_passwd, option.allow_ga, option.deny_ga, option.no_www)
 	
