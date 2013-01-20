@@ -133,7 +133,11 @@ class SageProtocol(WebSocketServerProtocol):
 		#self.sendMessage(dumps(msg))
 	
 	def connectionLost(self, reason):
-		self.factory.clients.remove(self)
+		try:
+			self.factory.clients.remove(self)
+		except ValueError:
+			# client doesn't exist, pass
+			pass
 		WebSocketServerProtocol.connectionLost(self, reason)
 		
 
@@ -141,6 +145,8 @@ class SageProtocolFactory(WebSocketServerFactory):
 	def __init__(self, *args, **kwargs):
 		# pop api parameter off
 		self.api = kwargs.pop('api', None)
+		
+		kwargs['server'] = 'saged/0.1.0 (libcbus)'
 		
 		WebSocketServerFactory.__init__(self, *args, **kwargs)
 
@@ -183,7 +189,7 @@ class SageProtocolFactory(WebSocketServerFactory):
 	
 		
 		
-def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DEFAULT_SAGE_ROOT, auth_realm=None, auth_passwd=None, allow_ga=None, deny_ga=None):
+def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DEFAULT_SAGE_ROOT, auth_realm=None, auth_passwd=None, allow_ga=None, deny_ga=None, no_www=False):
 	global api
 	global factory
 	DBusGMainLoop(set_as_default=True)
@@ -198,14 +204,17 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DE
 	
 	uri = createWsUrl(listen_addr, port)
 	factory = SageProtocolFactory(uri, debug=False, api=api)
-	factory.setProtocolOptions(allowHixie76=True)
+	factory.setProtocolOptions(allowHixie76=True, webStatus=False)
 	factory.protocol = SageProtocol
 	factory.clients = []
 	
 	resource = WebSocketResource(factory)
 	
-	root = File(sage_www_root)
-	root.putChild('saged', resource)
+	if no_www:
+		root = resource
+	else:
+		root = File(sage_www_root)
+		root.putChild('saged', resource)
 	
 	if auth_realm != None and auth_passwd != None:
 		portal = Portal(SageRealm(root), [ApachePasswordDB(auth_passwd)])
@@ -262,6 +271,13 @@ if __name__ == '__main__':
 		help='Root path where sage www resources are stored [default: %(default)s]'
 	)
 	
+	parser.add_argument('-W', '--no-www',
+		dest='no_www',
+		action='store_true',
+		default=False,
+		help='Disable serving any of the static web pages from the web server.  This is useful if you are hosting the sage webui files on a different web server, and only want saged to present a WebSockets interface [default: %(default)s]'
+	)
+	
 	group = parser.add_argument_group('Authentication options')
 	
 	group.add_argument('-R', '--realm',
@@ -293,6 +309,6 @@ if __name__ == '__main__':
 	option = parser.parse_args()
 	
 	log.startLogging(option.log_target)
-	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root, option.auth_realm, option.auth_passwd, option.allow_ga, option.deny_ga)
+	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root, option.auth_realm, option.auth_passwd, option.allow_ga, option.deny_ga, option.no_www)
 	
 	
