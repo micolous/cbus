@@ -1,6 +1,6 @@
 /*
  * sageui.js - UI controller for sage jquerymobile client
- * Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+ * Copyright 2012-2013 Michael Farrell <micolous+git@gmail.com>
  *
  * This library is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 
 var sage = null;
 var project = null;
@@ -201,7 +200,6 @@ function changeLocation(location_id) {
 	// change footer bar
 	$('#locations ul li').removeClass('ui-btn-active');
 	$('#locations ul li[data-location-id=' + location_id + ']').addClass('ui-btn-active');
-	//$('#locations ul li').button('refresh');
 	
 	$('#switchContainer').trigger('create');
 	wireEvents();
