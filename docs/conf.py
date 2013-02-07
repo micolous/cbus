@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'libcbus'
-copyright = u'2012, Michael Farrell'
+copyright = u'2012-2013 Michael Farrell'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -228,7 +228,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'cbus', u'cbus Documentation',
-   u'Michael Farrell', 'cbus', 'One line description of project.',
+   u'Michael Farrell', 'cbus', 'Interface library to Clipsal C-Bus.',
    'Miscellaneous'),
 ]
 
