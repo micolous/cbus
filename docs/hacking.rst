@@ -20,9 +20,8 @@ Geoffry Bennett's reverse engineering notes (2001 - 2004)
 
 Geoffry Bennett gave a talk at a `LinuxSA meeting in 2001`_ and at `Linux.conf.au 2004`_ about his experiences with reverse engineering C-Bus.  At the time there was no official protocol documentation available.
 
-The `Linux.conf.au 2004`_ notes cover a lot more information, and includes some information about dumping and reverse engineering the contents of NVRAM in units, and an emulator used for older versions of the Clipsal programming software.
+The `Linux.conf.au 2004`_ notes cover a lot more information, includes some information about dumping and reverse engineering the contents of NVRAM in units, a Perl client library, and an emulator used for older versions of the Clipsal programming software.
 
-There is also an implementation of a C-Bus client library and emulator in Perl.
 
 
 CNI / network protocol
