@@ -31,16 +31,17 @@ function wireEvents() {
 			setLevel(this.dataset.groupAddress, 1);
 		}
 	});
-	
+
 	$('[data-widget-type=slider]').on('change', function(e) {
 		if ($(this).hasClass('suspended')) return;
-		
+
+		// throttle updates
 		oldtimer = $(this).data('timer');
 		if (oldtimer != null) {
 			clearTimeout(oldtimer);
 			$(this).data('timer', null);
 		}
-		
+
 		$(this).data('timer', setTimeout('setLevel(' + this.dataset.groupAddress + ',' + (this.value/100) + ');sage.lightingGroupRamp(' + this.dataset.groupAddress + ', 0, ' + (this.value / 100) + ');$(this).data(\'timer\', null);', 500));
 	});
 }
@@ -58,8 +59,7 @@ $('#pgMain').live('pageinit', function(evt) {
 		$('#switchContainer').text('Sorry!  project.json seems to be missing or have a syntax error, so sage cannot start.  The error was: ' + ex);
 		return;
 	}
-	
-	
+
 	// now iterate through groups and set them up in the UI
 	$('#locations').empty().trigger('destroy');
 	$.each(project.locations, function(k, v) {
@@ -69,13 +69,10 @@ $('#pgMain').live('pageinit', function(evt) {
 				.attr('data-location-id', k)
 				.data('location-id', k)
 				.on('click', function() { changeLocation($(this).data('location-id')); })
-			
 		)
 	});
 	
 	$('#locations').trigger('create');
-	
-	
 
 	// do some websockets connection here.
 	var first_connect = true;
@@ -150,12 +147,28 @@ function changeLocation(location_id) {
 			fieldcontainer = $('<div data-role="fieldcontain">');
 			weights[v.locations[location_id]].push(fieldcontainer);
 
-			
 			// add label
 			fieldcontainer.append($('<label>').attr('for', 'w' + k).text(v.name));
 			
 			// add widget
-			if (v.type == 'slider') {
+			var handled = false;
+			if (v.type == 'switch' || v.type == 'switch_slider') {
+				fieldcontainer.append($('<select>')
+					.attr('data-role', 'slider')
+					.attr('data-group-address', k)
+					.attr('data-widget-type', 'switch')
+					.attr('id', 'w' + k)
+					.attr('name', 'w' + k)
+					.append(
+						$('<option>').attr('value', 0).text('Off'),
+						$('<option>').attr('value', 1).text('On')
+					)
+				);
+				
+				handled = true;
+			}
+			
+			if (v.type == 'slider' || v.type == 'switch_slider') {
 				fieldcontainer.append($('<input type="range">')
 					.attr('name', 'w' + k)
 					.attr('id', 'w' + k)
@@ -167,49 +180,12 @@ function changeLocation(location_id) {
 					.attr('max', '100')
 				);
 			
-			} else if (v.type == 'switch') {
-				fieldcontainer.append($('<select>')
-					.attr('data-role', 'slider')
-					.attr('data-group-address', k)
-					.attr('data-widget-type', 'switch')
-					.attr('id', 'w' + k)
-					.attr('name', 'w' + k)
-					.append(
-						$('<option>').attr('value', 0).text('Off'),
-						$('<option>').attr('value', 1).text('On')
-					)
-				);
-			} else if (v.type == 'switch_slider') {
-				var slider = 
-					
-				fieldcontainer.append($('<select>')
-					.attr('data-role', 'slider')
-					.attr('data-group-address', k)
-					.attr('data-widget-type', 'switch')
-					.attr('id', 'w' + k)
-					.attr('name', 'w' + k)
-					.append(
-						$('<option>').attr('value', 0).text('Off'),
-						$('<option>').attr('value', 1).text('On')
-					)
-				).append($('<input type="range">')
-					.attr('name', 'w' + k)
-					.attr('id', 'w' + k)
-					.attr('data-highlight', 'true')
-					.attr('data-group-address', k)
-					.attr('data-widget-type', 'slider')
-					.attr('value', '0')
-					.attr('min', '0')
-					.attr('max', '100')
-				);
-			
-			} else {
-				console.log('unknown widget type ' + v.type + '!');
+				handled = true;
 			}
 			
-			
-			
-			//$('#switchContainer').append(fieldcontainer);
+			if (!handled) {
+				console.log('unknown widget type ' + v.type + '!');
+			}
 		}
 	});
 	
@@ -218,9 +194,7 @@ function changeLocation(location_id) {
 			$('#switchContainer').append(w);
 		});
 	});
-	
-	
-	
+
 	// get current lighting state from server
 	sage.getLightStates(Object.keys(project.widgets));
 	
@@ -245,14 +219,12 @@ function setLevel(ga, level) {
 		// is a slider
 		this.value = level * 100;
 		$(this).slider('refresh');
-	
 	});
 
 	$('[data-group-address=' + ga + '][data-widget-type=switch]').each(function(i, d) {
 		// is a switch	
 		this.selectedIndex = (level > 0) ? 1 : 0;
 		$(this).slider('refresh');
-	
 	});
 	
 	// resume updates
