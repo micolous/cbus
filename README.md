@@ -2,7 +2,7 @@
 
 Talks to C-Bus using Python.
 
-Copyright 2012 Michael Farrell.  Licensed under the GNU LGPL3+.  For more details see `COPYING` and `COPYING.LESSER`.
+Copyright 2012-2013 Michael Farrell.  Licensed under the GNU LGPL3+.  For more details see `COPYING` and `COPYING.LESSER`.
 
 Clipsal state that use of C-Bus with non-Clipsal hardware or software may void your warranty.
 
@@ -16,7 +16,7 @@ This is a reimplementation of the PCI serial protocol from scratch.
 
 It does **not** use the `libcbm` library/DLL from Clipsal, or C-Gate:
 
- * The `libcbm` module only runs on `x86_32` systems, and is only available as a static library (closed source).  
+ * The `libcbm` module only runs on `x86_32` systems, and is only available as a static library (closed source).
  * C-Gate requires an OS and architecture specific closed source serial library (SerialIO), the Java runtime, and itself has various licensing restrictions.
 
 As such, it should run on any Python supported platform, with the exeception of `dbus` (IPC server) components which don't work properly on Windows. 

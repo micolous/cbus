@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # saged.py - Backend for websockets server in sage, a mobile CBus controller.
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2013 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by

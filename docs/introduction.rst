@@ -50,8 +50,8 @@ So where does libcbus come in?
 libcbus primarily provides three ways to communicate with C-Bus, with varying levels of complexity and abstraction:
 
 * A low level API which allows direct encoding and decoding of packets.  It exposes parts of the packet as classes with attributes.
-* A medium level API which handles access to the CBus PCI through the Twisted networking library and PySerial.  You can insert your own protocol handler, or work with the lower level API in order to access the library at a level that suits you.  There are both server (FakePCI) and client interfaces.
-* A high level API which provides access to CBus over DBus.  This allows multiple applications on your computer to interact with the CBus network in a simple way, and allows you to use other DBus supporting languages (such as bash, C, C#, Perl, Ruby, and Vala) to interact with the network through a single PCI.
+* A medium level API which handles access to the C-Bus PCI through the Twisted networking library and PySerial.  You can insert your own protocol handler, or work with the lower level API in order to access the library at a level that suits you.  There are both server (FakePCI) and client interfaces.
+* A high level API which provides access to C-Bus over DBus.  This allows multiple applications on your computer to interact with the CBus network in a simple way, and allows you to use other DBus supporting languages (such as bash, C, C#, Perl, Python, Ruby, and Vala) to interact with the network through a single PCI.
  
 libcbus does this using completely open source code (LGPLv3), and works across all Python supported platforms.  Platforms that don't support DBus (such as Windows) will be able to use the lower level APIs only, and lack the sharing functionality.
 

@@ -30,7 +30,20 @@ class PointToMultipointPacket(BasePacket):
 		self.application = application
 		self.status_request = status_request
 		self.sal = []
-		
+			
+	def __repr__(self):
+		return '<%s object: application=%r, source_address=%r, status_req=%r, %s>' % (
+			self.__class__.__name__,
+			self.application,
+			self.source_address,
+			self.status_request,
+			(
+				'level_reqest=%r' % (self.level_request,)
+			) if self.status_request else (
+				'sal=%r' % (self.sal,)
+			)
+		)
+
 	
 	@classmethod
 	def decode_packet(cls, data, checksum, flags, destination_address_type, rc, dp, priority_class):
@@ -52,11 +65,11 @@ class PointToMultipointPacket(BasePacket):
 				# 7A version of the status request (binary)
 				# FA is deprecated and "shouldn't be used".  ha ha.
 				data = data[1:]
-				level_request = False
+				packet.level_request = False
 			elif data[:2] == '\x73\x07':
 				# 7307 version of the status request (levels, in v4)
 				data = data[2:]
-				level_request = True
+				packet.level_request = True
 			else:
 				raise NotImplemented, 'unknown status request type %r' % data[0]
 			

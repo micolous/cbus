@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/common.py - Constants and common functions used in the CBUS protocol.
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2013 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -40,6 +40,35 @@ APP_CLOCK = 0xDF
 APP_ENABLE = 0xCB
 APP_LIGHTING = 0x38
 APP_TEMPERATURE = 0x19
+
+# CALs
+CAL_REQ_RESET      = 0x08
+CAL_REQ_RECALL     = 0x1A
+CAL_REQ_IDENTIFY   = 0x21
+CAL_REQ_GET_STATUS = 0x2A
+
+CAL_RES_REPLY      = 0x80
+
+
+# identify parameters
+IDENT_MANUFACTURER = 0x00
+IDENT_TYPE         = 0x01
+IDENT_FIRMWARE_VER = 0x02
+IDENT_SUMMARY      = 0x03
+IDENT_EXTENDED     = 0x04
+IDENT_NET_TERM_LVL = 0x05
+IDENT_TERM_LVL     = 0x06
+IDENT_NET_VOLTAGE  = 0x07
+IDENT_GAV_CURRENT  = 0x08
+IDENT_GAV_STORED   = 0x09
+IDENT_GAV_PHY_ADDR = 0x0A
+IDENT_LOGIC_ASSIGN = 0x0B
+IDENT_DELAYS       = 0x0C
+IDENT_MIN_LVL      = 0x0D
+IDENT_MAX_LVL      = 0x0E
+IDENT_CUR_LVL      = 0x0F
+IDENT_OUT_SUMMARY  = 0x10
+IDENT_DSI_STATUS   = 0x11
 
 # Routing buffer
 ROUTING_NONE = 0x00

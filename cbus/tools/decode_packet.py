@@ -22,7 +22,7 @@ from argparse import ArgumentParser
 from cbus.protocol.packet import decode_packet
 
 def pretty_packet(packet, checksum=True, strict=True, server_packet=True):
-	packet = decode_packet(packet, checksum, strict, server_packet)
+	packet, remainder = decode_packet(packet, checksum, strict, server_packet)
 	
 	print packet
 	

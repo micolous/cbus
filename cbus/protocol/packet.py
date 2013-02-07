@@ -20,7 +20,7 @@ from base64 import b16encode, b16decode
 from cbus.protocol.reset_packet import ResetPacket
 from cbus.protocol.scs_packet import SmartConnectShortcutPacket
 from cbus.protocol.base_packet import BasePacket
-#from cbus.protocol.pp_packet import PointToPointPacket
+from cbus.protocol.pp_packet import PointToPointPacket
 #from cbus.protocol.ppm_packet import PointToPointToMultipointPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.dm_packet import DeviceManagementPacket
@@ -148,8 +148,8 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 	
 	elif destination_address_type == DAT_PP:
 		# decode as point-to-point packet
-		#return PointToPointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
-		raise NotImplementedError, 'Point-to-point'
+		p = PointToPointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
+		#raise NotImplementedError, 'Point-to-point'
 	elif destination_address_type == DAT_PM:
 		# decode as point-to-multipoint packet
 		p = PointToMultipointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
@@ -160,8 +160,10 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 
 	if not server_packet and confirmation:
 		p.confirmation = confirmation
+		p.source_address = None
 	elif source_addr:
 		p.source_address = source_addr
+		p.confirmation = None
 	
 	return p, None
 

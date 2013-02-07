@@ -27,11 +27,13 @@ from cbus.protocol.packet import decode_packet
 from cbus.protocol.base_packet import BasePacket, SpecialServerPacket, SpecialClientPacket
 from cbus.protocol.po_packet import PowerOnPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
+from cbus.protocol.pp_packet import PointToPointPacket
 from cbus.protocol.dm_packet import DeviceManagementPacket
 from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.application.lighting import *
 from cbus.protocol.application.clock import *
+from cbus.protocol.cal.identify import *
 from cbus.protocol.reset_packet import ResetPacket
 from datetime import datetime
 
@@ -104,7 +106,9 @@ class PCIProtocol(LineReceiver):
 			if p == None:
 				log.msg("dce: packet == None")
 				continue
-				
+			
+			log.msg('dce: packet: %r' % p)
+			
 			if isinstance(p, SpecialServerPacket):
 				if isinstance(p, PCIErrorPacket):
 					self.on_pci_cannot_accept_data()
@@ -392,7 +396,24 @@ class PCIProtocol(LineReceiver):
 		# 6: IDMON
 		#self._send('A3300059', encode=False, checksum=False)
 		self._send(DeviceManagementPacket(checksum=False, parameter=0x30, value=0x59), basic_mode=True)
-
+	
+	def identify(self, unit_address, attribute):
+		"""
+		Sends an IDENTIFY command to the given unit_address.
+		
+		:param unit_address: Unit address to send the packet to
+		:type unit_address: int
+		
+		:param attribute: Attribute ID to retrieve information for.  See s7.2 of Serial Interface Guide for acceptable codes.
+		:type attribute: int
+		
+		:returns: Single-byte string with code for the confirmation event.
+		:rtype: string
+		"""
+		p = PointToPointPacket(unit_address=unit_address)
+		p.cal.append(IdentifyCAL(p, attribute))
+		
+		return self._send(p)
 	
 	def lighting_group_on(self, group_addr):
 		"""

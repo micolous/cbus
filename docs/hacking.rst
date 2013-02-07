@@ -15,6 +15,14 @@ There is a large amount of documentation in there that says "these items are dep
 
 This doesn't mean implement the library to talk this way.  You should implement it properly.  Just be aware than when working with implementing a fake PCI or parsing out packets that Clipsal's software generated, be aware they'll do strange and undocumented things.
 
+Geoffry Bennett's reverse engineering notes (2001 - 2004)
+---------------------------------------------------------
+
+Geoffry Bennett gave a talk at a `LinuxSA meeting in 2001`_ and at `Linux.conf.au 2004`_ about his experiences with reverse engineering C-Bus.  At the time there was no official protocol documentation available.
+
+The `Linux.conf.au 2004`_ notes cover a lot more information, and includes some information about dumping and reverse engineering the contents of NVRAM in units, and an emulator used for older versions of the Clipsal programming software.
+
+There is also an implementation of a C-Bus client library and emulator in Perl.
 
 
 CNI / network protocol
@@ -91,3 +99,5 @@ When implementing a new application, you should copy all of the examples given i
 .. _5000CT2: http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=5000CT2WB&ref=
 .. _C-5000CT2: http://updates.clipsal.com/ClipsalOnline/ProductInformation.aspx?CatNo=C-5000CTDL2&ref=
 .. _Wireshark: http://www.wireshark.org/
+.. _LinuxSA meeting in 2001: http://www.linuxsa.org.au/meetings/cbus.txt
+.. _Linux.conf.au 2004: ftp://mirror.linux.org.au/pub/linux.conf.au/2004/papers/cbus/
