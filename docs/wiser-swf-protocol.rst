@@ -1,8 +1,8 @@
-****************************
-Wiser SWF XMLSocket Protocol
-****************************
+*****
+Wiser
+*****
 
-The Wiser is a rebadged SparkLAN 802.11b/g/draft-n WiFi Router with custom firmware.  Believe it could be either a WRTR-205GN (based on firmware information) or WRTR-502GN (based on what is available information online).  It runs an embedded Linux system, with an expanded web interface for hosting Flash/XMLSocket based control of CBus.
+The Wiser is a rebadged SparkLAN 802.11b/g/draft-n WiFi Router with custom firmware.  Believe it could be either a WRTR-205GN (based on firmware header) or WRTR-502GN (based on what is available information online).  It runs an embedded Linux system, with an expanded web interface for hosting Flash/XMLSocket based control of CBus.
 
 According to the source code release from Clipsal, this runs Linux 2.6.17.14.  The kernel configuration indicates that the board is a ``fv13xx`` ARM system.
 
@@ -23,8 +23,11 @@ This configuration appears to be one that allows anything to make requests to th
 
 The resources and API classes are stored in ``/clipsal/resources/resources.swf``.  This contains things like the cbus_controller class which is used to establish Flash XMLSocket connections.
 
+Protocol
+========
+
 Discovery and Handshake
-=======================
+-----------------------
 
 After the SWF is started, it loads the configuration file from ``/clipsal/resources/local_config.xml``.  This looks like::
 
@@ -66,7 +69,7 @@ The Wiser responds with a message like this::
 
 	
 Project and Skin
-================
+----------------
 
 It also returns a ``<Touchscreen>`` XML which is a form of the project file, and a ``<skin>`` XML which contains localised strings and resource image references.
 
@@ -76,7 +79,7 @@ The project file contains all of the programming in use on the Wiser, button ass
 
 
 XMLSocket protocol for dummies
-==============================
+------------------------------
 
 Adobe's documentation describes the XMLSocket protocol as sending XML documents in either direction on the TCP socket, terminated by a null character.
 
@@ -85,3 +88,47 @@ It is like a simple version of WebSockets -- client and server may send data at 
 The XML documents sent do not require the typical XML stanzas at the start of the file specifying encoding, and may also contain multiple top-level (document) elements.
 
 There are third-party client and server libraries available for this protocol.
+
+Firmware image
+==============
+
+Firmware image for the device is bundled with the PICED software as :file:`Firmware/firmware_1_24_0.img`.  The tool `binwalk`__ shows the layout of the firmware image::
+
+	0x13      	uImage header, header size: 64 bytes, header CRC: 0x2781C02C, created: Mon Oct  3 11:26:33 2011, image size: 722439 bytes, Data Address: 0x40008000, Entry Point: 0x40008000, data CRC: 0xF7547123, OS: Linux, CPU: ARM, image type: OS Kernel Image, compression type: lzma, image name: Linux-2.6.17
+	0x53      	LZMA compressed data, properties: 0x5D, dictionary size: 8388608 bytes, uncompressed size: 2015280 bytes
+	0xC0013   	Squashfs filesystem, little endian, version 2.1, size: 1736392 bytes, 435 inodes, blocksize: 65536 bytes, created: Mon Oct  3 11:27:23 2011
+
+__ https://code.google.com/p/binwalk/
+
+Appears to be a uBoot image with some extra headers on the image.
+
+Extracting root filesystem
+--------------------------
+
+.. highlight:: console
+
+The version of squashfs used by the root filesystem is very old, and current Linux kernels are incapable of mounting it.  It requires an LZMA version of squashfs-2.1 in order to extract it, available from `firmware-mod-kit`__.  Their SVN repository contains all the components needed::
+
+	$ svn co https://firmware-mod-kit.googlecode.com/svn/trunk/src/lzma/
+	$ svn co https://firmware-mod-kit.googlecode.com/svn/trunk/src/squashfs-2.1-r2/
+	$ cd squashfs-2.1-r2
+	$ make
+
+__ https://code.google.com/p/firmware-mod-kit/
+
+Once built, extract the root filesystem with::
+
+	$ binwalk -D squashfs:squashfs firmware_1_24_0.img
+	$ ./squashfs-2.1-r2/unsquashfs-lzma C0013.squashfs
+
+This will then give an extracted copy of the root filesystem in the directory :file:`squashfs-root`.
+
+Filesystem observations
+-----------------------
+
+These are things that need some more investigation:
+
+* Shell interface from ``console.asp`` accessible on the webserver, however the form on the page is broken.
+* NTP client which has 32 hard-coded NTP server IP addresses.
+* "FTP" daemon, which appears to be a backdoor into the device, with hard-coded password.
+
