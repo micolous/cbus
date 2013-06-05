@@ -7,6 +7,6 @@ install:
   - "pip install -r requirements-nodbus.txt --use-mirrors"
   - pip install coveralls --use-mirrors
 script:
-  - nosetests --with-coverage --cover-package cbus
+  - coverage run --source=cbus setup.py -q nosetests
 after_success:
   - coveralls

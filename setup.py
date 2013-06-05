@@ -20,6 +20,7 @@ if system != 'windows':
 		'pygobject (>=2.28.6)'
 	]
 
+tests_require = ['nose']
 
 setup(
 	name="cbus",
@@ -30,7 +31,9 @@ setup(
 	url="https://github.com/micolous/cbus",
 	license="LGPL3+",
 	requires=deps,
-	
+	test_suite='nose.collector',
+	tests_require=tests_require,
+	extras_require={'test': tests_require},
 	# TODO: add scripts to this.
 	packages=find_packages(),
 	
