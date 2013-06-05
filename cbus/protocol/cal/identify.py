@@ -49,7 +49,7 @@ class IdentifyCAL(object):
 		assert (0 <= self.attribute <= 255), 'attribute must be in range 0..255'
 		return [CAL_REQ_IDENTIFY, self.attribute]
 		
-	def __repr__(self):
+	def __repr__(self): # pragma: no cover
 		return '<%s object: attribute=%r>' % (
 			self.__class__.__name__,
 			self.attribute

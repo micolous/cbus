@@ -139,7 +139,7 @@ class PointToPointPacket(BasePacket):
 		
 	
 	
-	def __repr__(self):
+	def __repr__(self): # pragma: no cover
 		return '<%s object: unit_address=%r, pm_bridged=%r, cal=%r>' % (
 			self.__class__.__name__,
 			self.unit_address,

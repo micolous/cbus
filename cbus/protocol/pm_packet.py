@@ -31,7 +31,7 @@ class PointToMultipointPacket(BasePacket):
 		self.status_request = status_request
 		self.sal = []
 			
-	def __repr__(self):
+	def __repr__(self): # pragma: no cover
 		return '<%s object: application=%r, source_address=%r, status_req=%r, %s>' % (
 			self.__class__.__name__,
 			self.application,

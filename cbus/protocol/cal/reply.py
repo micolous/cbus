@@ -55,7 +55,7 @@ class ReplyCAL(object):
 			self.parameter
 		] + [ord(c) for c in self.data]
 		
-	def __repr__(self):
+	def __repr__(self): # pragma: no cover
 		return '<%s object: parameter=%r, data=%r>' % (
 			self.__class__.__name__,
 			self.parameter,
