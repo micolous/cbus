@@ -5,4 +5,8 @@ python:
   - "pypy"
 install:
   - "pip install -r requirements-nodbus.txt --use-mirrors"
-script: nosetests
+  - pip install coveralls --use-mirrors
+script:
+  - nosetests --with-coverage --cover-package cbus
+after_success:
+  - coveralls
