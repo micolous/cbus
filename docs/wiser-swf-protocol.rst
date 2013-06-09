@@ -43,8 +43,10 @@ Discovery and Handshake
 After the SWF is started, it loads the configuration file from ``/clipsal/resources/local_config.xml``.  This looks like::
 
 	<local_config version="1.0">
-	  <wiser ip="XXX.XXX.XXX.XXX" port="8888" remote_url="" remote_port="8336" remote="0" wan="0"/>
-	  <client name="Web UI" fullscreen="0" http_auth="0" local_file_access="1" local_project="0" local_skin_definition="0"/>
+	  <wiser ip="XXX.XXX.XXX.XXX" port="8888" remote_url="" remote_port="8336"
+	         remote="0" wan="0"/>
+	  <client name="Web UI" fullscreen="0" http_auth="0" local_file_access="1"
+	          local_project="0" local_skin_definition="0"/>
 	</local_config>
 
 Here we see the internal IP address of the Wiser, and the port that is used for XMLSockets requests (``port``).  ``remote_port`` indicates the port used by the CFTP daemon.
@@ -308,7 +310,7 @@ This is then immediately followed by a UNIX newline character, and then the file
 
 Files must not be bigger than 512kB, or the transfer will be rejected by the Wiser.  File names must end in ".tar.gz".
 
-Projects must also not extract to a size greater than about 1 MiB.  Wiser stores the contents of this archive in ramfs, so larger archives will use all available RAM on the Wiser, and cannot be freed, leading to Linux's oomkiller to run or processes to fail to dynamically allocate memory.  This has the potential in turn to partially brick the Wiser -- :program:`cftp_daemon` will not be able to copy a new project file into RAM temporarily for flashing, and may be permanently stuck in this state.  This partial brick state could probably gotten around by writing NULL over the contents of /dev/mtdblock/6, then transferring a new project file.
+Projects must also not extract to a size greater than about 1 MiB.  Wiser stores the contents of this archive in ramfs, so larger archives will use all available RAM on the Wiser, and cannot be freed, leading to Linux's oomkiller to run or processes to fail to dynamically allocate memory.  This has the potential in turn to partially brick the Wiser -- :program:`cftp_daemon` will not be able to copy a new project file into RAM temporarily for flashing, and may be permanently stuck in this state.  This partial brick state could probably gotten around by writing NULL over the contents of :file:`/dev/mtdblock/6`, then transferring a new project file.
 
 
 Firmware image
