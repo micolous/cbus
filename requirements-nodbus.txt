@@ -5,3 +5,4 @@ configparser
 argparse
 autobahn
 passlib
+requests
