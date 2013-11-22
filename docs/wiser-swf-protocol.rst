@@ -17,6 +17,8 @@ At the moment this is a rather unorganised set of notes while I'm still figuring
 
 .. note:: In XML outputs in this document, new-line characters and basic formatting whitespace has been added to improve readability.  The original data does not contain this, unless otherwise indicated.
 
+.. note:: This project provides it's own replacement for Wiser's web interface, called :doc:`sage <daemons.sage>`.
+
 Downloading SWFs
 ================
 
