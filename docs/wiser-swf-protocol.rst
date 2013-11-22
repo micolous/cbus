@@ -165,7 +165,7 @@ On startup, the process will:
 1. Delete :file:`/tmp/*.tar.gz`.
 2. Copy the contents of :file:`/dev/mtblock/6` to :file:`/tmp/test.cta`.
 3. Mount a new ramfs to :file:`/www/clipsal/resources/`
-4. Extract :file:`settings.conf` from the gzip-compressed tarball :file:`/tmp/test.cta` to file:`/www/clipsal/resources/`.
+4. Extract :file:`settings.conf` from the gzip-compressed tarball :file:`/tmp/test.cta` to :file:`/www/clipsal/resources/`.
 5. Read daemon configuration from :file:`settings.conf`.
 6. Extract all files from the tarball to :file:`/www/clipsal/resources/`.
 
