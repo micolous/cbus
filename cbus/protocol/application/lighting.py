@@ -155,7 +155,10 @@ class LightingRampSAL(LightingSAL):
 			self.group_address,
 			int(self.level * 255)
 		]
-		
+	
+	def __repr__(self):
+		return '<LightingRampSAL object: group_address=%r, duration=%r, level=%r>' % (self.group_address, self.duration, self.level)
+
 class LightingOnSAL(LightingSAL):
 	"""
 	Lighting on event SAL
@@ -188,6 +191,9 @@ class LightingOnSAL(LightingSAL):
 			LIGHT_ON,
 			self.group_address
 		]
+	
+	def __repr__(self):
+		return '<LightingOnSAL object: group_address=%r>' % self.group_address
 
 class LightingOffSAL(LightingSAL):
 	"""
@@ -221,6 +227,9 @@ class LightingOffSAL(LightingSAL):
 			LIGHT_OFF,
 			self.group_address
 		]
+	
+	def __repr__(self):
+		return '<LightingOffSAL object: group_address=%r>' % self.group_address
 
 class LightingTerminateRampSAL(LightingSAL):
 	"""
@@ -255,7 +264,9 @@ class LightingTerminateRampSAL(LightingSAL):
 			LIGHT_TERMINATE_RAMP,
 			self.group_address
 		]
-
+	
+	def __repr__(self):
+		return '<LightingTerminateRampSAL object: group_address=%r>' % self.group_address
 
 # register SAL handlers (used by LightingSAL to map commands)
 SAL_HANDLERS = {

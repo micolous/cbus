@@ -43,7 +43,8 @@ setup(
 			'cdbusd = cbus.daemon.cdbusd:main',
 			'dbuspcid = cbus.daemon.dbuspcid:main',
 			'staged = cbus.daemon.staged:main',
-			'fetch_cbus_proto_docs = cbus.fetch_protocol_docs:main',
+			'cbus_fetch_proto_docs = cbus.tools.fetch_protocol_docs:main',
+			'cbus_decode_packet = cbus.tools.decode_packet:main',
 		]
 	},
 	

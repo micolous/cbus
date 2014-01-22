@@ -20,6 +20,7 @@ from cbus.protocol.cal.reply import ReplyCAL
 from cbus.common import *
 from base64 import b16encode
 
+
 class PointToPointPacket(BasePacket):
 	
 	def __init__(self, checksum=True, priority_class=CLASS_4, unit_address=0, bridge_address=0, hops=None):
