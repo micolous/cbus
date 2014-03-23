@@ -58,7 +58,7 @@ class DBusRemoteWrapperMethod(object):
 	"""
 	def __init__(self, obj, methname):
 		self._obj = obj
-		self._methname = _methname
+		self._methname = methname
 
 
 	def __call__(self, *args, **kwargs):
