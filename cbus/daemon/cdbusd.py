@@ -122,12 +122,12 @@ class CBusService(objects.DBusObject):
 		Signal('on_lighting_group_off', 'yy'),
 		Signal('on_lighting_group_terminate_ramp', 'yy')
 	)
+	dbusInterfaces = [iface]
 
 
 	def __init__(self, protocol, objectPath=DBUS_PATH):
 		self.pci = protocol
 		self.pci.cbus_api = self
-		
 		self._lighting_state = {}
 		super(CBusService, self).__init__(objectPath)
 
