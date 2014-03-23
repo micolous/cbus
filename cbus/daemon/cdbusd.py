@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cdbus.py - DBus service for controlling CBus.
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2014 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -22,9 +22,8 @@ The service exposes itself on the service au.id.micolous.cbus.CBusService.
 
 """
 
-# from http://twistedmatrix.com/trac/attachment/ticket/1352/dbus-twisted.py
-from cbus.twisted_errors import *
 
+from cbus.twisted_errors import *
 from twisted.internet import reactor, defer
 from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ClientEndpoint
@@ -348,8 +347,6 @@ def main():
 		# this module is only needed if daemonising.
 		from daemon import daemonize
 		daemonize(option.pid_file)
-
-
 
 	reactor.run()
 

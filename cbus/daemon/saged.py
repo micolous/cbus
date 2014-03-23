@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # saged.py - Backend for websockets server in sage, a mobile CBus controller.
-# Copyright 2012-2013 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2014 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -15,25 +15,17 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import dbus, gobject
+
 from cbus.twisted_errors import *
-from twisted.internet import glib2reactor
-
-# installing the glib2 reactor breaks sphinx autodoc
-# this patches around the issue.
-try:
-	glib2reactor.install()
-except ReactorAlreadyInstalledError:
-	pass
-
 from cbus.daemon.cdbusd import DBUS_INTERFACE, DBUS_SERVICE, DBUS_PATH
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.python import log
 from twisted.web.server import Site
 from twisted.web.static import File
-from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, createWsUrl
-from autobahn.resource import WebSocketResource, HTTPChannelHixie76Aware
+from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
+from autobahn.twisted.resource import WebSocketResource, HTTPChannelHixie76Aware
 from zope.interface import implements
+from txdbus import client
 from twisted.cred.portal import IRealm, Portal
 from cbus.twisted_passlib import ApachePasswordDB
 from twisted.web.resource import IResource
@@ -43,8 +35,6 @@ from argparse import ArgumentParser
 import sys
 from os.path import dirname, join, abspath
 
-# attach dbus to the same glib event loop
-from dbus.mainloop.glib import DBusGMainLoop
 api = Factory = None
 
 DEFAULT_SAGE_ROOT = abspath(join(dirname(__file__), '..', 'sage_root'))
@@ -59,6 +49,31 @@ class SageRealm(object):
 		if IResource in interfaces:
 			return (IResource, self.root, lambda: None)
 		raise NotImplementedError('Only IResource interface is supported')
+
+
+class DBusRemoteWrapperMethod(object):
+	"""
+	Wrapper for methods for interface.callRemote
+	"""
+	def __init__(self, obj, methname):
+		self._obj = obj
+		self._methname = _methname
+
+
+	def __call__(self, *args, **kwargs):
+		return self._obj.callRemote(self._methname, *args, **kwargs)
+
+
+class DBusRemoteWrapper(object):
+	"""
+	Wrapper for interfaces that makes everything a callRemote.
+
+	"""
+	def __init__(self, obj):
+		self._obj = obj
+	
+	def __getattr__(self, name):
+		return DBusRemoteWrapperMethod(self._obj, name)
 
 
 class SageProtocol(WebSocketServerProtocol):
@@ -220,33 +235,25 @@ class SageProtocolFactory(WebSocketServerFactory):
 			return group_address not in self.deny_ga
 		else:
 			return True
-		
 
 
-
-	
-		
-		
+@defer.inlineCallbacks
 def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DEFAULT_SAGE_ROOT, auth_realm=None, auth_passwd=None, allow_ga=None, deny_ga=None, no_www=False):
 
 	assert not (allow_ga and deny_ga), 'Must not specify both deny and allow rules for group addresses'
 	global api
 	global factory
-	DBusGMainLoop(set_as_default=True)
 	
-	if session_bus:
-		bus = dbus.SessionBus()
-	else:
-		bus = dbus.SystemBus()
-		
-	obj = bus.get_object(DBUS_SERVICE, DBUS_PATH)
-	api = dbus.Interface(obj, DBUS_INTERFACE)
-	
-	uri = createWsUrl(listen_addr, port)
+	conn = yield client.connect(reactor, 'session' if session_bus else 'system')
+	obj = yield conn.getRemoteObject(DBUS_SERVICE, DBUS_PATH)
+	api = DBusRemoteWrapper(obj)
+
 	factory = SageProtocolFactory(uri, debug=False, api=api, allow_ga=allow_ga, deny_ga=deny_ga)
 	factory.setProtocolOptions(allowHixie76=True, webStatus=False)
 	factory.protocol = SageProtocol
 	factory.clients = []
+	factory.host = listen_addr
+	factory.port = port
 	
 	resource = WebSocketResource(factory)
 	
@@ -265,8 +272,7 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DE
 	site = Site(root)
 	site.protocol = HTTPChannelHixie76Aware
 	reactor.listenTCP(port, site, interface=listen_addr)
-	
-	reactor.run()
+
 
 if __name__ == '__main__':
 	# do commandline handling
@@ -354,7 +360,7 @@ if __name__ == '__main__':
 		option.allow_ga = [int(x) for x in option.allow_ga.split(',')]
 	if option.deny_ga != None:
 		option.deny_ga = [int(x) for x in option.deny_ga.split(',')]
-		
-	boot(option.listen_addr, option.port, option.session_bus, option.sage_www_root, option.auth_realm, option.auth_passwd, option.allow_ga, option.deny_ga, option.no_www)
 	
+	reactor.callWhenRunning(boot, option.listen_addr, option.port, option.session_bus, option.sage_www_root, option.auth_realm, option.auth_passwd, option.allow_ga, option.deny_ga, option.no_www)
 	
+	reactor.run()	
