@@ -24,6 +24,7 @@ from twisted.web.server import Site
 from twisted.web.static import File
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from autobahn.twisted.resource import WebSocketResource, HTTPChannelHixie76Aware
+from autobahn.websocket.protocol import createWsUrl
 from zope.interface import implements
 from txdbus import client
 from twisted.cred.portal import IRealm, Portal
@@ -188,8 +189,6 @@ class SageProtocolFactory(WebSocketServerFactory):
 		
 		WebSocketServerFactory.__init__(self, *args, **kwargs)
 
-		
-		
 		self.clients = []
 		
 		# wire up events so we can handle events from cdbusd and populate to clients
@@ -248,12 +247,11 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DE
 	obj = yield conn.getRemoteObject(DBUS_SERVICE, DBUS_PATH)
 	api = DBusRemoteWrapper(obj)
 
+	uri = createWsUrl(listen_addr, port)
 	factory = SageProtocolFactory(uri, debug=False, api=api, allow_ga=allow_ga, deny_ga=deny_ga)
 	factory.setProtocolOptions(allowHixie76=True, webStatus=False)
 	factory.protocol = SageProtocol
 	factory.clients = []
-	factory.host = listen_addr
-	factory.port = port
 	
 	resource = WebSocketResource(factory)
 	
