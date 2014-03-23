@@ -190,18 +190,7 @@ class SageProtocolFactory(WebSocketServerFactory):
 		WebSocketServerFactory.__init__(self, *args, **kwargs)
 
 		self.clients = []
-		
-		# wire up events so we can handle events from cdbusd and populate to clients
-		
-		for n, m in (
-			('on_lighting_group_on', self.on_lighting_group_on),
-			('on_lighting_group_off', self.on_lighting_group_off),
-			('on_lighting_group_ramp', self.on_lighting_group_ramp)
-		):
-			api.connect_to_signal(
-				handler_function=m,
-				signal_name=n
-			)
+
 	
 	def broadcast_object(self, msg, exceptClient=None):
 		# format into json once
@@ -252,7 +241,15 @@ def boot(listen_addr='127.0.0.1', port=8080, session_bus=False, sage_www_root=DE
 	factory.setProtocolOptions(allowHixie76=True, webStatus=False)
 	factory.protocol = SageProtocol
 	factory.clients = []
-	
+
+	# register signals
+	for n, m in (
+		('on_lighting_group_on', factory.on_lighting_group_on),
+		('on_lighting_group_off', factory.on_lighting_group_off),
+		('on_lighting_group_ramp', factory.on_lighting_group_ramp)
+	):
+		obj.notifyOnSignal(n, m)
+
 	resource = WebSocketResource(factory)
 	
 	if no_www:
