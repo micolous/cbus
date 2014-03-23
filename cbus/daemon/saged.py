@@ -87,17 +87,22 @@ class SageProtocol(WebSocketServerProtocol):
 		#print dumps(obj)
 		self.sendMessage(dumps(obj))
 	
+	@defer.inlineCallbacks
 	def send_states(self, *groups):
-		print 'states = %r' % (self.api.get_light_states(groups),)
-		states = [float(x) for x in self.api.get_light_states(groups)]
+		# lol
+		#self.api.get_light_states(lambda s: (self.send_object(dict(cmd='light_states', args=[dict(zip(groups, [float(x) for x in s]))))), groups)
+
+		states = yield self.api.get_light_states(groups)
+		states = [float(x) for x in states]
 		self.send_object(dict(cmd='light_states', args=[dict(zip(groups, states))]))
 		
-	
+	@defer.inlineCallbacks
 	def onMessage(self, msg, binary):
 		msg = loads(msg)
 		
 		cmd = msg[u'cmd']
 		args = msg[u'args']
+		err = False
 		
 		# now try and handle the message
 		if cmd == 'lighting_group_on':
@@ -106,28 +111,26 @@ class SageProtocol(WebSocketServerProtocol):
 			groups = [int(x) for x in args[0]]
 			
 			if all((self.factory.allowed_by_policy(x) for x in groups)):
-				self.api.lighting_group_on(groups)
+				yield self.api.lighting_group_on(groups)
+				args = [groups]
 			else:
 				# group address denied by policy
 				# return current light states
 				self.send_states(*groups)
-				return
-				
-			args = [groups]
+				err = True			
 		elif cmd == 'lighting_group_off':
 			# handle lighting group off
 			print 'lighting group off %r' % args[0]
 			groups = [int(x) for x in args[0]]
 			
 			if all((self.factory.allowed_by_policy(x) for x in groups)):
-				self.api.lighting_group_off(groups)
+				yield self.api.lighting_group_off(groups)
+				args = [groups]
 			else:
 				# group address denied by policy
 				# return current light states
 				self.send_states(*groups)
-				return
-			
-			args = [groups]
+				err = True
 		elif cmd == 'lighting_group_ramp':
 			# handle lighting ramp
 			print 'lighting group ramp group=%s, duration=%s, level=%s' % (args[0], args[1], args[2])
@@ -136,39 +139,43 @@ class SageProtocol(WebSocketServerProtocol):
 			level = float(args[2])
 			
 			if self.factory.allowed_by_policy(group):
-				self.api.lighting_group_ramp(group, duration, level)
+				yield self.api.lighting_group_ramp(group, duration, level)
+				args = [group, duration, level]
 			else:
 				self.send_states(group)
-				return
-			args = [group, duration, level]
+				err = True
 		elif cmd == 'lighting_group_terminate_ramp':
 			print 'lighting group terminate ramp group=%s' % args[0]
 			group = int(args[0])
 			
-			self.api.lighting_group_terminate_ramp(group)
-			args = [group]
+			if self.factory.allowed_by_policy(group):
+				yield self.api.lighting_group_terminate_ramp(group)
+				args = [group]
+			else:
+				self.send_states(group)
+				err = True
 		elif cmd == 'get_light_states':
 			args = [int(x) for x in args]
 			self.send_states(*args)
 			
 			# don't want to broadcast the request onto the network again.
-			return
+			err = True
 		else:
 			print 'unknown command: %r' % cmd
-			return
-		
+			err = True
 		#print repr(msg)
 		
-		# now send the message to other nodes
-		# make sure args is sanitised before this point...
-		args = [None] + args
-		self.factory.broadcast_object(dict(cmd=cmd, args=args))
+		if not err:
+			# now send the message to other nodes
+			# make sure args is sanitised before this point...
+			args = [None] + args
+			self.factory.broadcast_object(dict(cmd=cmd, args=args))
 		
-		#for c in self.factory.clients:
-		#	if c != self:
-		#		c.send_object(dict(cmd=cmd, args=args))
+			#for c in self.factory.clients:
+			#	if c != self:
+			#		c.send_object(dict(cmd=cmd, args=args))
 		
-		#self.sendMessage(dumps(msg))
+			#self.sendMessage(dumps(msg))
 	
 	def connectionLost(self, reason):
 		try:
