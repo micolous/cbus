@@ -2,7 +2,7 @@
 
 Talks to C-Bus using Python.
 
-Copyright 2012-2013 Michael Farrell.  Licensed under the GNU LGPL3+.  For more details see `COPYING` and `COPYING.LESSER`.
+Copyright 2012-2014 Michael Farrell.  Licensed under the GNU LGPL3+.  For more details see `COPYING` and `COPYING.LESSER`.
 
 Clipsal state that use of C-Bus with non-Clipsal hardware or software may void your warranty.
 

@@ -56,3 +56,36 @@ libcbus primarily provides three ways to communicate with C-Bus, with varying le
 libcbus does this using completely open source code (LGPLv3), and works across all Python supported platforms.  Platforms that don't support DBus (such as Windows) will be able to use the lower level APIs only, and lack the sharing functionality.
 
 I've tested this primarily with Linux on armel, armhf, amd64 and i386, and Windows on amd64.
+
+
+Installing
+==========
+
+.. note::
+
+	This section is incomplete.
+
+Linux
+-----
+
+Most Linux distributions have D-Bus installed by default.  As a result, you should only need to install the Python bindings:
+
+* python-dbus
+
+Mac OS X
+--------
+
+In order to run this software, you'll need to first install Xcode (from the App Store) and MacPorts.
+
+You then need to install dbus and the Python bindings for it:
+
+.. code-block:: console
+
+	# port install dbus +universal
+
+Windows
+-------
+
+Windows doesn't have a D-Bus, so you can't use ``cdbusd``.
+
+However, you can use the libraries with Twisted directly.  But most of the applications interface with ``cdbusd``.
