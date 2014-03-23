@@ -88,6 +88,7 @@ class SageProtocol(WebSocketServerProtocol):
 		self.sendMessage(dumps(obj))
 	
 	def send_states(self, *groups):
+		print 'states = %r' % (self.api.get_light_states(groups),)
 		states = [float(x) for x in self.api.get_light_states(groups)]
 		self.send_object(dict(cmd='light_states', args=[dict(zip(groups, states))]))
 		
