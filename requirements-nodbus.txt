@@ -6,3 +6,4 @@ argparse
 autobahn
 passlib
 requests
+txdbus

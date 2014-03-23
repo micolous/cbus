@@ -1,11 +1,6 @@
-pyserial==2.6
+pyserial>=2.6
 lxml
 Twisted>=12.0.0a
-
-# a requirement, but you should install this from packages as it lacks a setup.py
-#python-dbus
-# also should be installed from packages
-#PyGObject
 
 argparse
 configparser
@@ -14,3 +9,5 @@ passlib
 
 # official protocol documentation downloading
 requests
+
+txdbus

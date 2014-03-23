@@ -24,27 +24,17 @@ The service exposes itself on the service au.id.micolous.cbus.CBusService.
 
 # from http://twistedmatrix.com/trac/attachment/ticket/1352/dbus-twisted.py
 from cbus.twisted_errors import *
-from twisted.internet import glib2reactor
 
-# installing the glib2 reactor breaks sphinx autodoc
-# this patches around the issue.
-try:
-	glib2reactor.install()
-except ReactorAlreadyInstalledError:
-	pass
-	
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.internet.serialport import SerialPort
 from twisted.python import log
+from txdbus import client, objects, error
+from txdbus.interface import DBusInterface, Signal, Method
 from cbus.protocol.pciprotocol import PCIProtocol
 from cbus.common import validate_ga
 import sys
-import dbus
-import dbus.service
-import gobject
-from dbus.mainloop.glib import DBusGMainLoop
 from argparse import ArgumentParser
 
 
@@ -109,76 +99,94 @@ class CBusProtocolHandler(PCIProtocol):
 		self.clock_datetime()
 		
 		
-class CBusService(dbus.service.Object):
+class CBusService(objects.DBusObject):
 	"""
 	DBus service Object for CBus.
 	
 	"""
-	def __init__(self, bus, protocol, object_path=DBUS_PATH):
+	
+	iface = DBusInterface(
+		DBUS_INTERFACE,
+		Method('get_light_states', 'ay', 'ad'),
+		Method('lighting_group_on', 'ay', 's'),
+		Method('lighting_group_off', 'ay', 's'),
+		Method('lighting_group_terminate_ramp', 'y', 's'),
+		Method('lighting_group_ramp', 'ynd', 's'),
+		Method('recall', 'yyy', 's'),
+		Method('identify', 'yy', 's'),
+		Signal('on_confirmation', 'sb'),
+		Signal('on_reset', ''),
+		Signal('on_mmi', 'ys'),
+		Signal('on_lighting_group_ramp', 'yynd'),
+		Signal('on_lighting_group_on', 'yy'),
+		Signal('on_lighting_group_off', 'yy'),
+		Signal('on_lighting_group_terminate_ramp', 'yy')
+	)
+
+
+	def __init__(self, protocol, objectPath=DBUS_PATH):
 		self.pci = protocol
 		self.pci.cbus_api = self
 		
 		self._lighting_state = {}
-		dbus.service.Object.__init__(self, bus, object_path)
-	
-	
+		super(CBusService, self).__init__(objectPath)
+
+
 	def set_light_state(self, group_address, level):
 		self._lighting_state[group_address] = level
-		
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ay', out_signature='ad')
-	def get_light_states(self, group_addresses):
+
+
+	def dbus_get_light_states(self, group_addresses):
 		# validate group addresses
 		if not all((validate_ga(x) for x in group_addresses)):
 			raise ValueError, 'Group address(es) (is/are) invalid!'
 			
 		return [self._lighting_state.get(x, 0.) for x in group_addresses]
 
-	#@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ay', out_signature='s')
-	def lighting_group_on(self, group_addrs):
+
+	def dbus_lighting_group_on(self, group_addrs):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_on
 		"""
 		[self.set_light_state(x, 1.) for x in group_addrs]
 		return self.pci.lighting_group_on(group_addrs)
-		
-	#@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ay', out_signature='s')
-	def lighting_group_off(self, group_addrs):
+
+
+	def dbus_lighting_group_off(self, group_addrs):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_off
 		"""
 		[self.set_light_state(x, 0.) for x in group_addrs]
 		return self.pci.lighting_group_off(group_addrs)
 
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
-	def lighting_group_terminate_ramp(self, group_addr):
+
+	def dbus_lighting_group_terminate_ramp(self, group_addr):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_terminate_ramp
 		"""
 		# TODO: handle recording of state
 		return self.pci.lighting_group_terminate_ramp(group_addr)
-		
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='ynd', out_signature='s')
-	def lighting_group_ramp(self, group_addr, duration, level):
+
+
+	def dbus_lighting_group_ramp(self, group_addr, duration, level):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_ramp
 		"""
 		# FIXME: This records the final value of the dim in the state.
 		self.set_light_state(group_addr, level)
 		return self.pci.lighting_group_ramp(group_addr, duration, level)
-		
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='yyy', out_signature='s')
-	def recall(self, unit_addr, param_no, count):
+
+
+	def dbus_recall(self, unit_addr, param_no, count):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.recall
 		"""
 
 		# TODO: implement return response
 		return self.pci.recall(unit_addr, param_no, count)
-	
-	@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='yy', out_signature='s')
-	def identify(self, unit_addr, attribute):
+
+
+	def dbus_identify(self, unit_addr, attribute):
 		"""
 		See cbus.protocol.pciprotocol.PCIProtocol.identify
 		"""
@@ -186,34 +194,38 @@ class CBusService(dbus.service.Object):
 		# TODO: implement return response
 		return self.pci.identify(unit_addr, attribute)
 
-	# signals are automatically fired by the twisted reactor and passed into dbus, so these methods have no logic
-	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='sb')
+	# signals are automatically fired by the twisted reactor and passed into dbus, so
+	# these methods have no logic
 	def on_confirmation(self, code, success):
-		pass
-			
-	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='')	
+		self.emitSignal('on_confirmation', code, success)
+		
+
 	def on_reset(self):
-		pass
-				
-	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='ys')
-	def on_mmi(self, application, bytes):
-		pass
+		self.emitSignal('on_reset')
+
 			
-	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yynd')
+	def on_mmi(self, application, bytes):
+		self.emitSignal('on_mmi', application, bytes)
+
+		
 	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
 		self.set_light_state(group_addr, level)
-			
-	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
+		self.emitSignal('on_lighting_group_ramp', source_addr, group_addr, duration, level)
+
+
 	def on_lighting_group_on(self, source_addr, group_addr):
 		self.set_light_state(group_addr, 1.)
-			
-	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
+		self.emitSignal('on_lighting_group_on', source_addr, group_addr)
+
+
 	def on_lighting_group_off(self, source_addr, group_addr):
 		self.set_light_state(group_addr, 0.)
+		self.emitSignal('on_lighting_group_off', source_addr, group_addr)
 
-	@dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yy')
+
 	def on_lighting_group_terminate_ramp(self, source_addr, group_addr):
-		pass
+		self.emitSignal('on_lighting_group_terminate_ramp', source_addr, group_addr)
+
 
 class CBusProtocolHandlerFactory(Factory):
 	def __init__(self, protocol):
@@ -222,21 +234,21 @@ class CBusProtocolHandlerFactory(Factory):
 	def buildProtocol(self, addr):
 		return self.protocol
 
+
+@defer.inlineCallbacks
 def boot_dbus(serial_mode, addr, session_bus, timesync, no_clock):
-	if session_bus:
-		bus = dbus.SessionBus()
-	else:
-		bus = dbus.SystemBus()
-	
-	name = dbus.service.BusName(DBUS_SERVICE, bus=bus)
+	conn = yield client.connect(reactor, 'session' if session_bus else 'system')
 	
 	protocol = CBusProtocolHandler()
-	api = CBusService(name, protocol)
+	api = CBusService(protocol)
+	
+	conn.exportObject(api)
+	yield conn.requestBusName(DBUS_SERVICE)
 	
 	if serial_mode:
 		SerialPort(protocol, addr, reactor, baudrate=9600)
 	else:
-		point = TCP4ClientEndpoint(reactor, addr[0], int(addr[1]))
+		point = TCP4ClientEndpoinlt(reactor, addr[0], int(addr[1]))
 		d = point.connect(CBusProtocolHandlerFactory(protocol))
 		
 	# setup time loop if applicable
@@ -246,20 +258,10 @@ def boot_dbus(serial_mode, addr, session_bus, timesync, no_clock):
 		reactor.callLater(10, protocol.timesync, timesync) 
 
 	if no_clock:
+		# monkey-patch the clock
 		protocol.on_clock_request = lambda x: None
-	
-	
-	
-	"""mainloop = gobject.MainLoop()
-	
-
-	
-	gobject.threads_init()
-	context = mainloop.get_context()"""
 
 def main():
-	DBusGMainLoop(set_as_default=True)
-
 	parser = ArgumentParser()
 
 	group = parser.add_argument_group('Daemon options')
