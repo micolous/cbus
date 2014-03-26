@@ -75,7 +75,6 @@ def boot(session_bus=False, lifx_mac=None, group_addr=None, interface=None):
 	obj = yield conn.getRemoteObject(DBUS_SERVICE, DBUS_PATH)
 	api = DBusRemoteWrapper(obj)
 
-	uri = createWsUrl(listen_addr, port)
 	factory = LifxProtocol(api=api, lifx_connection=lifx_connection)
 
 	# register signals
