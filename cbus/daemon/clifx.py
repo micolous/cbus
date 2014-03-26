@@ -57,11 +57,11 @@ class LifxProtocol(object):
 
 
 	def on_lighting_group_on(self, source_addr, group_addr):
-		if group_addr = self.group_addr:
+		if group_addr == self.group_addr:
 			self.lifx_connection.on()
 		
 	def on_lighting_group_off(self, source_addr, group_addr):
-		if group_addr = self.group_addr:
+		if group_addr == self.group_addr:
 			self.lifx_connection.off()
 	
 	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
