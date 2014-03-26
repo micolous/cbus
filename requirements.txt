@@ -11,3 +11,5 @@ passlib
 requests
 
 txdbus
+pylifx
+
