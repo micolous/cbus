@@ -50,18 +50,22 @@ class DBusRemoteWrapper(object):
 
 
 class LifxProtocol(object):
-	def __init__(self, *args, **kwargs):
-		self.api = kwargs.pop('api')
-		self.lifx_connection = kwargs.pop('lifx_connection')
+	def __init__(self, api, lifx_connection, group_addr):
+		self.api = api
+		self.lifx_connection = lifx_connection
+		self.group_addr = group_addr
 
 
 	def on_lighting_group_on(self, source_addr, group_addr):
-		self.lifx_connection.on()
+		if group_addr = self.group_addr:
+			self.lifx_connection.on()
 		
 	def on_lighting_group_off(self, source_addr, group_addr):
-		self.lifx_connection.off()
+		if group_addr = self.group_addr:
+			self.lifx_connection.off()
 	
 	def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
+		# TODO: listen to dimmer events, RGB!
 		pass
 
 
@@ -75,7 +79,7 @@ def boot(session_bus=False, lifx_mac=None, group_addr=None, interface=None):
 	obj = yield conn.getRemoteObject(DBUS_SERVICE, DBUS_PATH)
 	api = DBusRemoteWrapper(obj)
 
-	factory = LifxProtocol(api=api, lifx_connection=lifx_connection)
+	factory = LifxProtocol(api, lifx_connection, group_addr)
 
 	# register signals
 	for n, m in (
@@ -115,6 +119,7 @@ if __name__ == '__main__':
 		dest='group_addr',
 		type=int,
 		required=True,
+		default=0,
 		help='Group address to listen for on the CBus network'
 	)
 	parser.add_argument('-i', '--iface',
