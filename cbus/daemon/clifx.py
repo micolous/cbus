@@ -66,10 +66,10 @@ class LifxProtocol(object):
 
 
 @defer.inlineCallbacks
-def boot(session_bus=False, lifx_mac=None, group_addr=None):
+def boot(session_bus=False, lifx_mac=None, group_addr=None, interface=None):
 	global api
 	global factory
-	lifx_connection = pylifx.LifxController(lifx_mac)
+	lifx_connection = pylifx.LifxController(lifx_mac, intf_name=interface)
 	
 	conn = yield client.connect(reactor, 'session' if session_bus else 'system')
 	obj = yield conn.getRemoteObject(DBUS_SERVICE, DBUS_PATH)
@@ -118,9 +118,15 @@ if __name__ == '__main__':
 		required=True,
 		help='Group address to listen for on the CBus network'
 	)
+	parser.add_argument('-i', '--iface',
+		dest='interface',
+		required=False,
+		help='Network interface to use to broadcast LIFX packets'
+	)
+
 	option = parser.parse_args()
 
 	log.startLogging(option.log_target)
 
-	reactor.callWhenRunning(boot, option.session_bus, option.lifx_mac, option.group_addr)
+	reactor.callWhenRunning(boot, option.session_bus, option.lifx_mac, option.group_addr, option.interface)
 	reactor.run()	
