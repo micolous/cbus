@@ -17,7 +17,7 @@ This should work with the following C-Bus PC Interfaces (PCIs):
 * [5500PCU USB PCI](http://www2.clipsal.com/cis/technical/product_groups/cbus/system_units_and_accessories/pc_interface)
   (Linux: use `cp210x` kernel module on v2.6.25 or later.)
 
-* [5500CN Ethernet PCI](http://www2.clipsal.com/cis/technical/product_groups/cbus/system_units_and_accessories/ethernet_interface
+* [5500CN Ethernet PCI](http://www2.clipsal.com/cis/technical/product_groups/cbus/system_units_and_accessories/ethernet_interface)
 
 ## About this project ##
 
