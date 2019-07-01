@@ -5,10 +5,11 @@ from platform import system
 system = system().lower()
 
 deps = [
-		'configparser_plus (>=1.0)',
-		'serial (>=2.6)',
-		'lxml (>=2.3.2)',
-		'Twisted (>=12.0.0)',
+	'configparser (>=3.7.0)',
+	'serial (>=2.6)',
+	'lxml (>=2.3.2)',
+	'Twisted (>=12.0.0)',
+	'six',
 ]
 
 if system != 'windows':
@@ -24,7 +25,7 @@ tests_require = ['nose']
 
 setup(
 	name="cbus",
-	version="0.1",
+	version="0.2",
 	description="Library and applications to interact with Clipsal CBus in Python.",
 	author="Michael Farrell",
 	author_email="micolous@gmail.com",
@@ -43,7 +44,7 @@ setup(
 			'cdbusd = cbus.daemon.cdbusd:main',
 			'dbuspcid = cbus.daemon.dbuspcid:main',
 			'staged = cbus.daemon.staged:main',
-			'cbus_fetch_proto_docs = cbus.tools.fetch_protocol_docs:main',
+			'cbus_fetch_protocol_docs = cbus.tools.fetch_protocol_docs:main',
 			'cbus_decode_packet = cbus.tools.decode_packet:main',
 		]
 	},

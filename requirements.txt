@@ -11,6 +11,7 @@ argparse
 configparser
 autobahn
 passlib
+six
 
 # official protocol documentation downloading
 requests
