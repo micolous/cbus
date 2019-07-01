@@ -1,6 +1,7 @@
 # libcbus
 
 [![Build Status](https://secure.travis-ci.org/micolous/cbus.png?branch=master)][travis]
+[![Coverage Status](https://coveralls.io/repos/github/micolous/cbus/badge.svg)][coveralls]
 
 Talks to Clipsal C-Bus using Python.
 
@@ -59,6 +60,7 @@ The most useful bits of this project are:
   which can connect to `saged`.
 
 [rtd]: https://cbus.rtfd.org/
+[coveralls]: https://coveralls.io/github/micolous/cbus
 [travis]: https://travis-ci.org/micolous/cbus
 [5500PC]: https://www.clipsal.com/Trade/Products/ProductDetail?catno=5500PC
 [5500PCU]: https://www.clipsal.com/Trade/Products/ProductDetail?catno=5500PCU
