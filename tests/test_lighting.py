@@ -116,8 +116,8 @@ class ClipsalLightingTest(unittest.TestCase):
         self.assertIsInstance(p.sal[0], LightingRampSAL)
         self.assertEqual(p.sal[0].group_address, 0x21)
         self.assertEqual(p.sal[0].duration, 4)
-        # rounding must be done to 2 decimal places, as the value isn't actually
-        # 50%, but 49.8039%.  next value is 50.1%.
+        # rounding must be done to 2 decimal places, as the value isn't
+        # actually 50%, but 49.8039%.  next value is 50.1%.
         self.assertEqual(round(p.sal[0].level, 2), 0.5)
 
         # check that it encodes properly again

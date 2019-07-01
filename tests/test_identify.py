@@ -31,7 +31,8 @@ class BennettIdentifyTest(unittest.TestCase):
         protocol reverse engineering docs
 
         """
-        p, r = decode_packet('\\0699002101', server_packet=False, checksum=False)
+        p, r = decode_packet(
+            '\\0699002101', server_packet=False, checksum=False)
 
         self.assertIsInstance(p, PointToPointPacket)
 
