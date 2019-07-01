@@ -18,8 +18,8 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 http://stackoverflow.com/a/3632240
 
-
 """
+
 from __future__ import print_function
 
 from twisted.internet.protocol import DatagramProtocol
