@@ -14,10 +14,14 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
+
+from base64 import b16encode
+from six import byte2int, indexbytes, int2byte
+
 from cbus.protocol.base_packet import BasePacket
 from cbus.protocol.application import APPLICATIONS
 from cbus.common import CLASS_4, DAT_PM, add_cbus_checksum, check_ga
-from base64 import b16encode
 
 
 class PointToMultipointPacket(BasePacket):
@@ -54,8 +58,8 @@ class PointToMultipointPacket(BasePacket):
         # serial interface guide s4.2.9.2
 
         # is this referencing an application
-        packet.application = ord(data[0])
-        if ord(data[1]) != 0x00:
+        packet.application = byte2int(data)
+        if indexbytes(data, 1) != 0x00:
             raise ValueError('Routing data in PM message?')
 
         if packet.application == 0xFF:
@@ -65,12 +69,12 @@ class PointToMultipointPacket(BasePacket):
             # ...decode it.
             data = data[2:]
 
-            if data[0] in ('\x7A', '\xFA'):
+            if byte2int(data) in (0x7a, 0xfa):
                 # 7A version of the status request (binary)
                 # FA is deprecated and "shouldn't be used".  ha ha.
                 data = data[1:]
                 packet.level_request = False
-            elif data[:2] == '\x73\x07':
+            elif data[:2] == b'\x73\x07':
                 # 7307 version of the status request (levels, in v4)
                 data = data[2:]
                 packet.level_request = True
@@ -79,8 +83,8 @@ class PointToMultipointPacket(BasePacket):
                     'Unknown status request type {}'.format(data[0]))
 
             # now read the application
-            packet.application = ord(data[0])
-            packet.group_address = ord(data[1])
+            packet.application = byte2int(data)
+            packet.group_address = indexbytes(data, 1)
 
             if packet.group_address % 0x20 != 0:
                 raise ValueError('group_address report must be a multiple of '
@@ -125,9 +129,8 @@ class PointToMultipointPacket(BasePacket):
                 o += x.encode()
 
         # join the packet
-        p = (''.join(
-            (chr(x)
-             for x in (super(PointToMultipointPacket, self)._encode() + o))))
+        p = bytes(bytearray(
+            super(PointToMultipointPacket, self)._encode() + o))
 
         # checksum it, if needed.
         if self.checksum:

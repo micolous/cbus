@@ -15,8 +15,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from cbus.common import APP_TEMPERATURE, check_ga, TEMPERATURE_BROADCAST
+from __future__ import absolute_import
+
+from six import byte2int, indexbytes, int2byte
 import warnings
+
+from cbus.common import APP_TEMPERATURE, check_ga, TEMPERATURE_BROADCAST
 
 __all__ = [
     'TemperatureApplication',
@@ -79,8 +83,8 @@ class TemperatureSAL(object):
                     'application (malformed packet)', UserWarning)
                 break
 
-            command_code = ord(data[0])
-            group_address = ord(data[1])
+            command_code = byte2int(data)
+            group_address = indexbytes(data, 1)
 
             data = data[2:]
 
@@ -144,7 +148,7 @@ class TemperatureBroadcastSAL(TemperatureSAL):
         """
         Do not call this method directly -- use TemperatureSAL.decode
         """
-        temperature = ord(data[0]) / 4.0
+        temperature = byte2int(data) / 4.0
         data = data[1:]
 
         return cls(packet, group_address, temperature), data
@@ -153,7 +157,7 @@ class TemperatureBroadcastSAL(TemperatureSAL):
         if not (0.0 <= self.temperature <= 63.75):
             raise ValueError(
                 'Temperature is out of bounds. Must be between 0.0 and 63.75 '
-                'celcius (got {}).'.format(self.temperature))
+                'celsius (got {}).'.format(self.temperature))
 
         return super(TemperatureBroadcastSAL, self).encode() + [
             TEMPERATURE_BROADCAST, self.group_address,

@@ -15,10 +15,14 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+
+from six import byte2int, indexbytes, int2byte
+import warnings
+
 from cbus.common import (
     APP_LIGHTING, LIGHT_ON, LIGHT_OFF, LIGHT_RAMP_RATES, LIGHT_TERMINATE_RAMP,
     check_ga, check_ramp_rate, duration_to_ramp_rate, ramp_rate_to_duration)
-import warnings
 
 __all__ = [
     'LightingApplication',
@@ -83,8 +87,8 @@ class LightingSAL(object):
                     '(malformed packet)', UserWarning)
                 break
 
-            command_code = ord(data[0])
-            group_address = ord(data[1])
+            command_code = byte2int(data)
+            group_address = indexbytes(data, 1)
             data = data[2:]
 
             if command_code not in SAL_HANDLERS:
@@ -152,7 +156,7 @@ class LightingRampSAL(LightingSAL):
                 UserWarning)
             return None
 
-        level = ord(data[0]) / 255.
+        level = byte2int(data) / 255.
 
         data = data[1:]
         return cls(packet, group_address, duration, level), data

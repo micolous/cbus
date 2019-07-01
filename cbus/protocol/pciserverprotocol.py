@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log

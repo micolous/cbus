@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
 from cbus.protocol.base_packet import SpecialServerPacket
 from cbus.common import CONFIRMATION_CODES
 

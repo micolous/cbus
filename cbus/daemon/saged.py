@@ -15,10 +15,13 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+from __future__ import print_function
 import dbus
 import gobject
 from twisted.internet import glib2reactor
 from twisted.internet.error import ReactorAlreadyInstalledError
+from six.moves import zip
 
 # installing the glib2 reactor breaks sphinx autodoc
 # this patches around the issue.
@@ -78,7 +81,7 @@ class SageProtocol(WebSocketServerProtocol):
     def send_states(self, *groups):
         states = [float(x) for x in self.api.get_light_states(groups)]
         self.send_object(
-            dict(cmd='light_states', args=[dict(zip(groups, states))]))
+            dict(cmd='light_states', args=[dict(list(zip(groups, states)))]))
 
     def onMessage(self, msg, binary):
         msg = loads(msg)
@@ -89,7 +92,7 @@ class SageProtocol(WebSocketServerProtocol):
         # now try and handle the message
         if cmd == 'lighting_group_on':
             # handle lighting group on
-            print "lighting group on %r" % args[0]
+            print("lighting group on %r" % args[0])
             groups = [int(x) for x in args[0]]
 
             if all((self.factory.allowed_by_policy(x) for x in groups)):
@@ -103,7 +106,7 @@ class SageProtocol(WebSocketServerProtocol):
             args = [groups]
         elif cmd == 'lighting_group_off':
             # handle lighting group off
-            print 'lighting group off %r' % args[0]
+            print('lighting group off %r' % args[0])
             groups = [int(x) for x in args[0]]
 
             if all((self.factory.allowed_by_policy(x) for x in groups)):
@@ -117,8 +120,8 @@ class SageProtocol(WebSocketServerProtocol):
             args = [groups]
         elif cmd == 'lighting_group_ramp':
             # handle lighting ramp
-            print 'lighting group ramp group=%s, duration=%s, level=%s' % (
-                args[0], args[1], args[2])
+            print('lighting group ramp group=%s, duration=%s, level=%s' % (
+                args[0], args[1], args[2]))
             group = int(args[0])
             duration = int(args[1])
             level = float(args[2])
@@ -130,7 +133,7 @@ class SageProtocol(WebSocketServerProtocol):
                 return
             args = [group, duration, level]
         elif cmd == 'lighting_group_terminate_ramp':
-            print 'lighting group terminate ramp group=%s' % args[0]
+            print('lighting group terminate ramp group=%s' % args[0])
             group = int(args[0])
 
             self.api.lighting_group_terminate_ramp(group)
@@ -142,7 +145,7 @@ class SageProtocol(WebSocketServerProtocol):
             # don't want to broadcast the request onto the network again.
             return
         else:
-            print 'unknown command: %r' % cmd
+            print('unknown command: %r' % cmd)
             return
 
         # print(repr(msg))

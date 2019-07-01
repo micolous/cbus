@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+from __future__ import print_function
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
@@ -616,11 +618,11 @@ if __name__ == '__main__':
             return PCIProtocol()
 
         def clientConnectionLost(self, connector, reason):
-            print 'Lost connection.  Reason:', reason
+            print('Lost connection.  Reason:', reason)
             reactor.stop()
 
         def clientConnectionFailed(self, connector, reason):
-            print 'Connection failed. Reason:', reason
+            print('Connection failed. Reason:', reason)
             reactor.stop()
 
     class CBusProtocolHandlerFactory(Factory):

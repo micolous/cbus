@@ -21,6 +21,7 @@ sharing.
 
 """
 
+from __future__ import absolute_import
 import dbus
 import gobject
 import sys

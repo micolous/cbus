@@ -14,11 +14,16 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
+
+from base64 import b16encode
+from six import byte2int, indexbytes
+from six.moves import range
+
+from cbus.common import CLASS_4, DAT_PP, BRIDGE_LENGTHS, add_cbus_checksum
 from cbus.protocol.base_packet import BasePacket
 from cbus.protocol.cal import REQUESTS
 from cbus.protocol.cal.reply import ReplyCAL
-from cbus.common import CLASS_4, DAT_PP, BRIDGE_LENGTHS, add_cbus_checksum
-from base64 import b16encode
 
 
 class PointToPointPacket(BasePacket):
@@ -57,28 +62,28 @@ class PointToPointPacket(BasePacket):
 
         # now decode the unit address or bridge address
 
-        if data[1] == '\x00':
+        if indexbytes(data, 1) == 0x00:
             # this is a unit address
             packet.pm_bridged = False
-            packet.unit_address = ord(data[0])
+            packet.unit_address = byte2int(data)
             data = data[2:]
 
         else:
             # this is a bridge address
             packet.pm_bridged = True
-            packet.bridge_address = ord(data[0])
+            packet.bridge_address = byte2int(data)
 
-            bridge_length = BRIDGE_LENGTHS[ord(data[1])]
+            bridge_length = BRIDGE_LENGTHS[indexbytes(data, 1)]
 
             data = data[2:]
             packet.hops = []
 
             for x in range(bridge_length):
                 # get all the hops
-                packet.hops.append(data[0])
+                packet.hops.append(byte2int(data[0]))
                 data = data[1:]
 
-            packet.unit_address = ord(data[0])
+            packet.unit_address = byte2int(data)
 
             data = data[1:]
 
@@ -86,7 +91,7 @@ class PointToPointPacket(BasePacket):
         # packet.cal = []
         while data:
             # find the cal
-            cmd = ord(data[0])
+            cmd = byte2int(data)
             if cmd & 0xE0 == 0x80:  # flick off the lower bits
                 # REPLY
                 reply_len = (cmd & 0x1F)
@@ -132,8 +137,7 @@ class PointToPointPacket(BasePacket):
             o += cal.encode()
 
         # join the packet
-        p = (''.join(
-            (chr(x) for x in (super(PointToPointPacket, self)._encode() + o))))
+        p = bytes(bytearray(super(PointToPointPacket, self)._encode() + o))
 
         # checksum it, if needed.
         if self.checksum:

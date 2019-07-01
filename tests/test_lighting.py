@@ -30,7 +30,7 @@ class ClipsalLightingTest(unittest.TestCase):
     def test_s6_4(self):
         """Examples in serial interface guide, s6.4"""
         # Switch on light at GA 8
-        p, r = decode_packet('\\0538000108BAg', server_packet=False)
+        p, r = decode_packet(b'\\0538000108BAg', server_packet=False)
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
@@ -39,11 +39,11 @@ class ClipsalLightingTest(unittest.TestCase):
         self.assertEqual(p.sal[0].group_address, 8)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '0538000108BA')
-        self.assertEqual(p.confirmation, 'g')
+        self.assertEqual(p.encode(), b'0538000108BA')
+        self.assertEqual(p.confirmation, b'g')
 
         # concatenated packet
-        p, r = decode_packet('\\05380001087909090A25h', server_packet=False)
+        p, r = decode_packet(b'\\05380001087909090A25h', server_packet=False)
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 3)
@@ -61,13 +61,13 @@ class ClipsalLightingTest(unittest.TestCase):
         self.assertEqual(p.sal[2].group_address, 10)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '05380001087909090A25')
-        self.assertEqual(p.confirmation, 'h')
+        self.assertEqual(p.encode(), b'05380001087909090A25')
+        self.assertEqual(p.confirmation, b'h')
 
     def test_s2_11(self):
         """Examples in Lighting Application s2.11"""
         # switch on light at GA 0x93
-        p, r = decode_packet('\\0538007993B7j', server_packet=False)
+        p, r = decode_packet(b'\\0538007993B7j', server_packet=False)
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
@@ -76,13 +76,13 @@ class ClipsalLightingTest(unittest.TestCase):
         self.assertEqual(p.sal[0].group_address, 0x93)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '0538007993B7')
-        self.assertEqual(p.confirmation, 'j')
+        self.assertEqual(p.encode(), b'0538007993B7')
+        self.assertEqual(p.confirmation, b'j')
 
     def test_s9_1(self):
         """Examples in quick start guide, s9.1"""
         # turn on light 0x21
-        p, r = decode_packet('\\053800792129i', server_packet=False)
+        p, r = decode_packet(b'\\053800792129i', server_packet=False)
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
@@ -91,11 +91,11 @@ class ClipsalLightingTest(unittest.TestCase):
         self.assertEqual(p.sal[0].group_address, 0x21)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '053800792129')
-        self.assertEqual(p.confirmation, 'i')
+        self.assertEqual(p.encode(), b'053800792129')
+        self.assertEqual(p.confirmation, b'i')
 
         # turn off light 0x21
-        p, r = decode_packet('\\0538000121A1k', server_packet=False)
+        p, r = decode_packet(b'\\0538000121A1k', server_packet=False)
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
@@ -104,11 +104,11 @@ class ClipsalLightingTest(unittest.TestCase):
         self.assertEqual(p.sal[0].group_address, 0x21)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '0538000121A1')
-        self.assertEqual(p.confirmation, 'k')
+        self.assertEqual(p.encode(), b'0538000121A1')
+        self.assertEqual(p.confirmation, b'k')
 
         # ramp light 0x21 to 50% over 4 seconds
-        p, r = decode_packet('\\0538000A217F19l', server_packet=False)
+        p, r = decode_packet(b'\\0538000A217F19l', server_packet=False)
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
@@ -121,13 +121,13 @@ class ClipsalLightingTest(unittest.TestCase):
         self.assertEqual(round(p.sal[0].level, 2), 0.5)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '0538000A217F19')
-        self.assertEqual(p.confirmation, 'l')
+        self.assertEqual(p.encode(), b'0538000A217F19')
+        self.assertEqual(p.confirmation, b'l')
 
 
 class InternalLightingTest(unittest.TestCase):
     def test_lighting_encode_decode(self):
-        "self-made tests of encode then decode"
+        """test of encode then decode"""
 
         orig = PointToMultipointPacket(application=APP_LIGHTING)
         orig.source_address = 5
@@ -147,7 +147,7 @@ class InternalLightingTest(unittest.TestCase):
         self.assertIsNone(r)
 
     def test_lighting_encode_decode_client(self):
-        "self-made tests of encode then decode, with packets from a client."
+        """test of encode then decode, with packets from a client"""
 
         orig = PointToMultipointPacket(application=APP_LIGHTING)
         orig.sal.append(LightingOnSAL(orig, 27))
@@ -171,7 +171,7 @@ class LightingRegressionTest(unittest.TestCase):
         # Lighting packet from the server, lighting application, source address
         # 0x06. Sometimes cbus units emit these null lighting commands because
         # of an off-by-one issue?
-        p, r = decode_packet('05063800BD')
+        p, r = decode_packet(b'05063800BD')
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(p.application, 0x38)

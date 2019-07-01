@@ -27,7 +27,7 @@ from cbus.protocol.cal.reply import ReplyCAL
 class ClipsalReplyTest(unittest.TestCase):
     def test_s9_2(self):
         """Example in s9.2 (Serial Interface Guide) of decoding a reply CAL"""
-        p, r = decode_packet('8604990082300328', server_packet=True)
+        p, r = decode_packet(b'8604990082300328', server_packet=True)
         self.assertIsInstance(p, PointToPointPacket)
         self.assertEqual(p.source_address, 4)
         self.assertEqual(p.unit_address, 0x99)
@@ -35,9 +35,9 @@ class ClipsalReplyTest(unittest.TestCase):
 
         self.assertIsInstance(p.cal[0], ReplyCAL)
         self.assertEqual(p.cal[0].parameter, 0x30)
-        self.assertEqual(p.cal[0].data, '\x03')
+        self.assertEqual(p.cal[0].data, b'\x03')
 
-        self.assertEqual(p.encode(), '8604990082300328')
+        self.assertEqual(p.encode(), b'8604990082300328')
 
 
 if __name__ == '__main__':

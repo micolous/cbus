@@ -15,6 +15,9 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+from six import byte2int, indexbytes, int2byte, iterbytes
+
 from cbus.common import CAL_RES_REPLY
 
 __all__ = [
@@ -41,7 +44,7 @@ class ReplyCAL(object):
         Decodes reply CAL.
         """
 
-        cal = ReplyCAL(packet, ord(data[0]), data[1:])
+        cal = ReplyCAL(packet, byte2int(data), data[1:])
 
         return cal
 
@@ -51,7 +54,7 @@ class ReplyCAL(object):
         if len(self.data) >= 0x1f:
             raise ValueError('must be less than 31 bytes of data')
         return [(CAL_RES_REPLY | (len(self.data) + 1)),
-                self.parameter] + [ord(c) for c in self.data]
+                self.parameter] + list(iterbytes(self.data))
 
     def __repr__(self):  # pragma: no cover
         return '<%s object: parameter=%r, data=%r>' % (

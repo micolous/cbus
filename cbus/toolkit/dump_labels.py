@@ -19,8 +19,10 @@ You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import absolute_import
 from cbus.toolkit.cbz import CBZ
 from optparse import OptionParser
+import six
 try:
     import json
 except ImportError:
@@ -74,7 +76,7 @@ def main():
     # iterate through networks
     for network in cbz.root.Project.Network:
         no = {
-            'name': unicode(network.TagName),
+            'name': six.text_type(network.TagName),
             'address': int(network.Address),
             'networknumber': int(network.NetworkNumber),
             # don't worry about converting CNI/PCI parameters.
@@ -83,14 +85,14 @@ def main():
         }
         for application in network.Application:
             ao = {
-                'name': unicode(application.TagName),
+                'name': six.text_type(application.TagName),
                 'address': int(application.Address),
-                'description': unicode(application.Description),
+                'description': six.text_type(application.Description),
                 'groups': {}
             }
 
             for group in application.Group:
-                ao['groups'][int(group.Address)] = unicode(group.TagName)
+                ao['groups'][int(group.Address)] = six.text_type(group.TagName)
 
             no['applications'][int(application.Address)] = ao
 
@@ -110,12 +112,12 @@ def main():
                     # print(parameter.attrib['Name'], '=',
                     #       parameter.attrib['Value'])
             no['units'][int(unit.Address)] = {
-                'name': unicode(unit.TagName),
+                'name': six.text_type(unit.TagName),
                 'address': int(unit.Address),
-                'unittype': unicode(unit.UnitType),
-                'unitname': unicode(unit.UnitName),
-                'serial': unicode(unit.SerialNumber),
-                'catalog': unicode(unit.CatalogNumber),
+                'unittype': six.text_type(unit.UnitType),
+                'unitname': six.text_type(unit.UnitName),
+                'serial': six.text_type(unit.SerialNumber),
+                'catalog': six.text_type(unit.CatalogNumber),
                 'groups': channels
             }
 

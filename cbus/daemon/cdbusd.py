@@ -23,6 +23,7 @@ The service exposes itself on the service au.id.micolous.cbus.CBusService.
 """
 
 # from http://twistedmatrix.com/trac/attachment/ticket/1352/dbus-twisted.py
+from __future__ import absolute_import
 from twisted.internet import glib2reactor
 from twisted.internet.error import ReactorAlreadyInstalledError
 

@@ -31,7 +31,7 @@ class ClipsalTemperatureTest(unittest.TestCase):
         # Temperature of 25 degrees at group 5
         # note, the guide actually states that there is a checksum, but no
         # checksum is actually on the packet!
-        p, r = decode_packet('\\05190002056477g', server_packet=False)
+        p, r = decode_packet(b'\\05190002056477g', server_packet=False)
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
@@ -41,8 +41,8 @@ class ClipsalTemperatureTest(unittest.TestCase):
         self.assertEqual(p.sal[0].temperature, 25)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '05190002056477')
-        self.assertEqual(p.confirmation, 'g')
+        self.assertEqual(p.encode(), b'05190002056477')
+        self.assertEqual(p.confirmation, b'g')
 
 
 class InternalTemperatureTest(unittest.TestCase):

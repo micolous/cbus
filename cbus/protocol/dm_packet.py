@@ -15,9 +15,13 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+
+from base64 import b16encode
+from six import byte2int, indexbytes
+
 from cbus.protocol.base_packet import BasePacket
 from cbus.common import CLASS_2, DAT_PPM, add_cbus_checksum
-from base64 import b16encode
 
 
 class DeviceManagementPacket(BasePacket):
@@ -46,11 +50,11 @@ class DeviceManagementPacket(BasePacket):
         #  pp = parameter number
         #  vv = value
 
-        packet.parameter = ord(data[0])
-        if ord(data[1]) != 0:
+        packet.parameter = byte2int(data)
+        if indexbytes(data, 1) != 0:
             raise ValueError('second byte of DeviceManagementPacket must be 0')
 
-        packet.value = ord(data[2])
+        packet.value = indexbytes(data, 2)
 
         if len(data) != 3:
             raise ValueError(
@@ -59,13 +63,11 @@ class DeviceManagementPacket(BasePacket):
         return packet
 
     def encode(self, source_addr=None):
-
         # encode the remainder
         o = [self.parameter, 0, self.value]
+
         # join the packet
-        p = (''.join(
-            (chr(x)
-             for x in (super(DeviceManagementPacket, self)._encode() + o))))
+        p = bytes(bytearray(super(DeviceManagementPacket, self)._encode()) + o)
 
         # checksum it, if needed.
         if self.checksum:

@@ -31,7 +31,7 @@ class ClipsalClockTest(unittest.TestCase):
         """Example in s23.13.1 of decoding a time."""
         # Set network time to 10:43:23 with no DST offset
         # Slight change from guide:
-        p, r = decode_packet('\\05DF000D010A2B1700C2g', server_packet=False)
+        p, r = decode_packet(b'\\05DF000D010A2B1700C2g', server_packet=False)
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
@@ -50,13 +50,13 @@ class ClipsalClockTest(unittest.TestCase):
         # check that it encodes properly again
         # fuzzy match to allow packet that has no DST information
         self.assertIn(p.encode(),
-                      ['05DF000D010A2B1700C2', '05DF000D010A2B17FFC3'])
-        self.assertEqual(p.confirmation, 'g')
+                      [b'05DF000D010A2B1700C2', b'05DF000D010A2B17FFC3'])
+        self.assertEqual(p.confirmation, b'g')
 
     def test_s23_13_2(self):
         """Example in s23.13.2 of decoding a date."""
         # Set network date to 2005-02-25 (Friday)
-        p, r = decode_packet('\\05DF000E0207D502190411g', server_packet=False)
+        p, r = decode_packet(b'\\05DF000E0207D502190411g', server_packet=False)
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
 
@@ -71,8 +71,8 @@ class ClipsalClockTest(unittest.TestCase):
         self.assertEqual(p.sal[0].val.weekday(), 4)  # friday
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '05DF000E0207D502190411')
-        self.assertEqual(p.confirmation, 'g')
+        self.assertEqual(p.encode(), b'05DF000E0207D502190411')
+        self.assertEqual(p.confirmation, b'g')
 
     def test_s23_13_3(self):
         """Example in s23.13.3 of decoding request refresh."""
@@ -81,15 +81,15 @@ class ClipsalClockTest(unittest.TestCase):
         #  - says      05DF00100C
         #  - should be 05DF00110308
 
-        p, r = decode_packet('\\05DF00110308g', server_packet=False)
+        p, r = decode_packet(b'\\05DF00110308g', server_packet=False)
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
 
         self.assertIsInstance(p.sal[0], ClockRequestSAL)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '05DF00110308')
-        self.assertEqual(p.confirmation, 'g')
+        self.assertEqual(p.encode(), b'05DF00110308')
+        self.assertEqual(p.confirmation, b'g')
 
 
 if __name__ == '__main__':

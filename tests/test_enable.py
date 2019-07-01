@@ -28,7 +28,7 @@ class ClipsalEnableTest(unittest.TestCase):
     def test_s8_11(self):
         """Example in enable control application guide, s8.11 (page 7)"""
         # Set the network variable 0x37 to 0x82
-        p, r = decode_packet('\\05CB0002378275g', server_packet=False)
+        p, r = decode_packet(b'\\05CB0002378275g', server_packet=False)
 
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p.sal), 1)
@@ -38,8 +38,8 @@ class ClipsalEnableTest(unittest.TestCase):
         self.assertEqual(p.sal[0].value, 0x82)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), '05CB0002378275')
-        self.assertEqual(p.confirmation, 'g')
+        self.assertEqual(p.encode(), b'05CB0002378275')
+        self.assertEqual(p.confirmation, b'g')
 
 
 if __name__ == '__main__':

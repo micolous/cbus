@@ -22,11 +22,13 @@ The majority of the functionality shouldn't be needed by your own application,
 however it is used internally within the protocol encoders and decoders.
 """
 
+from __future__ import absolute_import
 from base64 import b16encode, b16decode
+import six
 
-HEX_CHARS = "0123456789ABCDEF"
+HEX_CHARS = b'0123456789ABCDEF'
 
-END_COMMAND = '\r\n'
+END_COMMAND = b'\r\n'
 
 # command types
 # TODO: improve this with data from s3.4 of serial interface guide p11/12
@@ -157,7 +159,7 @@ LANGUAGE_CODES = {
     0x4E: 'gl',  # galician
 }
 # these are valid confirmation codes used in acknowledge events.
-CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzg'
+CONFIRMATION_CODES = b'hijklmnopqrstuvwxyzg'
 
 MIN_GROUP_ADDR = 0
 MAX_GROUP_ADDR = 255
@@ -194,8 +196,8 @@ def duration_to_ramp_rate(seconds):
     :raises ValueError: If the given duration is too long and cannot be
                         represented.
     """
-    for k, v in sorted(LIGHT_RAMP_RATES.iteritems(),
-                       cmp=lambda x, y: cmp(x[0], y[0])):
+    for k, v in sorted(six.iteritems(LIGHT_RAMP_RATES),
+                       key=lambda x: x[0]):
         if seconds <= v:
             return k
     raise ValueError('That duration is too long!')
@@ -224,29 +226,29 @@ def cbus_checksum(i, b16=False):
     Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
 
     :param i: The C-Bus data to calculate the checksum of.
-    :type i: str
+    :type i: bytes
 
     :param b16: Indicates that the input is in base16 (network) format, and
                 that the return should be in base16 format.
     :type b16: bool
 
     :returns: The checksum value of the given input
-    :rtype: int (if b16=False), str (if b16=True)
+    :rtype: int (if b16=False), bytes (if b16=True)
     """
     if b16:
-        if i[0] == '\\':
+        if six.byte2int(i) == 0x5c:  # \
             i = i[1:]
 
         i = b16decode(i)
 
     c = 0
-    for x in i:
-        c += ord(x)
+    for x in six.iterbytes(i):
+        c += x
 
-    c = ((c % 0x100) ^ 0xff) + 1
+    c = ((c & 0xff) ^ 0xff) + 1
 
     if b16:
-        return b16encode(chr(c))
+        return b16encode(six.int2byte(c))
     return c
 
 
@@ -256,13 +258,13 @@ def add_cbus_checksum(i):
 
     :param i: The C-Bus message to append a checksum to. Must not be in base16
               format.
-    :type i: str
+    :type i: bytes
 
     :returns: The C-Bus message with the checksum appended to it.
-    :rtype: str
+    :rtype: bytes
     """
     c = cbus_checksum(i)
-    return i + chr(c)
+    return i + six.int2byte(c)
 
 
 def validate_cbus_checksum(i):

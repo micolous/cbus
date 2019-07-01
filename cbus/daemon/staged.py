@@ -20,6 +20,8 @@ lighting group address messages and transmits additional messages via cdbusd.
 
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 DEFAULT_CONFIG_FILE = '/etc/cbus/staged.ini'
 DEFAULT_CONFIG = {'staged': {}}
 RESERVED_SECTIONS = ('staged',)
@@ -53,12 +55,12 @@ class StagedEventHandler(object):
             ga, state = int(r[0].strip()), r[1].strip().lower()
 
             if not cbus.common.validate_ga(ga):
-                raise ValueError, 'Group address for trigger %r (%r) in group %r is invalid' % (
-                    t, ga, section)
+                raise ValueError('Group address for trigger %r (%r) in group %r is invalid' % (
+                    t, ga, section))
 
             if state not in ('on', 'off'):
-                raise ValueError, 'State for trigger %r (%r) in group %r is not "on" or "off"' % (
-                    t, state, section)
+                raise ValueError('State for trigger %r (%r) in group %r is not "on" or "off"' % (
+                    t, state, section))
 
             self.triggers.append((ga, state))
 
@@ -69,12 +71,12 @@ class StagedEventHandler(object):
                 ga, action = int(ga.strip()), action.lower().strip().split(':')
 
                 if not cbus.common.validate_ga(ga):
-                    raise ValueError, 'Group address for action %r = %r in group %r is not valid' % (
-                        ga, action, section)
+                    raise ValueError('Group address for action %r = %r in group %r is not valid' % (
+                        ga, action, section))
 
                 if action[0] not in ('on', 'off', 'ramp'):
-                    raise ValueError, 'State for action %r = %r in group %r is not "on" or "off"' % (
-                        ga, action, section)
+                    raise ValueError('State for action %r = %r in group %r is not "on" or "off"' % (
+                        ga, action, section))
 
                 if action[0] == 'ramp':
                     # validate the ramping
@@ -107,7 +109,7 @@ class StagedEventHandler(object):
 
     def trigger(self):
         for ga, action in self.actions:
-            print "trigger: %r, %r" % (ga, action)
+            print("trigger: %r, %r" % (ga, action))
             if action[0] == 'on':
                 self.api.lighting_group_on(ga)
             elif action[0] == 'off':
@@ -150,7 +152,7 @@ class Staged(object):
                                     signal_name=n)
 
     def on_lighting_group_on(self, source_addr, group_addr):
-        print "on_lighting_group_on: %r, %r" % (source_addr, group_addr)
+        print("on_lighting_group_on: %r, %r" % (source_addr, group_addr))
 
         # look for triggers
         t = (group_addr, 'on')
@@ -159,7 +161,7 @@ class Staged(object):
             [h.trigger() for h in self.triggers[t]]
 
     def on_lighting_group_off(self, source_addr, group_addr):
-        print "on_lighting_group_off: %r, %r" % (source_addr, group_addr)
+        print("on_lighting_group_off: %r, %r" % (source_addr, group_addr))
 
         # look for triggers
         t = (group_addr, 'off')
@@ -173,13 +175,13 @@ def boot(daemon_enable,
          session_bus=False,
          settings_file=DEFAULT_CONFIG_FILE):
     if daemon_enable:
-        raise ValueError, "daemon mode not supported yet"
+        raise ValueError("daemon mode not supported yet")
 
     config = ConfigParser()
     config.read_dict(DEFAULT_CONFIG)
 
     if not config.read(settings_file):
-        print "cannot read settings file %r" % settings_file
+        print("cannot read settings file %r" % settings_file)
         sys.exit(1)
 
     if session_bus:

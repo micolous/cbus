@@ -17,6 +17,8 @@ You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 from argparse import ArgumentParser
 from cbus.protocol.packet import decode_packet
 
@@ -24,7 +26,7 @@ from cbus.protocol.packet import decode_packet
 def pretty_packet(packet, checksum=True, strict=True, server_packet=True):
     packet, remainder = decode_packet(packet, checksum, strict, server_packet)
 
-    print packet
+    print(packet)
 
 
 def main():

@@ -20,15 +20,17 @@ http://stackoverflow.com/a/3632240
 
 """
 
+from __future__ import absolute_import
 from __future__ import print_function
 
-from twisted.internet.protocol import DatagramProtocol
-from twisted.internet import reactor
 from base64 import b16encode, b16decode
 import socket
 
-CBUS_DISCOVERY_QUERY = '\xcb\x80\0\0'
-CBUS_DISCOVERY_REPLY = '\xcb\x81\0\0'
+from twisted.internet.protocol import DatagramProtocol
+from twisted.internet import reactor
+
+CBUS_DISCOVERY_QUERY = b'\xcb\x80\0\0'
+CBUS_DISCOVERY_REPLY = b'\xcb\x81\0\0'
 
 
 class CNIDiscoveryProtocol(DatagramProtocol):
@@ -46,7 +48,8 @@ class CNIDiscoveryProtocol(DatagramProtocol):
         "called after the transport is teared down"
         pass
 
-    def datagramReceived(self, data, (host, port)):
+    def datagramReceived(self, data, xxx_todo_changeme):
+        (host, port) = xxx_todo_changeme
         print('Recieved datagram from %s:%d:'.format(host, port))
         print(b16encode(data))
 

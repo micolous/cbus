@@ -15,10 +15,14 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from cbus.common import APP_CLOCK, CLOCK_DATE, CLOCK_TIME
-from struct import unpack, pack
+from __future__ import absolute_import
+
 from datetime import date, time
+from six import byte2int, indexbytes, int2byte
+from struct import unpack, pack
 import warnings
+
+from cbus.common import APP_CLOCK, CLOCK_DATE, CLOCK_TIME
 
 __all__ = [
     'ClockApplication',
@@ -71,7 +75,7 @@ class ClockSAL(object):
 
         while data:
             # parse the data
-            command_code = ord(data[0])
+            command_code = byte2int(data)
             data = data[1:]
 
             # if command_code not in SAL_HANDLERS:
@@ -155,7 +159,7 @@ class ClockUpdateSAL(ClockSAL):
         Do not call this method directly -- use ClockSAL.decode
         """
 
-        variable = ord(data[0])
+        variable = byte2int(data)
         data_length = command_code & 0x07
         val = data[1:data_length]
         data = data[data_length:]
@@ -215,7 +219,7 @@ class ClockUpdateSAL(ClockSAL):
         return super(ClockUpdateSAL, self).encode() + [
             0x08 | (len(val) + 1),
             self.variable,
-        ] + [ord(x) for x in val]
+        ] + [x for x in val]
 
 
 class ClockRequestSAL(ClockSAL):
@@ -242,7 +246,7 @@ class ClockRequestSAL(ClockSAL):
         Do not call this method directly -- use ClockSAL.decode
         """
 
-        argument = ord(data[0])
+        argument = byte2int(data)
         data = data[1:]
 
         if argument != 0x03:

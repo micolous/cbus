@@ -32,7 +32,7 @@ class BennettIdentifyTest(unittest.TestCase):
 
         """
         p, r = decode_packet(
-            '\\0699002101', server_packet=False, checksum=False)
+            b'\\0699002101', server_packet=False, checksum=False)
 
         self.assertIsInstance(p, PointToPointPacket)
 
@@ -42,7 +42,7 @@ class BennettIdentifyTest(unittest.TestCase):
         self.assertIsInstance(p.cal[0], IdentifyCAL)
         self.assertEqual(p.cal[0].attribute, 1)
 
-        self.assertEqual(p.encode(), '0699002101')
+        self.assertEqual(p.encode(), b'0699002101')
 
 
 if __name__ == '__main__':

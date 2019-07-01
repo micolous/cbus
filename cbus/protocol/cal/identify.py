@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/cal/identify.py - Identify unit
-# Copyright 2013 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2013-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -14,6 +14,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import absolute_import
+from six import byte2int, indexbytes, int2byte
 
 from cbus.common import CAL_REQ_IDENTIFY
 
@@ -37,7 +40,7 @@ class IdentifyCAL(object):
         Decodes identify SAL.
         """
 
-        cal = IdentifyCAL(packet, ord(data[1]))
+        cal = IdentifyCAL(packet, indexbytes(data, 1))
 
         data = data[2:]
         return data, cal
@@ -48,5 +51,5 @@ class IdentifyCAL(object):
         return [CAL_REQ_IDENTIFY, self.attribute]
 
     def __repr__(self):  # pragma: no cover
-        return '<%s object: attribute=%r>' % (self.__class__.__name__,
-                                              self.attribute)
+        return '<%s object: attribute=%r>' % (
+            self.__class__.__name__, self.attribute)

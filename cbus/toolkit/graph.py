@@ -19,9 +19,11 @@ You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import absolute_import
 from argparse import ArgumentParser, FileType
 import json
 import pydot
+import six
 
 
 def generate_graph(input, output):
@@ -43,13 +45,13 @@ def generate_graph(input, output):
                       graph_type='digraph')
 
     # create groups for networks
-    for network_id, network in networks.iteritems():
+    for network_id, network in six.iteritems(networks):
         loads = set()
 
         subgraph = pydot.Subgraph('Network_%s' % network_id)
         # cluster = pydot.Cluster('Network %s' % network_id)
 
-        for unit_id, unit in network['units'].iteritems():
+        for unit_id, unit in six.iteritems(network['units']):
             node = pydot.Node(unit['name'])
             subgraph.add_node(node)
             node.groups = unit['groups']

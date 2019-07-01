@@ -15,8 +15,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from cbus.common import APP_ENABLE, ENABLE_SET_NETWORK_VARIABLE
+from __future__ import absolute_import
+
+from six import byte2int, indexbytes, int2byte
 import warnings
+
+from cbus.common import APP_ENABLE, ENABLE_SET_NETWORK_VARIABLE
 
 __all__ = [
     'EnableApplication',
@@ -76,7 +80,7 @@ class EnableSAL(object):
                     'application (malformed packet)', UserWarning)
                 break
 
-            command_code = ord(data[0])
+            command_code = byte2int(data)
 
             data = data[1:]
 
@@ -140,8 +144,8 @@ class EnableSetNetworkVariableSAL(EnableSAL):
         """
 
         # print "data == %r" % data
-        variable = ord(data[0])
-        value = ord(data[1])
+        variable = byte2int(data)
+        value = indexbytes(data, 1)
 
         data = data[2:]
 

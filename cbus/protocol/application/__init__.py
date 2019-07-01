@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
 from cbus.protocol.application.clock import ClockApplication
 from cbus.protocol.application.enable import EnableApplication
 from cbus.protocol.application.lighting import LightingApplication

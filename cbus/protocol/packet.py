@@ -16,7 +16,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+
 from base64 import b16decode
+from six import byte2int, indexbytes, int2byte
+import warnings
+
 from cbus.protocol.reset_packet import ResetPacket
 from cbus.protocol.scs_packet import SmartConnectShortcutPacket
 # from cbus.protocol.base_packet import BasePacket
@@ -30,7 +35,6 @@ from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.common import (
     DAT_PM, DAT_PP, DAT_PPM, HEX_CHARS, CONFIRMATION_CODES,
     get_real_cbus_checksum, validate_cbus_checksum)
-import warnings
 
 
 def decode_packet(data, checksum=True, strict=True, server_packet=True):
@@ -46,49 +50,49 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 
     """
     data = data.strip()
-    if data == '':
+    if data == b'':
         return None, None
 
     # packets from clients have some special flags which we need to handle.
     if server_packet:
-        if data[0] == '+':
+        if byte2int(data) == 0x2b:  # +
             data = data[1:]
             return PowerOnPacket(), data
-        elif data[0] == '!':
+        elif byte2int(data) == 0x21:  # !
             # buffer is full / invalid checksum, some requests may be dropped.
             # serial interface guide s4.3.3 p28
             data = data[1:]
             return PCIErrorPacket(), data
 
         if data[0] in CONFIRMATION_CODES:
-            success = data[1] == '.'
-            code = data[0]
+            success = indexbytes(data, 1) == 0x2e  # .
+            code = byte2int(data)
             data = data[2:]
             return ConfirmationPacket(code, success), data
 
     else:
-        if data == '~~~':
+        if data == b'~~~':
             # reset
             return ResetPacket(), None
-        elif data == '|':
+        elif data == b'|':
             # smart + connect shortcut
             return SmartConnectShortcutPacket(), None
-        elif '?' in data:
+        elif b'?' in data:
             # discard data before the ?, and resubmit for processing.
-            data = data.split('?')[-1]
+            data = data.split(b'?')[-1]
             return None, data
 
-        if data[0] == '\\':
+        if byte2int(data) == 0x5c:  # \
             data = data[1:]
 
-        if data[0] == '@':
+        if byte2int(data) == 0x40:  # @
             # this causes it to be once-off a "basic" mode command.
             data = data[1:]
             checksum = False
 
         if data[-1] not in HEX_CHARS:
             # then there is a confirmation code at the end.
-            confirmation = data[-1]
+            confirmation = int2byte(indexbytes(data, -1))
 
             if confirmation not in CONFIRMATION_CODES:
                 if strict:
@@ -127,7 +131,7 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
     data = b16decode(data)
 
     # flags (serial interface guide s3.4)
-    flags = ord(data[0])
+    flags = byte2int(data)
 
     destination_address_type = flags & 0x07
     # "reserved", "must be set to 0"
@@ -141,7 +145,7 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 
     # handle source address
     if server_packet:
-        source_addr = ord(data[0])
+        source_addr = byte2int(data)
         data = data[1:]
     else:
         source_addr = None
@@ -167,7 +171,7 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
         # decode as point-to-point-to-multipoint packet
         # return PointToPointToMultipointPacket.decode_packet(data, checksum,
         # flags, destination_address_type, rc, dp, priority_class)
-        raise NotImplementedError('Point-to-point-tomultipoint')
+        raise NotImplementedError('Point-to-point-to-multipoint')
 
     if not server_packet and confirmation:
         p.confirmation = confirmation
