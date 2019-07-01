@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/application/testenable.py - Enable control unit tests
+# cbus/protocol/application/test_enable.py - Enable control unit tests
 # Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify

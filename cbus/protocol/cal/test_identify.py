@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/cal/testreply.py - Reply CAL unit test
+# cbus/protocol/cal/test_identify.py - Identify CAL unit test
 # Copyright 2013 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify
@@ -17,21 +17,22 @@
 
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pp_packet import PointToPointPacket
-from cbus.protocol.cal.reply import *
+from cbus.protocol.cal.identify import *
 from cbus.common import *
 
 
-def S9_2_Test():
-	"Example in s9.2 (Serial Interface Guide) of decoding a reply CAL"
-	p, r = decode_packet('8604990082300328', server_packet=True)
+def Bennett_get_unit_type_test():
+	"Example of 'get unit type' (identify type) from Geoffry Bennett's protocol reverse engineering docs"
+	p, r = decode_packet('\\0699002101', server_packet=False, checksum=False)
+	
 	assert isinstance(p, PointToPointPacket), 'Packet is not PointToPointPacket'
-	assert p.source_address == 4
+	
 	assert p.unit_address == 0x99
 	assert len(p.cal) == 1
 	
-	assert isinstance(p.cal[0], ReplyCAL)
-	assert p.cal[0].parameter == 0x30
-	assert p.cal[0].data == '\x03'
+	assert isinstance(p.cal[0], IdentifyCAL)
+	assert p.cal[0].attribute == 1
 	
-	assert p.encode() == '8604990082300328'
+	assert p.encode() == '0699002101'
+
 

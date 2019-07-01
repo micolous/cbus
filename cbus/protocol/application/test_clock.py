@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/application/testclock.py - Clock and Timekeeping Application Unit Tests
+# cbus/protocol/application/test_clock.py - Clock and Timekeeping Application Unit Tests
 # Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify

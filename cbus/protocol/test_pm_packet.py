@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/testpm_packet.py - Point to Multipoint packet tests
+# cbus/protocol/test_pm_packet.py - Point to Multipoint packet tests
 # Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify

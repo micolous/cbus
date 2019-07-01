@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/application/testtemperature.py - Temperature broadcast unit tests
+# cbus/protocol/application/test_temperature.py - Temperature broadcast unit tests
 # Copyright 2012 Michael Farrell <micolous+git@gmail.com>
 # 
 # This library is free software: you can redistribute it and/or modify
