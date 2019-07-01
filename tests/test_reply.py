@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/cal/test_identify.py - Identify CAL unit test
+# test_reply.py - Reply CAL unit test
 # Copyright 2013-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
@@ -15,25 +15,30 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+
+import unittest
+
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pp_packet import PointToPointPacket
-from cbus.protocol.cal.identify import IdentifyCAL
+from cbus.protocol.cal.reply import ReplyCAL
 
 
-def Bennett_get_unit_type_test():
-    """
-    Example of 'get unit type' (identify type) from Geoffry Bennett's
-    protocol reverse engineering docs
+class ClipsalReplyTest(unittest.TestCase):
+    def test_s9_2(self):
+        """Example in s9.2 (Serial Interface Guide) of decoding a reply CAL"""
+        p, r = decode_packet('8604990082300328', server_packet=True)
+        self.assertIsInstance(p, PointToPointPacket)
+        self.assertEqual(p.source_address, 4)
+        self.assertEqual(p.unit_address, 0x99)
+        self.assertEqual(len(p.cal), 1)
 
-    """
-    p, r = decode_packet('\\0699002101', server_packet=False, checksum=False)
+        self.assertIsInstance(p.cal[0], ReplyCAL)
+        self.assertEqual(p.cal[0].parameter, 0x30)
+        self.assertEqual(p.cal[0].data, '\x03')
 
-    assert isinstance(p, PointToPointPacket)
+        self.assertEqual(p.encode(), '8604990082300328')
 
-    assert p.unit_address == 0x99
-    assert len(p.cal) == 1
 
-    assert isinstance(p.cal[0], IdentifyCAL)
-    assert p.cal[0].attribute == 1
-
-    assert p.encode() == '0699002101'
+if __name__ == '__main__':
+    unittest.main()
