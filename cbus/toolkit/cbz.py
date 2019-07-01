@@ -21,27 +21,31 @@ from zipfile import ZipFile
 from lxml import objectify
 import warnings
 
-class CBZException(Exception): pass
+
+class CBZException(Exception):
+    pass
+
 
 class CBZ(object):
-	def __init__(self, fh):
-		"""
+
+    def __init__(self, fh):
+        """
 		Opens the file as a CBZ.
 		
 		fh can either be a string poining to a file name or a file-like object.
 		"""
-		self.zip = ZipFile(fh, 'r')
-		files = self.zip.namelist()
-		
-		if len(files) != 1:
-			raise CBZException, 'The number of files in this archive is not 1. (it is %d)' % len(files)
-		
-		# validate the filename.
-		xmlfilename = files[0]
-		if not xmlfilename.endswith('.xml'):
-			raise CBZException, 'The file in this archive does not have an xml extension.  It is probably not a CBZ.'
-		
-		# now open the inner file and objectify.
-		self.tree = objectify.parse(self.zip.open(xmlfilename, 'r'))
-		self.root = self.tree.getroot()
-	
+        self.zip = ZipFile(fh, 'r')
+        files = self.zip.namelist()
+
+        if len(files) != 1:
+            raise CBZException, 'The number of files in this archive is not 1. (it is %d)' % len(
+                files)
+
+        # validate the filename.
+        xmlfilename = files[0]
+        if not xmlfilename.endswith('.xml'):
+            raise CBZException, 'The file in this archive does not have an xml extension.  It is probably not a CBZ.'
+
+        # now open the inner file and objectify.
+        self.tree = objectify.parse(self.zip.open(xmlfilename, 'r'))
+        self.root = self.tree.getroot()

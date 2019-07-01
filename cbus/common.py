@@ -11,7 +11,7 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
@@ -42,33 +42,32 @@ APP_LIGHTING = 0x38
 APP_TEMPERATURE = 0x19
 
 # CALs
-CAL_REQ_RESET      = 0x08
-CAL_REQ_RECALL     = 0x1A
-CAL_REQ_IDENTIFY   = 0x21
+CAL_REQ_RESET = 0x08
+CAL_REQ_RECALL = 0x1A
+CAL_REQ_IDENTIFY = 0x21
 CAL_REQ_GET_STATUS = 0x2A
 
-CAL_RES_REPLY      = 0x80
-
+CAL_RES_REPLY = 0x80
 
 # identify parameters
 IDENT_MANUFACTURER = 0x00
-IDENT_TYPE         = 0x01
+IDENT_TYPE = 0x01
 IDENT_FIRMWARE_VER = 0x02
-IDENT_SUMMARY      = 0x03
-IDENT_EXTENDED     = 0x04
+IDENT_SUMMARY = 0x03
+IDENT_EXTENDED = 0x04
 IDENT_NET_TERM_LVL = 0x05
-IDENT_TERM_LVL     = 0x06
-IDENT_NET_VOLTAGE  = 0x07
-IDENT_GAV_CURRENT  = 0x08
-IDENT_GAV_STORED   = 0x09
+IDENT_TERM_LVL = 0x06
+IDENT_NET_VOLTAGE = 0x07
+IDENT_GAV_CURRENT = 0x08
+IDENT_GAV_STORED = 0x09
 IDENT_GAV_PHY_ADDR = 0x0A
 IDENT_LOGIC_ASSIGN = 0x0B
-IDENT_DELAYS       = 0x0C
-IDENT_MIN_LVL      = 0x0D
-IDENT_MAX_LVL      = 0x0E
-IDENT_CUR_LVL      = 0x0F
-IDENT_OUT_SUMMARY  = 0x10
-IDENT_DSI_STATUS   = 0x11
+IDENT_DELAYS = 0x0C
+IDENT_MIN_LVL = 0x0D
+IDENT_MAX_LVL = 0x0E
+IDENT_CUR_LVL = 0x0F
+IDENT_OUT_SUMMARY = 0x10
+IDENT_DSI_STATUS = 0x11
 
 # Routing buffer
 ROUTING_NONE = 0x00
@@ -97,22 +96,22 @@ LIGHT_LABEL = 0xA0
 #\053800rr64FF (GA 100, to level 100%/0xff)
 
 LIGHT_RAMP_RATES = {
-	0x02: 0,
-	0x0A: 4,
-	0x12: 8,
-	0x1A: 12,
-	0x22: 20,
-	0x2A: 30,
-	0x32: 40,
-	0x3A: 60,
-	0x42: 90,
-	0x4A: 120,
-	0x52: 180,
-	0x5A: 300,
-	0x62: 420,
-	0x6A: 600,
-	0x72: 900,
-	0x7A: 1020
+    0x02: 0,
+    0x0A: 4,
+    0x12: 8,
+    0x1A: 12,
+    0x22: 20,
+    0x2A: 30,
+    0x32: 40,
+    0x3A: 60,
+    0x42: 90,
+    0x4A: 120,
+    0x52: 180,
+    0x5A: 300,
+    0x62: 420,
+    0x6A: 600,
+    0x72: 900,
+    0x7A: 1020
 }
 
 CLOCK_TIME = 0x01
@@ -126,42 +125,36 @@ IDENTIFY = 0x21
 
 # Lighting Application s2.4.3 s6-7
 LANGUAGE_CODES = {
-	# english and dialects
-	0x01: 'en',
-	0x02: 'en-AU',
-	0x03: 'en-BZ',
-	0x04: 'en-CA',
-	#0x05: English (Carribean)
-	0x06: 'en-IE',
-	0x07: 'en-JM',
-	0x08: 'en-NZ',
-	0x09: 'en-PH',
-	0x0A: 'en-ZA',
-	0x0B: 'en-TT',
-	0x0C: 'en-GB',
-	0x0D: 'en-US',
-	0x0E: 'en-ZW',
-	
-	0x40: 'af', # afrikaans
-	0x41: 'eu', # basque
-	0x42: 'ca', # catalan
-	0x43: 'da', # danish
-	
-	0x44: 'nl-BE', # dutch (belgium)
-	0x45: 'nl-NL', # dutch (netherlands)
-	
-	0x46: 'fo', # faroese
-	0x47: 'fi', # finnish
-	
-	0x48: 'fr-BE', # french (belgium)
-	0x49: 'fr-CA', # french (canada)
-	0x4A: 'fr', # french
-	0x4B: 'fr-LU', # french (luxembourg)
-	0x4C: 'fr-MC', # french (monaco)
-	0x4D: 'fr-CH', # french (switzerland)
-	
-	0x4E: 'gl', # galician
-	
+    # english and dialects
+    0x01: 'en',
+    0x02: 'en-AU',
+    0x03: 'en-BZ',
+    0x04: 'en-CA',
+    #0x05: English (Carribean)
+    0x06: 'en-IE',
+    0x07: 'en-JM',
+    0x08: 'en-NZ',
+    0x09: 'en-PH',
+    0x0A: 'en-ZA',
+    0x0B: 'en-TT',
+    0x0C: 'en-GB',
+    0x0D: 'en-US',
+    0x0E: 'en-ZW',
+    0x40: 'af',  # afrikaans
+    0x41: 'eu',  # basque
+    0x42: 'ca',  # catalan
+    0x43: 'da',  # danish
+    0x44: 'nl-BE',  # dutch (belgium)
+    0x45: 'nl-NL',  # dutch (netherlands)
+    0x46: 'fo',  # faroese
+    0x47: 'fi',  # finnish
+    0x48: 'fr-BE',  # french (belgium)
+    0x49: 'fr-CA',  # french (canada)
+    0x4A: 'fr',  # french
+    0x4B: 'fr-LU',  # french (luxembourg)
+    0x4C: 'fr-MC',  # french (monaco)
+    0x4D: 'fr-CH',  # french (switzerland)
+    0x4E: 'gl',  # galician
 }
 # these are valid confirmation codes used in acknowledge events.
 CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzg'
@@ -169,43 +162,27 @@ CONFIRMATION_CODES = 'hijklmnopqrstuvwxyzg'
 MIN_GROUP_ADDR = 0
 MAX_GROUP_ADDR = 255
 
-
 # priority classes.
 CLASS_1 = 0x03
 CLASS_2 = 0x02
 CLASS_3 = 0x01
 CLASS_4 = 0x00
 
-CLASSES = {
-	CLASS_1: '1',
-	CLASS_2: '2',
-	CLASS_3: '3',
-	CLASS_4: '4'
-}
+CLASSES = {CLASS_1: '1', CLASS_2: '2', CLASS_3: '3', CLASS_4: '4'}
 
 # destination address type
 DAT_PPM = 0x03
 DAT_PM = 0x05
 DAT_PP = 0x06
 
-DATS = {
-	DAT_PPM: 'PPM',
-	DAT_PM: 'PM',
-	DAT_PP: 'PP'
-}
+DATS = {DAT_PPM: 'PPM', DAT_PM: 'PM', DAT_PP: 'PP'}
 
 # bridge length
-BRIDGE_LENGTHS = {
-	0x09: 0,
-	0x12: 1,
-	0x1B: 2,
-	0x24: 3,
-	0x2D: 4,
-	0x36: 5
-}
+BRIDGE_LENGTHS = {0x09: 0, 0x12: 1, 0x1B: 2, 0x24: 3, 0x2D: 4, 0x36: 5}
+
 
 def duration_to_ramp_rate(seconds):
-	"""
+    """
 	Converts a given duration into a ramp rate code.
 	
 	:param seconds: The number of seconds that the ramp is over.
@@ -216,13 +193,15 @@ def duration_to_ramp_rate(seconds):
 	
 	:throws ValueError: If the given duration is too long and cannot be represented.
 	"""
-	for k, v in sorted(LIGHT_RAMP_RATES.iteritems(), cmp=lambda x, y: cmp(x[0], y[0])):
-		if seconds <= v:
-			return k
-	raise ValueError, 'That duration is too long!'
+    for k, v in sorted(LIGHT_RAMP_RATES.iteritems(),
+                       cmp=lambda x, y: cmp(x[0], y[0])):
+        if seconds <= v:
+            return k
+    raise ValueError, 'That duration is too long!'
+
 
 def ramp_rate_to_duration(rate):
-	"""
+    """
 	Converts a given ramp rate code into a duration in seconds.
 	
 	:param rate: The ramp rate code to convert.
@@ -233,11 +212,12 @@ def ramp_rate_to_duration(rate):
 	
 	:throws KeyError: If the given ramp rate code is invalid.
 	"""
-	
-	return LIGHT_RAMP_RATES[rate]
+
+    return LIGHT_RAMP_RATES[rate]
+
 
 def cbus_checksum(i, b16=False):
-	"""
+    """
 	Calculates the checksum of a C-Bus command string.
 	
 	Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
@@ -251,24 +231,25 @@ def cbus_checksum(i, b16=False):
 	:returns: The checksum value of the given input
 	:rtype: int (if b16=False), str (if b16=True)
 	"""
-	if b16:
-		if i[0] == '\\':
-			i = i[1:]
-		
-		i = b16decode(i)
-	
-	c = 0
-	for x in i:
-		c += ord(x)
-	
-	c = ((c % 0x100) ^ 0xff) + 1
-	
-	if b16:
-		return b16encode(chr(c))
-	return c
+    if b16:
+        if i[0] == '\\':
+            i = i[1:]
+
+        i = b16decode(i)
+
+    c = 0
+    for x in i:
+        c += ord(x)
+
+    c = ((c % 0x100) ^ 0xff) + 1
+
+    if b16:
+        return b16encode(chr(c))
+    return c
+
 
 def add_cbus_checksum(i):
-	"""
+    """
 	Appends a C-Bus checksum to a given message.
 	
 	:param i: The C-Bus message to append a checksum to.  Must not be in base16 format.
@@ -277,11 +258,12 @@ def add_cbus_checksum(i):
 	:returns: The C-Bus message with the checksum appended to it.
 	:rtype: str
 	"""
-	c = cbus_checksum(i)
-	return i + chr(c)
-	
+    c = cbus_checksum(i)
+    return i + chr(c)
+
+
 def validate_cbus_checksum(i):
-	"""
+    """
 	Verifies a C-Bus checksum from a given message.
 	
 	:param i: The C-Bus message to verify the checksum of.  Must be in base16 format.
@@ -290,27 +272,28 @@ def validate_cbus_checksum(i):
 	:returns: True if the checksum is correct, False otherwise.
 	:rtype: bool
 	"""
-	c = i[-2:]
-	d = i[:-2]
-	
-	cc = cbus_checksum(d, b16=True)
-	#print "%r: %r == %r ? %r" % (d, c, cc, c == cc)
-	return c == cc
+    c = i[-2:]
+    d = i[:-2]
+
+    cc = cbus_checksum(d, b16=True)
+    #print "%r: %r == %r ? %r" % (d, c, cc, c == cc)
+    return c == cc
+
 
 def get_real_cbus_checksum(i):
-	"""
+    """
 	Calculates the supposedly correct cbus checksum for a message.
 	
 	Assumes input of a base16 encoded message with the checksum ignored.
 	
 	"""
-	d = i[:-2]
-	cc = cbus_checksum(d, b16=True)
-	return cc
-	
+    d = i[:-2]
+    cc = cbus_checksum(d, b16=True)
+    return cc
+
 
 def validate_ga(group_addr):
-	"""
+    """
 	Validates a given group address to verify that it is valid.
 	
 	:param group_addr: Input group address to validate.
@@ -320,10 +303,11 @@ def validate_ga(group_addr):
 	:rtype: bool
 	
 	"""
-	return MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR
+    return MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR
+
 
 def validate_ramp_rate(duration):
-	"""
+    """
 	Validates the given ramp rate.
 	
 	:param duration: A duration, in seconds, to check if it is within the allowed duration constraints.
@@ -332,5 +316,4 @@ def validate_ramp_rate(duration):
 	:returns: True if the duration is within range, False otherwise.
 	:rtype: bool
 	"""
-	return MIN_RAMP_RATE <= duration <= MAX_RAMP_RATE
-
+    return MIN_RAMP_RATE <= duration <= MAX_RAMP_RATE

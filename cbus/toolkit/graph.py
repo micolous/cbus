@@ -21,8 +21,9 @@ from argparse import ArgumentParser, FileType
 import json
 import pydot
 
+
 def generate_graph(input, output):
-	"""
+    """
 	Generates a Graphviz DOT graph for the given network.
 
 	:param input: Input file-like object to read the network data from, in JSON format from the dump_labels tool.
@@ -31,63 +32,75 @@ def generate_graph(input, output):
 	:param output: Output file name to write the graph to.
 	:type output: str
 	"""
-	networks = json.load(input)
-	
-	# warning: pydot has a bad case of the stupid and doesn't sanitise
-	# inputs correctly.
-	graph = pydot.Dot(output.replace('.', '_').replace('-', '_'), graph_type='digraph')
+    networks = json.load(input)
 
-	# create groups for networks
-	for network_id, network in networks.iteritems():
-		loads = set()
+    # warning: pydot has a bad case of the stupid and doesn't sanitise
+    # inputs correctly.
+    graph = pydot.Dot(output.replace('.', '_').replace('-', '_'),
+                      graph_type='digraph')
 
-		subgraph = pydot.Subgraph('Network_%s' % network_id)
-		#cluster = pydot.Cluster('Network %s' % network_id)
+    # create groups for networks
+    for network_id, network in networks.iteritems():
+        loads = set()
 
-		for unit_id, unit in network['units'].iteritems():
-			node = pydot.Node(unit['name'])
-			subgraph.add_node(node)
-			node.groups = unit['groups']
-			[loads.add(x) for x in node.groups]
-			for x in unit['groups']:
-				if x == 255: continue
-				subgraph.add_edge(pydot.Edge(unit['name'], 'GA %s' % x))
+        subgraph = pydot.Subgraph('Network_%s' % network_id)
+        #cluster = pydot.Cluster('Network %s' % network_id)
 
-		for group in loads:
-			node = pydot.Node('GA %s' % group)
+        for unit_id, unit in network['units'].iteritems():
+            node = pydot.Node(unit['name'])
+            subgraph.add_node(node)
+            node.groups = unit['groups']
+            [loads.add(x) for x in node.groups]
+            for x in unit['groups']:
+                if x == 255: continue
+                subgraph.add_edge(pydot.Edge(unit['name'], 'GA %s' % x))
 
-			subgraph.add_node(node)
+        for group in loads:
+            node = pydot.Node('GA %s' % group)
 
+            subgraph.add_node(node)
 
-		#cluster.add_subgraph(subgraph)
-		graph.add_subgraph(subgraph)
+        #cluster.add_subgraph(subgraph)
+        graph.add_subgraph(subgraph)
 
-	# Dot.write must be a file name to write to -- not a file-like
-	# object.
-	graph.write(output)
-
+    # Dot.write must be a file name to write to -- not a file-like
+    # object.
+    graph.write(output)
 
 
 def main():
-	parser = ArgumentParser(usage='%(prog)s -i input.json -o output.dot', version='1.0', description="""\
-		Creates a Graphviz dot-file describing a CBus network.  """, epilog="""\
+    parser = ArgumentParser(usage='%(prog)s -i input.json -o output.dot',
+                            version='1.0',
+                            description="""\
+		Creates a Graphviz dot-file describing a CBus network.  """,
+                            epilog="""\
 		Render the output of this tool to an image with a command like:
 
 		python -m cbus.toolkit.dump_labels -i mynetwork.cbz -o mynetwork.json;
 		python -m cbus.toolkit.graph -i mynetwork.json -o mynetwork.dot;
 		fdp mynetwork.dot -Tpng -o mynetwork.png;
 """)
-	parser.add_argument('-o', '--output', dest='output', metavar='FILE', help='write dot output to FILE')
-	parser.add_argument('-i', '--input', dest='input', metavar='FILE', type=file, help='read JSON dump from FILE')
-	options = parser.parse_args()
+    parser.add_argument('-o',
+                        '--output',
+                        dest='output',
+                        metavar='FILE',
+                        help='write dot output to FILE')
+    parser.add_argument('-i',
+                        '--input',
+                        dest='input',
+                        metavar='FILE',
+                        type=file,
+                        help='read JSON dump from FILE')
+    options = parser.parse_args()
 
-	if options.input == None:
-		parser.error('Input filename not given.')
+    if options.input == None:
+        parser.error('Input filename not given.')
 
-	if options.output == None:
-		parser.error('Output filename not given.')
+    if options.output == None:
+        parser.error('Output filename not given.')
 
-	generate_graph(options.input, options.output)
+    generate_graph(options.input, options.output)
+
 
 if __name__ == "__main__":
-	main()
+    main()

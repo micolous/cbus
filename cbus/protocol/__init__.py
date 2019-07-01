@@ -8,4 +8,3 @@ TCP (CNI).
 In the future this may support C-Gate.
 
 """
-
