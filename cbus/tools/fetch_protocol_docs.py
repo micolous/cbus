@@ -1,6 +1,6 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # fetch_protocol_docs.py - Downloads official Clipsal Protocol documentation
-# Copyright 2013 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2013-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -15,13 +15,18 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import requests, argparse
-from HTMLParser import HTMLParser
-from urlparse import urlparse, urljoin, urlunparse
-from urllib import unquote
-from os.path import join
+from __future__ import absolute_import
+from __future__ import print_function
 
-DOCUMENTATION_INDEX = 'http://training.clipsal.com/downloads/OpenCBus/OpenCBusProtocolDownloads.html'
+import argparse
+import requests
+import os
+
+from six.moves.html_parser import HTMLParser
+from six.moves.urllib.parse import urlparse, urljoin, urlunparse, unquote
+
+DOCUMENTATION_INDEX = ('https://updates.clipsal.com/ClipsalSoftwareDownload'
+                       '/DL/downloads/OpenCBus/OpenCBusProtocolDownloads.html')
 DOCUMENTATION_INDEX_U = urlparse(DOCUMENTATION_INDEX)
 
 
@@ -38,16 +43,21 @@ class DocumentationParser(HTMLParser):
                     break
 
             # sanity check
-            if href != None and \
-             href.scheme in ('http', 'https') and \
-             href.netloc == DOCUMENTATION_INDEX_U.netloc and \
-             href.path.endswith('.pdf'):
+            if (href is not None and href.scheme in ('http', 'https') and
+                href.netloc == DOCUMENTATION_INDEX_U.netloc and
+                    href.path.endswith('.pdf')):
                 # This has a link to a document on this server, queue it.
                 self.links.append(href)
 
 
 def download_docs(destination):
-    print("Fetching documentation index from clipsal.com...")
+    if not os.path.exists(destination):
+        os.makedirs(destination)
+    elif not os.path.isdir(destination):
+        raise IOError('Destination {} exists, but is not a directory!'.format(
+            destination))
+
+    print('Fetching documentation index from updates.clipsal.com...')
     r = requests.get(DOCUMENTATION_INDEX)
 
     # now parse out the links to documentation
@@ -59,17 +69,21 @@ def download_docs(destination):
     total_links = len(parser.links)
     for i, link in enumerate(parser.links):
         uri = urlunparse(link)
-        fname = join(destination, unquote(link.path.split('/')[-1]))
+        short_fname = unquote(link.path.split('/')[-1])
+        fname = os.path.join(destination, short_fname)
+        if os.path.exists(fname):
+            print('Skipping `{}`, file already exists!'.format(short_fname))
+            continue
 
-        print("[%02d/%02d]: Downloading %r to %r..." %
-              (i + 1, total_links, uri, fname))
+        print('[{:02d}/{:02d}]: Downloading `{}` <{}>...'.format(
+            i + 1, total_links, short_fname, uri))
 
         document = requests.get(uri).content
         fh = open(fname, 'wb')
         fh.write(document)
         fh.close()
 
-    print("Downloaded documentation!")
+    print('Downloaded documentation to: {}'.format(destination))
 
 
 def main():

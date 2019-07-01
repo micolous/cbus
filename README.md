@@ -1,27 +1,38 @@
-# libcbus [![Build Status](https://secure.travis-ci.org/micolous/cbus.png?branch=master)](http://travis-ci.org/micolous/cbus) #
+# libcbus
 
-Talks to C-Bus using Python.
+[![Build Status](https://secure.travis-ci.org/micolous/cbus.png?branch=master)][travis]
 
-Copyright 2012-2014 Michael Farrell.  Licensed under the GNU LGPL3+.  For more details see `COPYING` and `COPYING.LESSER`.
+Talks to Clipsal C-Bus using Python.
 
-Clipsal state that use of C-Bus with non-Clipsal hardware or software may void your warranty.
+Copyright 2012-2019 Michael Farrell. Licensed under the GNU LGPL3+. For more
+details see `COPYING` and `COPYING.LESSER`.
 
-Additional documentation for the project is published at http://cbus.rtfd.org/
+**Note:** This software is not certified or endorsed by Clipsal or Schneider
+Electric. Clipsal claim that use of C-Bus with non-Clipsal hardware or
+software may void your warranty.
 
-## Hardware interface support ##
+More information about the project is available on
+[the libcbus ReadTheDocs site][rtd], and in the `docs` directory of the source
+repository.
+
+## Hardware interface support
 
 This should work with the following C-Bus PC Interfaces (PCIs):
 
-* [5500PC Serial PCI](http://www2.clipsal.com/cis/technical/product_groups/cbus/system_units_and_accessories/pc_interface)
+* [5500PC Serial PCI][5500PC]
 
-* [5500PCU USB PCI](http://www2.clipsal.com/cis/technical/product_groups/cbus/system_units_and_accessories/pc_interface)
-  (Linux: use `cp210x` kernel module on v2.6.25 or later.)
+* [5500PCU USB PCI][5500PCU]
 
-* [5500CN Ethernet PCI](http://www2.clipsal.com/cis/technical/product_groups/cbus/system_units_and_accessories/ethernet_interface)
+  On Linux, this requires v2.6.25 or later kernel, with the `cp210x` module.
 
-## About this project ##
+* [5500CN Ethernet PCI][5500CN] (and likely _also_ [5500CN2][])
 
-This is a reimplementation of the PCI serial protocol from scratch.
+  This software _does not_ support configuring the Ethernet PCI for the first
+  time. It must already have an IP address on your network.
+
+## About this project
+
+This is a reimplementation of the PCI serial protocol _from scratch_.
 
 It does **not** use the `libcbm` library/DLL from Clipsal, or C-Gate:
 
@@ -32,7 +43,7 @@ It does **not** use the `libcbm` library/DLL from Clipsal, or C-Gate:
   library (SerialIO), the Java runtime, and itself has various licensing
   restrictions.
 
-As such, it should run on any Python supported platform, with the exeception
+As such, it should run on any Python supported platform, with the exception
 of `dbus` (IPC server) components which don't work properly on Windows.
 
 The software itself has been primarily developed on Linux with on armhf,
@@ -47,3 +58,9 @@ The most useful bits of this project are:
 * `sage` (in `sage_root`), which is a jQueryMobile-based JavaScript web app
   which can connect to `saged`.
 
+[rtd]: https://cbus.rtfd.org/
+[travis]: https://travis-ci.org/micolous/cbus
+[5500PC]: https://www.clipsal.com/Trade/Products/ProductDetail?catno=5500PC
+[5500PCU]: https://www.clipsal.com/Trade/Products/ProductDetail?catno=5500PCU
+[5500CN]: https://updates.clipsal.com/ClipsalOnline/Files/Brochures/W0000348.pdf
+[5500CN2]: https://www.clipsal.com/Trade/Products/ProductDetail?catno=5500CN2
