@@ -33,7 +33,7 @@ END_COMMAND = '\r\n'
 POINT_TO_MULTIPOINT = 0x05
 POINT_TO_POINT = 0x06
 # undocumented command type issued for status inquiries by toolkit?
-#POINT_TO_46 = '\\46'
+# POINT_TO_46 = '\\46'
 
 # Applications
 APP_CLOCK = 0xDF
@@ -87,13 +87,13 @@ LIGHT_TERMINATE_RAMP = 0x09
 LIGHT_LABEL = 0xA0
 
 # light on
-#\0538007964 (GA 100)
+# \0538007964 (GA 100)
 
 # light off
-#\0538000164 (GA 100)
+# \0538000164 (GA 100)
 
 # set to level
-#\053800rr64FF (GA 100, to level 100%/0xff)
+# \053800rr64FF (GA 100, to level 100%/0xff)
 
 LIGHT_RAMP_RATES = {
     0x02: 0,
@@ -130,7 +130,7 @@ LANGUAGE_CODES = {
     0x02: 'en-AU',
     0x03: 'en-BZ',
     0x04: 'en-CA',
-    #0x05: English (Carribean)
+    # 0x05: English (Carribean)
     0x06: 'en-IE',
     0x07: 'en-JM',
     0x08: 'en-NZ',
@@ -183,54 +183,56 @@ BRIDGE_LENGTHS = {0x09: 0, 0x12: 1, 0x1B: 2, 0x24: 3, 0x2D: 4, 0x36: 5}
 
 def duration_to_ramp_rate(seconds):
     """
-	Converts a given duration into a ramp rate code.
-	
-	:param seconds: The number of seconds that the ramp is over.
-	:type seconds: int
-	
-	:returns: The ramp rate code for the duration given.
-	:rtype: int
-	
-	:throws ValueError: If the given duration is too long and cannot be represented.
-	"""
+    Converts a given duration into a ramp rate code.
+
+    :param seconds: The number of seconds that the ramp is over.
+    :type seconds: int
+
+    :returns: The ramp rate code for the duration given.
+    :rtype: int
+
+    :raises ValueError: If the given duration is too long and cannot be
+                        represented.
+    """
     for k, v in sorted(LIGHT_RAMP_RATES.iteritems(),
                        cmp=lambda x, y: cmp(x[0], y[0])):
         if seconds <= v:
             return k
-    raise ValueError, 'That duration is too long!'
+    raise ValueError('That duration is too long!')
 
 
 def ramp_rate_to_duration(rate):
     """
-	Converts a given ramp rate code into a duration in seconds.
-	
-	:param rate: The ramp rate code to convert.
-	:type rate: int
-	
-	:returns: The number of seconds the ramp runs over.
-	:rtype: int
-	
-	:throws KeyError: If the given ramp rate code is invalid.
-	"""
+    Converts a given ramp rate code into a duration in seconds.
+
+    :param rate: The ramp rate code to convert.
+    :type rate: int
+
+    :returns: The number of seconds the ramp runs over.
+    :rtype: int
+
+    :throws KeyError: If the given ramp rate code is invalid.
+    """
 
     return LIGHT_RAMP_RATES[rate]
 
 
 def cbus_checksum(i, b16=False):
     """
-	Calculates the checksum of a C-Bus command string.
-	
-	Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
-	
-	:param i: The C-Bus data to calculate the checksum of.
-	:type i: str
-	
-	:param b16: Indicates that the input is in base16 (network) format, and that the return should be in base16 format.
-	:type b16: bool
-	
-	:returns: The checksum value of the given input
-	:rtype: int (if b16=False), str (if b16=True)
-	"""
+    Calculates the checksum of a C-Bus command string.
+
+    Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
+
+    :param i: The C-Bus data to calculate the checksum of.
+    :type i: str
+
+    :param b16: Indicates that the input is in base16 (network) format, and
+                that the return should be in base16 format.
+    :type b16: bool
+
+    :returns: The checksum value of the given input
+    :rtype: int (if b16=False), str (if b16=True)
+    """
     if b16:
         if i[0] == '\\':
             i = i[1:]
@@ -250,43 +252,45 @@ def cbus_checksum(i, b16=False):
 
 def add_cbus_checksum(i):
     """
-	Appends a C-Bus checksum to a given message.
-	
-	:param i: The C-Bus message to append a checksum to.  Must not be in base16 format.
-	:type i: str
-	
-	:returns: The C-Bus message with the checksum appended to it.
-	:rtype: str
-	"""
+    Appends a C-Bus checksum to a given message.
+
+    :param i: The C-Bus message to append a checksum to. Must not be in base16
+              format.
+    :type i: str
+
+    :returns: The C-Bus message with the checksum appended to it.
+    :rtype: str
+    """
     c = cbus_checksum(i)
     return i + chr(c)
 
 
 def validate_cbus_checksum(i):
     """
-	Verifies a C-Bus checksum from a given message.
-	
-	:param i: The C-Bus message to verify the checksum of.  Must be in base16 format.
-	:type i: str
-	
-	:returns: True if the checksum is correct, False otherwise.
-	:rtype: bool
-	"""
+    Verifies a C-Bus checksum from a given message.
+
+    :param i: The C-Bus message to verify the checksum of. Must be in base16
+              format.
+    :type i: str
+
+    :returns: True if the checksum is correct, False otherwise.
+    :rtype: bool
+    """
     c = i[-2:]
     d = i[:-2]
 
     cc = cbus_checksum(d, b16=True)
-    #print "%r: %r == %r ? %r" % (d, c, cc, c == cc)
+    # print "%r: %r == %r ? %r" % (d, c, cc, c == cc)
     return c == cc
 
 
 def get_real_cbus_checksum(i):
     """
-	Calculates the supposedly correct cbus checksum for a message.
-	
-	Assumes input of a base16 encoded message with the checksum ignored.
-	
-	"""
+    Calculates the supposedly correct cbus checksum for a message.
+
+    Assumes input of a base16 encoded message with the checksum ignored.
+
+    """
     d = i[:-2]
     cc = cbus_checksum(d, b16=True)
     return cc
@@ -294,26 +298,61 @@ def get_real_cbus_checksum(i):
 
 def validate_ga(group_addr):
     """
-	Validates a given group address to verify that it is valid.
-	
-	:param group_addr: Input group address to validate.
-	:type group_addr: int
-	
-	:returns: True if the given group address is valid, False otherwise.
-	:rtype: bool
-	
-	"""
+    Validates a given group address.
+
+    :param group_addr: Input group address to validate.
+    :type group_addr: int
+
+    :returns: True if the given group address is valid, False otherwise.
+    :rtype: bool
+
+    """
     return MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR
+
+
+def check_ga(group_addr):
+    """
+    Validates a given group address, throwing ValueError if not.
+
+    :param group_addr: Input group address to validate.
+    :type group_addr: int
+    :returns: None
+    :raises ValueError: If group address is invalid
+
+    """
+    if not validate_ga(group_addr):
+        raise ValueError(
+            'Group Address out of range ({}..{}), got {}'.format(
+                MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr))
 
 
 def validate_ramp_rate(duration):
     """
-	Validates the given ramp rate.
-	
-	:param duration: A duration, in seconds, to check if it is within the allowed duration constraints.
-	:type duration: int
-	
-	:returns: True if the duration is within range, False otherwise.
-	:rtype: bool
-	"""
+    Validates the given ramp rate.
+
+    :param duration: A duration, in seconds, to check if it is within the
+                     allowed duration constraints.
+    :type duration: int
+
+    :returns: True if the duration is within range, False otherwise.
+    :rtype: bool
+    """
     return MIN_RAMP_RATE <= duration <= MAX_RAMP_RATE
+
+
+def check_ramp_rate(duration):
+    """
+    Validates the given ramp rate.
+
+    :param duration: A duration, in seconds, to check if it is within the
+                     allowed duration constraints.
+    :type duration: int
+
+    :returns: None
+    :raises ValueError: If ramp rate is invalid
+
+    """
+    if not validate_ramp_rate(duration):
+        raise ValueError(
+            'Duration is out of range {}..{} (got {})'.format(
+                MIN_RAMP_RATE, MAX_RAMP_RATE, duration))

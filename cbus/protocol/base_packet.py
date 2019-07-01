@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/base_packet.py - Skeleton class for basic packets
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -26,7 +26,6 @@ class BasePacket(object):
 
     def __init__(self,
                  checksum=True,
-                 flags=None,
                  destination_address_type=None,
                  rc=None,
                  dp=None,
@@ -34,7 +33,6 @@ class BasePacket(object):
         # base packet implementation.
         self.checksum = checksum
 
-        #self.flags = flags
         self.destination_address_type = destination_address_type
         self.rc = rc
         self.dp = dp
@@ -42,22 +40,26 @@ class BasePacket(object):
 
     def _encode(self):
         # do checks to make sure the maths will work out.
-        assert self.destination_address_type == self.destination_address_type & 0x07, 'destination_address_type > 0x07'
-        assert self.rc == self.rc & 0x03, 'rc > 0x03'
-        assert self.priority_class == self.priority_class & 0x03, 'priority_class > 0x03'
+        if self.destination_address_type > 0x07:
+            raise ValueError('destination_address_type > 0x07')
+        if self.rc > 0x03:
+            raise ValueError('rc > 0x03')
+        if self.priority_class > 0x03:
+            raise ValueError('priority_class > 0x03')
 
-        flags = \
-         self.destination_address_type + \
-         (self.rc << 3) + \
-         (0x20 if self.dp else 0x00) + \
-         (self.priority_class << 6)
+        flags = (self.destination_address_type + (self.rc << 3) +
+                 (0x20 if self.dp else 0x00) + (self.priority_class << 6))
 
-        #print self.destination_address_type, self.rc << 3, 0x20 if self.dp else 0x00, self.priority_class << 6
-        assert 0 <= flags <= 0xFF, 'flags not between 0 and 255 (%r)!' % flags
+        # print(self.destination_address_type, self.rc << 3,
+        #       0x20 if self.dp else 0x00, self.priority_class << 6)
+        if flags < 0 or flags > 0xff:
+            raise ValueError('flags not in range 0..255 ({})'.format(flags))
 
         if self.source_address:
             source_address = int(self.source_address)
-            assert 0 <= flags <= 0xFF, 'source_address set, and not between 0 and 255 (%r)!' % source_address
+            if source_address < 0 or source_address > 0xff:
+                raise ValueError('source_address set, but not in range 0..255 '
+                                 '({})'.format(source_address))
 
             return [flags, source_address]
         else:
@@ -67,7 +69,7 @@ class BasePacket(object):
 class SpecialPacket(BasePacket):
     """
 
-	"""
+    """
     checksum = False
     destination_address_type = None
     rc = None
@@ -83,19 +85,22 @@ class SpecialPacket(BasePacket):
 
 class SpecialClientPacket(SpecialPacket):
     """
-	Client -> PCI communications have some special packets, which we make subclasses of SpecialClientPacket to make them entirely seperate from normal packets.
-	
-	These have non-standard methods for serialisation.
-	"""
+    Client -> PCI communications have some special packets, which we make
+    subclasses of SpecialClientPacket to make them entirely separate from
+    normal packets.
+
+    These have non-standard methods for serialisation.
+    """
 
     pass
 
 
 class SpecialServerPacket(SpecialPacket):
     """
-	PCI -> Client has some special packets that we make subclasses of this, because they're different to regular packets.
-	
-	These have non-standard serialisation methods.
-	"""
+    PCI -> Client has some special packets that we make subclasses of this,
+    because they're different to regular packets.
+
+    These have non-standard serialisation methods.
+    """
 
     pass

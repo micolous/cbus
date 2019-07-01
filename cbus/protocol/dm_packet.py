@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/dm_packet.py - Device Management Packet decoder
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -14,9 +14,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
 from cbus.protocol.base_packet import BasePacket
-from cbus.protocol.application import APPLICATIONS
-from cbus.common import *
+from cbus.common import CLASS_2, DAT_PPM, add_cbus_checksum
 from base64 import b16encode
 
 
@@ -29,8 +29,8 @@ class DeviceManagementPacket(BasePacket):
                  priority_class=CLASS_2,
                  parameter=None,
                  value=None):
-        super(DeviceManagementPacket, self).__init__(checksum, None, DAT_PPM, 0,
-                                                     True, priority_class)
+        super(DeviceManagementPacket, self).__init__(
+            checksum, DAT_PPM, 0, True, priority_class)
 
         self.parameter = parameter
         self.value = value
@@ -47,11 +47,14 @@ class DeviceManagementPacket(BasePacket):
         #  vv = value
 
         packet.parameter = ord(data[0])
-        assert ord(
-            data[1]) == 0, 'second byte of DeviceManagementPacket must be 0'
+        if ord(data[1]) != 0:
+            raise ValueError('second byte of DeviceManagementPacket must be 0')
+
         packet.value = ord(data[2])
 
-        assert len(data) == 3, 'bad device management packet length (!= 3+)'
+        if len(data) != 3:
+            raise ValueError(
+                'Unexpected DeviceManagementPacket payload length')
 
         return packet
 

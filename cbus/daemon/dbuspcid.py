@@ -16,7 +16,8 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 `fakepci` allows you to create a fake CNI (TCP PCI) or serial PCI that connects
-to cdbusd.  This allows non-DBus CBus clients to connect to a PCI through sharing.
+to cdbusd. This allows non-DBus CBus clients to connect to a PCI through
+sharing.
 
 """
 
@@ -24,8 +25,8 @@ import dbus
 import gobject
 import sys
 from argparse import ArgumentParser
-from cbus.twisted_errors import *
 from twisted.internet import glib2reactor
+from twisted.internet.error import ReactorAlreadyInstalledError
 
 # installing the glib2 reactor breaks sphinx autodoc
 # this patches around the issue.
@@ -37,7 +38,6 @@ except ReactorAlreadyInstalledError:
 from cbus.daemon.cdbusd import DBUS_INTERFACE, DBUS_SERVICE, DBUS_PATH
 from twisted.internet.protocol import Factory
 from cbus.protocol.pciserverprotocol import PCIServerProtocol
-import cbus.common
 from twisted.python import log
 from twisted.internet import reactor
 
@@ -83,7 +83,7 @@ class FakePCIFactory(Factory):
 
 def boot(serial_mode, addr, daemon_enable, pid_file, session_bus=False):
     if daemon_enable:
-        raise ValueError, "daemon mode not supported yet"
+        raise ValueError("daemon mode not supported yet")
 
     if session_bus:
         bus = dbus.SessionBus()
@@ -93,7 +93,7 @@ def boot(serial_mode, addr, daemon_enable, pid_file, session_bus=False):
     fakepci = FakePCI(bus)
 
     if serial_mode:
-        raise ValueError, 'serial mode not implemented'
+        raise ValueError('serial mode not implemented')
     else:
         # tcp mode
         reactor.listenTCP(int(addr), FakePCIFactory(fakepci))
@@ -104,60 +104,48 @@ def main():
 
     group = parser.add_argument_group('Daemon options')
 
-    group.add_argument('-D',
-                       '--daemon',
-                       action='store_true',
-                       dest='daemon',
-                       default=False,
-                       help='Start as a daemon [default: %(default)s]')
+    group.add_argument(
+        '-D', '--daemon',
+        dest='daemon', action='store_true', default=False,
+        help='Start as a daemon [default: %(default)s]')
 
     group.add_argument(
-        '-P',
-        '--pid',
-        dest='pid_file',
-        default='/var/run/cdbusd.pid',
-        help=
-        'Location to write the PID file.  Only has effect in daemon mode.  [default: %(default)s]'
-    )
+        '-P', '--pid',
+        dest='pid_file', default='/var/run/cdbusd.pid',
+        help='Location to write the PID file. Only has effect in daemon mode. '
+             '[default: %(default)s]')
 
     group.add_argument(
-        '-S',
-        '--session-bus',
-        action='store_true',
-        dest='session_bus',
-        default=False,
-        help=
-        'Bind to the session bus instead of the system bus [default: %(default)s]'
-    )
+        '-S', '--session-bus',
+        dest='session_bus', action='store_true', default=False,
+        help='Bind to the session bus instead of the system bus '
+             '[default: %(default)s]')
 
-    group.add_argument('-l',
-                       '--log-file',
-                       dest='log',
-                       default=None,
-                       help='Destination to write logs [default: stdout]')
+    group.add_argument(
+        '-l', '--log-file',
+        dest='log', default=None,
+        help='Destination to write logs [default: stdout]')
 
     group = parser.add_argument_group('PCI Options')
-    parser.add_argument(
-        '-s',
-        '--serial-pci',
-        dest='serial_pci',
-        default=None,
-        help='Serial port to listen on.  Either this or -t must be specified.')
+    group.add_argument(
+        '-s', '--serial-pci',
+        dest='serial_pci', default=None,
+        help='Serial port to listen on. Either this or -t must be specified.')
 
-    parser.add_argument(
+    group.add_argument(
         '-t',
         '--tcp-pci',
         dest='tcp_pci',
         default=None,
-        help='TCP port to listen on (CNI).  Either this or -s must be specified.'
-    )
+        help='TCP port to listen on (CNI). Either this or -s must be '
+             'specified.')
 
     options, args = parser.parse_args()
 
     if options.serial_pci and options.tcp_pci:
         parser.error(
-            'Both serial and TCP CBus PCI listen addresses were specified!  Use only one...'
-        )
+            'Both serial and TCP CBus PCI listen addresses were specified! '
+            'Use only one...')
     elif options.serial_pci:
         serial_mode = True
         addr = options.serial_pci

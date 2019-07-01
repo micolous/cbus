@@ -1,6 +1,8 @@
 #!/usr/bin/env python
-# cbus/protocol/application/test_temperature.py - Temperature broadcast unit tests
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# cbus/protocol/application/test_temperature.py
+# Temperature broadcast unit tests
+#
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -17,8 +19,8 @@
 
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
-from cbus.protocol.application.temperature import *
-from cbus.common import *
+from cbus.protocol.application.temperature import TemperatureBroadcastSAL
+from cbus.common import APP_TEMPERATURE
 
 
 def S9_11_Test():
@@ -35,7 +37,7 @@ def S9_11_Test():
     assert p.sal[0].group_address == 5
     assert p.sal[0].temperature == 25
 
-    ## check that it encodes properly again
+    # check that it encodes properly again
     assert p.encode() == '05190002056477'
     assert p.confirmation == 'g'
 
@@ -61,4 +63,4 @@ def temperature_encode_decode_test():
         assert orig.sal[x].temperature == d.sal[x].temperature
 
     # ensure there is no remaining data to be parsed
-    assert r == None
+    assert r is None

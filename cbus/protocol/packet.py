@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # cbus/protocol/packet.py - Extensible protocol library for encoding and
 #                           decoding PCI protocol data.
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -16,33 +16,35 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from base64 import b16encode, b16decode
+from base64 import b16decode
 from cbus.protocol.reset_packet import ResetPacket
 from cbus.protocol.scs_packet import SmartConnectShortcutPacket
-from cbus.protocol.base_packet import BasePacket
+# from cbus.protocol.base_packet import BasePacket
 from cbus.protocol.pp_packet import PointToPointPacket
-#from cbus.protocol.ppm_packet import PointToPointToMultipointPacket
+# from cbus.protocol.ppm_packet import PointToPointToMultipointPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.dm_packet import DeviceManagementPacket
 from cbus.protocol.po_packet import PowerOnPacket
 from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.confirm_packet import ConfirmationPacket
-from cbus.common import *
+from cbus.common import (
+    DAT_PM, DAT_PP, DAT_PPM, HEX_CHARS, CONFIRMATION_CODES,
+    get_real_cbus_checksum, validate_cbus_checksum)
 import warnings
 
 
 def decode_packet(data, checksum=True, strict=True, server_packet=True):
     """
-	Decodes a packet from or send to the PCI.
-	
-	Returns a tuple, the packet that was parsed and the remainder that was
-	unparsed (in the case of some special commands.
-	
-	If no packet was able to be parsed, the first element of the tuple will be
-	None.  However there may be some circumstances where there is still a
-	remainder to be parsed (cancel request).
-	
-	"""
+    Decodes a packet from or send to the PCI.
+
+    Returns a tuple, the packet that was parsed and the remainder that was
+    unparsed (in the case of some special commands.
+
+    If no packet was able to be parsed, the first element of the tuple will be
+    None.  However there may be some circumstances where there is still a
+    remainder to be parsed (cancel request).
+
+    """
     data = data.strip()
     if data == '':
         return None, None
@@ -90,10 +92,11 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 
             if confirmation not in CONFIRMATION_CODES:
                 if strict:
-                    raise ValueError, "Confirmation code is not a lowercase letter in g - z"
+                    raise ValueError('Confirmation code is not a lowercase '
+                                     'letter in g..z')
                 else:
                     warnings.warn(
-                        'Confirmation code is not a lowercase letter in g - z')
+                        'Confirmation code is not a lowercase letter in g..z')
 
             data = data[:-1]
         else:
@@ -101,7 +104,7 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 
     for c in data:
         if c not in HEX_CHARS:
-            raise ValueError, "Non-base16 input: %r in %r" % (c, data)
+            raise ValueError('Non-base16 input: {} in {}'.format(c, data))
 
     # get the checksum, if it's there.
     if checksum:
@@ -109,12 +112,13 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
         if not validate_cbus_checksum(data):
             real_checksum = get_real_cbus_checksum(data)
             if strict:
-                raise ValueError, "C-Bus checksum incorrect (expected %r) and strict mode is enabled: %r." % (
-                    real_checksum, data)
+                raise ValueError(
+                    'C-Bus checksum incorrect (expected {}) and strict mode '
+                    'is enabled: {}'.format(real_checksum, data))
             else:
                 warnings.warn(
-                    "C-Bus checksum incorrect (expected %r) in data %r" %
-                    (real_checksum, data), UserWarning)
+                    'C-Bus checksum incorrect (expected {}) in data '
+                    '{}'.format(real_checksum, data), UserWarning)
 
         # strip checksum
         data = data[:-2]
@@ -154,7 +158,6 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
         p = PointToPointPacket.decode_packet(data, checksum, flags,
                                              destination_address_type, rc, dp,
                                              priority_class)
-        #raise NotImplementedError, 'Point-to-point'
     elif destination_address_type == DAT_PM:
         # decode as point-to-multipoint packet
         p = PointToMultipointPacket.decode_packet(data, checksum, flags,
@@ -162,8 +165,9 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
                                                   dp, priority_class)
     elif destination_address_type == DAT_PPM:
         # decode as point-to-point-to-multipoint packet
-        #return PointToPointToMultipointPacket.decode_packet(data, checksum, flags, destination_address_type, rc, dp, priority_class)
-        raise NotImplementedError, 'Point-to-point-tomultipoint'
+        # return PointToPointToMultipointPacket.decode_packet(data, checksum,
+        # flags, destination_address_type, rc, dp, priority_class)
+        raise NotImplementedError('Point-to-point-tomultipoint')
 
     if not server_packet and confirmation:
         p.confirmation = confirmation

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/application/test_lighting.py - Lighting Application unit tests
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -17,8 +17,9 @@
 
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
-from cbus.protocol.application.lighting import *
-from cbus.common import *
+from cbus.protocol.application.lighting import (
+    LightingOffSAL, LightingOnSAL, LightingRampSAL, LightingTerminateRampSAL)
+from cbus.common import APP_LIGHTING
 
 
 def S6_4_Test():
@@ -139,7 +140,7 @@ def lighting_encode_decode_test():
     assert orig.sal[0].group_address == d.sal[0].group_address
 
     # ensure there is no remaining data to be parsed
-    assert r == None
+    assert r is None
 
 
 def lighting_encode_decode_client_test():
@@ -158,13 +159,14 @@ def lighting_encode_decode_client_test():
     assert orig.sal[0].group_address == d.sal[0].group_address
 
     # ensure there is no remaining data to be parsed
-    assert r == None
+    assert r is None
 
 
 def issue2_test():
     "Handle the null lighting packet described in Issue #2."
-    # lighting packet from the server, lighting application, source address 0x06
-    # sometimes cbus units emit these null lighting commands because of an off-by-one issue?
+    # Lighting packet from the server, lighting application, source address
+    # 0x06. Sometimes cbus units emit these null lighting commands because of
+    # an off-by-one issue?
     p, r = decode_packet('05063800BD')
 
     assert isinstance(p, PointToMultipointPacket)
@@ -172,4 +174,4 @@ def issue2_test():
     assert p.source_address == 0x06
     assert len(p.sal) == 0
 
-    assert r == None
+    assert r is None

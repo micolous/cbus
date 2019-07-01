@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cdbus.py - DBus service for controlling CBus.
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -23,8 +23,8 @@ The service exposes itself on the service au.id.micolous.cbus.CBusService.
 """
 
 # from http://twistedmatrix.com/trac/attachment/ticket/1352/dbus-twisted.py
-from cbus.twisted_errors import *
 from twisted.internet import glib2reactor
+from twisted.internet.error import ReactorAlreadyInstalledError
 
 # installing the glib2 reactor breaks sphinx autodoc
 # this patches around the issue.
@@ -39,7 +39,7 @@ from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.internet.serialport import SerialPort
 from twisted.python import log
 from cbus.protocol.pciprotocol import PCIProtocol
-from cbus.common import validate_ga
+from cbus.common import check_ga
 import sys
 import dbus
 import dbus.service
@@ -59,40 +59,47 @@ DBUS_PATH = '/'
 
 class CBusProtocolHandler(PCIProtocol):
     """
-	Glue to wire events from the PCI onto the DBus API service.
-	
-	TODO: Merge this into the CBusService so it is one object.
-	
-	"""
+    Glue to wire events from the PCI onto the DBus API service.
+
+    TODO: Merge this into the CBusService so it is one object.
+
+    """
     cbus_api = None
 
     def on_confirmation(self, code, success):
-        if not self.cbus_api: return
+        if not self.cbus_api:
+            return
         self.cbus_api.on_confirmation(code, success)
 
     def on_reset(self):
-        if not self.cbus_api: return
+        if not self.cbus_api:
+            return
         self.cbus_api.on_reset()
 
-    def on_mmi(self, application, bytes):
-        if not self.cbus_api: return
-        self.cbus_api.on_mmi(application, bytes)
+    def on_mmi(self, application, data):
+        if not self.cbus_api:
+            return
+        self.cbus_api.on_mmi(application, data)
 
     def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
-        if not self.cbus_api: return
+        if not self.cbus_api:
+            return
         self.cbus_api.on_lighting_group_ramp(source_addr, group_addr, duration,
                                              level)
 
     def on_lighting_group_on(self, source_addr, group_addr):
-        if not self.cbus_api: return
+        if not self.cbus_api:
+            return
         self.cbus_api.on_lighting_group_on(source_addr, group_addr)
 
     def on_lighting_group_off(self, source_addr, group_addr):
-        if not self.cbus_api: return
+        if not self.cbus_api:
+            return
         self.cbus_api.on_lighting_group_off(source_addr, group_addr)
 
     def on_lighting_group_terminate_ramp(self, source_addr, group_addr):
-        if not self.cbus_api: return
+        if not self.cbus_api:
+            return
         self.cbus_api.on_lighting_group_terminate_ramp(source_addr, group_addr)
 
     def timesync(self, frequency):
@@ -108,9 +115,9 @@ class CBusProtocolHandler(PCIProtocol):
 
 class CBusService(dbus.service.Object):
     """
-	DBus service Object for CBus.
-	
-	"""
+    DBus service Object for CBus.
+
+    """
 
     def __init__(self, bus, protocol, object_path=DBUS_PATH):
         self.pci = protocol
@@ -125,32 +132,29 @@ class CBusService(dbus.service.Object):
     @dbus.service.method(dbus_interface=DBUS_INTERFACE,
                          in_signature='ay',
                          out_signature='ad')
-    def get_light_states(self, group_addresses):
-        # validate group addresses
-        if not all((validate_ga(x) for x in group_addresses)):
-            raise ValueError, 'Group address(es) (is/are) invalid!'
+    def get_light_states(self, group_addrs):
+        for group_address in group_addrs:
+            check_ga(group_address)
 
-        return [self._lighting_state.get(x, 0.) for x in group_addresses]
+        return [self._lighting_state.get(x, 0.) for x in group_addrs]
 
-    #@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
     @dbus.service.method(dbus_interface=DBUS_INTERFACE,
                          in_signature='ay',
                          out_signature='s')
     def lighting_group_on(self, group_addrs):
         """
-		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_on
-		"""
+        See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_on
+        """
         [self.set_light_state(x, 1.) for x in group_addrs]
         return self.pci.lighting_group_on(group_addrs)
 
-    #@dbus.service.method(dbus_interface=DBUS_INTERFACE, in_signature='y', out_signature='s')
     @dbus.service.method(dbus_interface=DBUS_INTERFACE,
                          in_signature='ay',
                          out_signature='s')
     def lighting_group_off(self, group_addrs):
         """
-		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_off
-		"""
+        See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_off
+        """
         [self.set_light_state(x, 0.) for x in group_addrs]
         return self.pci.lighting_group_off(group_addrs)
 
@@ -159,8 +163,8 @@ class CBusService(dbus.service.Object):
                          out_signature='s')
     def lighting_group_terminate_ramp(self, group_addr):
         """
-		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_terminate_ramp
-		"""
+        See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_terminate_ramp
+        """
         # TODO: handle recording of state
         return self.pci.lighting_group_terminate_ramp(group_addr)
 
@@ -169,8 +173,8 @@ class CBusService(dbus.service.Object):
                          out_signature='s')
     def lighting_group_ramp(self, group_addr, duration, level):
         """
-		See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_ramp
-		"""
+        See cbus.protocol.pciprotocol.PCIProtocol.lighting_group_ramp
+        """
         # FIXME: This records the final value of the dim in the state.
         self.set_light_state(group_addr, level)
         return self.pci.lighting_group_ramp(group_addr, duration, level)
@@ -180,8 +184,8 @@ class CBusService(dbus.service.Object):
                          out_signature='s')
     def recall(self, unit_addr, param_no, count):
         """
-		See cbus.protocol.pciprotocol.PCIProtocol.recall
-		"""
+        See cbus.protocol.pciprotocol.PCIProtocol.recall
+        """
 
         # TODO: implement return response
         return self.pci.recall(unit_addr, param_no, count)
@@ -191,13 +195,14 @@ class CBusService(dbus.service.Object):
                          out_signature='s')
     def identify(self, unit_addr, attribute):
         """
-		See cbus.protocol.pciprotocol.PCIProtocol.identify
-		"""
+        See cbus.protocol.pciprotocol.PCIProtocol.identify
+        """
 
         # TODO: implement return response
         return self.pci.identify(unit_addr, attribute)
 
-    # signals are automatically fired by the twisted reactor and passed into dbus, so these methods have no logic
+    # signals are automatically fired by the twisted reactor and passed into
+    # dbus, so these methods have no logic
     @dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='sb')
     def on_confirmation(self, code, success):
         pass
@@ -207,7 +212,7 @@ class CBusService(dbus.service.Object):
         pass
 
     @dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='ys')
-    def on_mmi(self, application, bytes):
+    def on_mmi(self, application, data):
         pass
 
     @dbus.service.signal(dbus_interface=DBUS_INTERFACE, signature='yynd')
@@ -261,12 +266,11 @@ def boot_dbus(serial_mode, addr, session_bus, timesync, no_clock):
 
     if no_clock:
         protocol.on_clock_request = lambda x: None
-    """mainloop = gobject.MainLoop()
-	
 
-	
-	gobject.threads_init()
-	context = mainloop.get_context()"""
+    # mainloop = gobject.MainLoop()
+
+    # gobject.threads_init()
+    # context = mainloop.get_context()
 
 
 def main():
@@ -275,85 +279,70 @@ def main():
     parser = ArgumentParser()
 
     group = parser.add_argument_group('Daemon options')
-    group.add_argument('-D',
-                       '--daemon',
-                       action='store_true',
-                       dest='daemon',
-                       default=False,
-                       help='Start as a daemon [default: %(default)s]')
+    group.add_argument(
+        '-D', '--daemon',
+        dest='daemon', action='store_true', default=False,
+        help='Start as a daemon [default: %(default)s]')
 
     group.add_argument(
-        '-P',
-        '--pid',
-        dest='pid_file',
-        default='/var/run/cdbusd.pid',
-        help=
-        'Location to write the PID file.  Only has effect in daemon mode.  [default: %(default)s]'
+        '-P', '--pid',
+        dest='pid_file', default='/var/run/cdbusd.pid',
+        help='Location to write the PID file. Only has effect in daemon mode. '
+             '[default: %(default)s]'
     )
 
     group.add_argument(
-        '-S',
-        '--session-bus',
-        action='store_true',
-        dest='session_bus',
-        default=False,
-        help=
-        'Bind to the session bus instead of the system bus [default: %(default)s]'
+        '-S', '--session-bus',
+        dest='session_bus', action='store_true', default=False,
+        help='Bind to the session bus instead of the system bus '
+             '[default: %(default)s]'
     )
 
-    group.add_argument('-l',
-                       '--log-file',
-                       dest='log',
-                       default=None,
-                       help='Destination to write logs [default: stdout]')
+    group.add_argument(
+        '-l', '--log-file',
+        dest='log', default=None,
+        help='Destination to write logs [default: stdout]')
 
     group = parser.add_mutually_exclusive_group(required=True)
 
     group.add_argument(
-        '-s',
-        '--serial-pci',
-        dest='serial_pci',
-        default=None,
-        help=
-        'Serial port where the PCI is located.  Either this or -t must be specified.'
+        '-s', '--serial-pci',
+        dest='serial_pci', default=None,
+        help='Serial port where the PCI is located. Either this or -t must be '
+             'specified.'
     )
 
     group.add_argument(
-        '-t',
-        '--tcp-pci',
-        dest='tcp_pci',
-        default=None,
-        help=
-        'IP address and TCP port where the PCI is located (CNI).  Either this or -s must be specified.'
+        '-t', '--tcp-pci',
+        dest='tcp_pci', default=None,
+        help='IP address and TCP port where the PCI is located (CNI). Either '
+             'this or -s must be specified.'
     )
 
     group = parser.add_argument_group('Extras')
     group.add_argument(
-        '-T',
-        '--timesync',
-        dest='timesync',
-        type=int,
-        default=300,
-        help=
-        'Send time synchronisation packets every n seconds (or 0 to disable). [default: %(default)s seconds]'
+        '-T', '--timesync',
+        dest='timesync', type=int, default=300,
+        help='Send time synchronisation packets every n seconds '
+             '(or 0 to disable). [default: %(default)s seconds]'
     )
 
     group.add_argument(
-        '-C',
-        '--no-clock',
-        dest='no_clock',
-        action='store_true',
+        '-C', '--no-clock',
+        dest='no_clock', action='store_true',
         default=False,
-        help=
-        'Do not respond to Clock Request SAL messages with the system time (ie: do not provide the CBus network the time when requested).  Enable if your machine does not have a reliable time source, or you have another device on the CBus network providing time services. [default: %(default)s]'
+        help='Do not respond to Clock Request SAL messages with the system '
+             'time (ie: do not provide the CBus network the time when '
+             'requested). Enable if your machine does not have a reliable '
+             'time source, or you have another device on the CBus network '
+             'providing time services. [default: %(default)s]'
     )
 
     option = parser.parse_args()
 
     if option.serial_pci and option.tcp_pci:
-        parser.error(
-            'Both serial and TCP CBus PCI addresses were specified!  Use only one...'
-        )
+        parser.error('Both serial and TCP CBus PCI addresses were specified! '
+                     'Use only one...')
     elif option.serial_pci:
         serial_mode = True
         addr = option.serial_pci
@@ -361,11 +350,11 @@ def main():
         serial_mode = False
         addr = option.tcp_pci.split(':', 2)
     else:
-        parser.error(
-            'No CBus PCI address was specified!  (See -s or -t option)')
+        parser.error('No CBus PCI address was specified! (-s or -t option)')
 
     if option.daemon and not option.pid_file:
-        parser.error('Running in daemon mode requires a PID file be specified.')
+        parser.error(
+            'Running in daemon mode requires a PID file be specified.')
 
     if option.log:
         log.startLogging(option.log)

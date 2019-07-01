@@ -15,9 +15,10 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import dbus, gobject
-from cbus.twisted_errors import *
+import dbus
+import gobject
 from twisted.internet import glib2reactor
+from twisted.internet.error import ReactorAlreadyInstalledError
 
 # installing the glib2 reactor breaks sphinx autodoc
 # this patches around the issue.
@@ -31,7 +32,8 @@ from twisted.internet import reactor
 from twisted.python import log
 from twisted.web.server import Site
 from twisted.web.static import File
-from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, createWsUrl
+from autobahn.websocket import (
+    WebSocketServerFactory, WebSocketServerProtocol, createWsUrl)
 from autobahn.resource import WebSocketResource, HTTPChannelHixie76Aware
 from zope.interface import implements
 from twisted.cred.portal import IRealm, Portal
@@ -70,7 +72,7 @@ class SageProtocol(WebSocketServerProtocol):
         self.api = self.factory.api
 
     def send_object(self, obj):
-        #print dumps(obj)
+        # print(dumps(obj))
         self.sendMessage(dumps(obj))
 
     def send_states(self, *groups):
@@ -143,18 +145,18 @@ class SageProtocol(WebSocketServerProtocol):
             print 'unknown command: %r' % cmd
             return
 
-        #print repr(msg)
+        # print(repr(msg))
 
         # now send the message to other nodes
         # make sure args is sanitised before this point...
         args = [None] + args
         self.factory.broadcast_object(dict(cmd=cmd, args=args))
 
-        #for c in self.factory.clients:
-        #	if c != self:
-        #		c.send_object(dict(cmd=cmd, args=args))
+        # for c in self.factory.clients:
+        #    if c != self:
+        #        c.send_object(dict(cmd=cmd, args=args))
 
-        #self.sendMessage(dumps(msg))
+        # self.sendMessage(dumps(msg))
 
     def connectionLost(self, reason):
         try:
@@ -179,20 +181,21 @@ class SageProtocolFactory(WebSocketServerFactory):
 
         self.clients = []
 
-        # wire up events so we can handle events from cdbusd and populate to clients
+        # wire up events so we can handle events from cdbusd and populate to
+        # clients
 
         for n, m in (('on_lighting_group_on', self.on_lighting_group_on),
                      ('on_lighting_group_off', self.on_lighting_group_off),
                      ('on_lighting_group_ramp', self.on_lighting_group_ramp)):
             api.connect_to_signal(handler_function=m, signal_name=n)
 
-    def broadcast_object(self, msg, exceptClient=None):
+    def broadcast_object(self, msg, except_client=None):
         # format into json once
         msg = dumps(msg)
 
         # broadcast
         for client in self.clients:
-            if exceptClient == None or exceptClient != client:
+            if except_client is None or except_client != client:
                 client.sendMessage(msg)
 
     def on_lighting_group_on(self, source_addr, group_addr):
@@ -217,14 +220,14 @@ class SageProtocolFactory(WebSocketServerFactory):
 
     def allowed_by_policy(self, group_address):
         """
-		Check what the policy for the group address should be.
-		
-		Returns True to allow, False to deny.
-		"""
+        Check what the policy for the group address should be.
 
-        if self.allow_ga != None:
+        Returns True to allow, False to deny.
+        """
+
+        if self.allow_ga is not None:
             return group_address in self.allow_ga
-        elif self.deny_ga != None:
+        elif self.deny_ga is not None:
             return group_address not in self.deny_ga
         else:
             return True
@@ -240,9 +243,10 @@ def boot(listen_addr='127.0.0.1',
          deny_ga=None,
          no_www=False):
 
-    assert not (
-        allow_ga and deny_ga
-    ), 'Must not specify both deny and allow rules for group addresses'
+    if allow_ga and deny_ga:
+        raise ValueError(
+            'Must not specify both deny and allow rules for group addresses')
+
     global api
     global factory
     DBusGMainLoop(set_as_default=True)
@@ -273,12 +277,12 @@ def boot(listen_addr='127.0.0.1',
         root = File(sage_www_root)
         root.putChild('saged', resource)
 
-    if auth_realm != None and auth_passwd != None:
+    if auth_realm is not None and auth_passwd is not None:
         portal = Portal(SageRealm(root), [ApachePasswordDB(auth_passwd)])
-        credentialFactories = [
+        credential_factories = [
             BasicCredentialFactory(auth_realm),
         ]
-        root = HTTPAuthSessionWrapper(portal, credentialFactories)
+        root = HTTPAuthSessionWrapper(portal, credential_factories)
 
     site = Site(root)
     site.protocol = HTTPChannelHixie76Aware
@@ -291,109 +295,82 @@ if __name__ == '__main__':
     # do commandline handling
     parser = ArgumentParser(usage='%(prog)s')
 
-    #parser.add_argument('-r', '--root-path',
-    #	dest='root_path',
-    #	default='cbus/sage_root',
-    #	help='Root path of the sage webserver.  Used to serve the accompanying javascript and HTML content [default: %(default)s]'
-    #)
-
     parser.add_argument(
-        '-H',
-        '--listen-addr',
-        dest='listen_addr',
-        default='127.0.0.1',
+        '-H', '--listen-addr',
+        dest='listen_addr', default='127.0.0.1',
         help='IP address to listen the web server on [default: %(default)s]')
 
     parser.add_argument(
-        '-p',
-        '--port',
-        dest='port',
-        type=int,
-        default=8080,
+        '-p', '--port',
+        dest='port', type=int, default=8080,
         help='Port to run the web server on [default: %(default)s]')
 
-    parser.add_argument('-l',
-                        '--log',
-                        dest='log_target',
-                        type=file,
-                        default=sys.stdout,
-                        help='Log target [default: stdout]')
+    parser.add_argument(
+        '-l', '--log',
+        dest='log_target', type=file, default=sys.stdout,
+        help='Log target [default: stdout]')
 
     parser.add_argument(
-        '-S',
-        '--session-bus',
-        action='store_true',
-        dest='session_bus',
-        default=False,
-        help=
-        'Bind to the session bus instead of the system bus [default: %(default)s]'
-    )
+        '-S', '--session-bus',
+        action='store_true', dest='session_bus', default=False,
+        help='Bind to the session bus instead of the system bus '
+             '[default: %(default)s]')
 
     parser.add_argument(
-        '-r',
-        '--sage-root',
-        dest='sage_www_root',
-        default=DEFAULT_SAGE_ROOT,
-        help=
-        'Root path where sage www resources are stored [default: %(default)s]')
+        '-r', '--sage-root',
+        dest='sage_www_root', default=DEFAULT_SAGE_ROOT,
+        help='Root path where sage www resources are stored '
+             '[default: %(default)s]')
 
     parser.add_argument(
-        '-W',
-        '--no-www',
-        dest='no_www',
-        action='store_true',
-        default=False,
-        help=
-        'Disable serving any of the static web pages from the web server.  This is useful if you are hosting the sage webui files on a different web server, and only want saged to present a WebSockets interface [default: %(default)s]'
-    )
+        '-W', '--no-www',
+        dest='no_www', action='store_true', default=False,
+        help='Disable serving any of the static web pages from the web '
+             'server. This is useful if you are hosting the sage webui files '
+             'on a different web server, and only want saged to present a '
+             'WebSockets interface [default: %(default)s]')
 
     group = parser.add_argument_group('Authentication options')
 
     group.add_argument(
-        '-R',
-        '--realm',
-        dest='auth_realm',
-        default='saged',
-        help=
-        'HTTP authorisation realm to use for authenticating clients [default: %(default)s]'
-    )
+        '-R', '--realm',
+        dest='auth_realm', default='saged',
+        help='HTTP authorisation realm to use for authenticating clients '
+             '[default: %(default)s]')
 
     group.add_argument(
-        '-P',
-        '--passwd',
-        dest='auth_passwd',
-        required=False,
-        help=
-        'If specified, a htpasswd password list to authenticate users with.  If not specified, no authentication will be used with this saged instance.  Note: due to a bug in Chrome (#123862), it cannot connect to password-protected WebSockets instances.'
-    )
+        '-P', '--passwd',
+        dest='auth_passwd', required=False,
+        help='If specified, a htpasswd password list to authenticate users '
+             'with. If not specified, no authentication will be used with '
+             'this saged instance. Note: due to a bug in Chrome (#123862), it '
+             'cannot connect to password-protected WebSockets instances.')
 
     group = parser.add_mutually_exclusive_group()
 
     group.add_argument(
-        '-a',
-        '--allow-ga',
-        dest='allow_ga',
-        required=False,
-        help=
-        'If specified, a comma seperated list of group addresses to allow "change" access to.  Other group addresses will be denied access.  saged will always report activities denied group addresses on the network.'
-    )
+        '-a', '--allow-ga',
+        dest='allow_ga', required=False,
+        help='If specified, a comma seperated list of group addresses to '
+             'allow "change" access to. Other group addresses will be denied '
+             'access. saged will always report activities for denied group '
+             'addresses on the network.')
 
     group.add_argument(
-        '-d',
-        '--deny-ga',
-        dest='deny_ga',
-        required=False,
-        help=
-        'If specified, a comma seperated list of group addresses to deny "change" access to.  Other group addresses will be allowed access.  saged will always report activities denied group addresses on the network.'
-    )
+        '-d', '--deny-ga',
+        dest='deny_ga', required=False,
+        help='If specified, a comma seperated list of group addresses to deny '
+             '"change" access to. Other group addresses will be allowed '
+             'access. saged will always report activities for denied group '
+             'addresses on the network.')
 
     option = parser.parse_args()
 
     log.startLogging(option.log_target)
 
-    if option.allow_ga != None:
+    if option.allow_ga is not None:
         option.allow_ga = [int(x) for x in option.allow_ga.split(',')]
-    if option.deny_ga != None:
+    if option.deny_ga is not None:
         option.deny_ga = [int(x) for x in option.deny_ga.split(',')]
 
     boot(option.listen_addr, option.port, option.session_bus,

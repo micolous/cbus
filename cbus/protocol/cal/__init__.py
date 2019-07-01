@@ -16,12 +16,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from cbus.protocol.cal.identify import IdentifyCAL
-
-#from cbus.protocol.application.clock import ClockApplication
-#from cbus.protocol.application.enable import EnableApplication
-#from cbus.protocol.application.lighting import LightingApplication
-#from cbus.protocol.application.temperature import TemperatureApplication
-from cbus.common import *
+from cbus.common import CAL_REQ_IDENTIFY
 
 REQUESTS = {
     CAL_REQ_IDENTIFY: IdentifyCAL,

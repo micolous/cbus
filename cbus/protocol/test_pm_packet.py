@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/test_pm_packet.py - Point to Multipoint packet tests
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.application.lighting import LightingOffSAL
@@ -27,7 +26,7 @@ def S4_2_9_2_Test():
     p, m = decode_packet('\\0538000108BAg', server_packet=False)
 
     assert isinstance(p, PointToMultipointPacket)
-    assert p.status_request == False
+    assert not p.status_request
     assert p.application == 0x38
     assert len(p.sal) == 1
 
@@ -36,16 +35,16 @@ def S4_2_9_2_Test():
 
     assert p.confirmation == 'g'
 
-    assert m == None
+    assert m is None
 
     # second test
     p, m = decode_packet('\\05FF007A38004Ah', server_packet=False)
 
     assert isinstance(p, PointToMultipointPacket)
-    assert p.status_request == True
+    assert p.status_request
     assert p.application == 0x38
     assert p.group_address == 0
     assert p.confirmation == 'h'
 
     # no remainder
-    assert m == None
+    assert m is None

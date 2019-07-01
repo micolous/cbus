@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/application/enable.py - Enable Control Application
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from cbus.common import *
+from cbus.common import APP_ENABLE, ENABLE_SET_NETWORK_VARIABLE
 import warnings
 
 __all__ = [
@@ -27,40 +27,43 @@ __all__ = [
 
 class EnableSAL(object):
     """
-	Base type for enable control application SALs.
-	"""
+    Base type for enable control application SALs.
+    """
 
     def __init__(self, packet=None):
         """
-		This should not be called directly by your code!
-		
-		Use one of the subclasses of cbus.protocol.enable.EnableSAL instead.
-		"""
+        This should not be called directly by your code!
+
+        Use one of the subclasses of cbus.protocol.enable.EnableSAL instead.
+        """
         self.packet = packet
 
-        assert packet != None, 'packet must not be none.'
+        if packet is None:
+            raise ValueError('packet must not be None')
 
-        if self.packet.application == None:
+        if self.packet.application is None:
             # no application set on the packet, set it.
             self.packet.application = APP_ENABLE
         elif self.packet.application != APP_ENABLE:
-            raise ValueError, 'packet has a different application set already. cannot have multiple application SAL in the same packet.'
+            raise ValueError(
+                'packet has a different application set already. Cannot have '
+                'multiple application SAL in the same packet.')
 
     @classmethod
     def decode(cls, data, packet):
         """
-		Decodes a enable control application packet and returns it's SAL(s).
-		
-		:param data: SAL data to be parsed.
-		:type data: str
-		
-		:param packet: The packet that this data is associated with.
-		:type packet: cbus.protocol.base_packet.BasePacket
-		
-		:returns: The SAL messages contained within the given data.
-		:rtype: list of cbus.protocol.application.enable.EnableSAL
-		
-		"""
+        Decodes a enable control application packet and returns it's SAL(s).
+
+        :param data: SAL data to be parsed.
+        :type data: str
+
+        :param packet: The packet that this data is associated with.
+        :type packet: cbus.protocol.base_packet.BasePacket
+
+        :returns: The SAL messages contained within the given data.
+        :rtype: list of cbus.protocol.application.enable.EnableSAL
+
+        """
         output = []
 
         while data:
@@ -69,8 +72,8 @@ class EnableSAL(object):
             if len(data) < 3:
                 # not enough data to go on.
                 warnings.warn(
-                    "Got less than 3 bytes of stray SAL for enable application (malformed packet)",
-                    UserWarning)
+                    'Got less than 3 bytes of stray SAL for enable '
+                    'application (malformed packet)', UserWarning)
                 break
 
             command_code = ord(data[0])
@@ -79,14 +82,14 @@ class EnableSAL(object):
 
             if (command_code & 0x80) == 0x80:
                 warnings.warn(
-                    'Got unknown enable command %r, stopping processing prematurely'
-                    % command_code, UserWarning)
+                    'Got unknown enable command {}, stopping processing '
+                    'prematurely'.format(command_code), UserWarning)
                 break
 
             if (command_code & 0x07) != 2:
                 warnings.warn(
-                    'Got invalid length for enable command %r, must be 2 (Enable s9.4.1)'
-                    % command_code, UserWarning)
+                    'Got invalid length for enable command {}, must be '
+                    '2 (Enable s9.4.1)'.format(command_code), UserWarning)
                 break
 
             sal, data = EnableSetNetworkVariableSAL.decode(
@@ -98,33 +101,33 @@ class EnableSAL(object):
 
     def encode(self):
         """
-		Encodes the SAL into a format for sending over the C-Bus network.
-		"""
+        Encodes the SAL into a format for sending over the C-Bus network.
+        """
         return []
 
 
 class EnableSetNetworkVariableSAL(EnableSAL):
     """
-	Enable control Set Network Variable SAL.
-	
-	Sets a network variable.
-	
-	"""
+    Enable control Set Network Variable SAL.
+
+    Sets a network variable.
+
+    """
 
     def __init__(self, packet, variable, value):
         """
-		Creates a new SAL Enable Control Set Network Variable
-		
-		:param packet: The packet that this SAL is to be included in.
-		:type packet: cbus.protocol.base_packet.BasePacket
-		
-		:param variable: The variable ID being changed
-		:type variable: int
-		
-		:param value: The value of the network variable
-		:type value: int
-		
-		"""
+        Creates a new SAL Enable Control Set Network Variable
+
+        :param packet: The packet that this SAL is to be included in.
+        :type packet: cbus.protocol.base_packet.BasePacket
+
+        :param variable: The variable ID being changed
+        :type variable: int
+
+        :param value: The value of the network variable
+        :type value: int
+
+        """
         super(EnableSetNetworkVariableSAL, self).__init__(packet)
 
         self.variable = variable
@@ -133,10 +136,10 @@ class EnableSetNetworkVariableSAL(EnableSAL):
     @classmethod
     def decode(cls, data, packet, command_code):
         """
-		Do not call this method directly -- use EnableSAL.decode
-		"""
+        Do not call this method directly -- use EnableSAL.decode
+        """
 
-        print "data == %r" % data
+        # print "data == %r" % data
         variable = ord(data[0])
         value = ord(data[1])
 
@@ -145,11 +148,13 @@ class EnableSetNetworkVariableSAL(EnableSAL):
         return cls(packet, variable, value), data
 
     def encode(self):
-        if not (0 <= self.variable <= 255):
-            raise ValueError, 'Network variable number (variable) must be in range 0 - 255 (got %r).' % self.variable
+        if self.variable < 0 or self.variable > 0xff:
+            raise ValueError('Network variable number (variable) must be in '
+                             'range 0..255 (got {}).'.format(self.variable))
 
-        if not (0 <= self.value <= 255):
-            raise ValueError, 'Network variable value (value) must be in range 0 - 255 (got %r).' % self.value
+        if self.value < 0 or self.value > 0xff:
+            raise ValueError('Network variable value (value) must be in '
+                             'range 0..255 (got {}).'.format(self.value))
 
         return super(EnableSetNetworkVariableSAL, self).encode() + [
             ENABLE_SET_NETWORK_VARIABLE, self.variable, self.value
@@ -158,17 +163,16 @@ class EnableSetNetworkVariableSAL(EnableSAL):
 
 class EnableApplication(object):
     """
-	This class is called in the cbus.protocol.applications.APPLICATIONS dict in
-	order to describe how to decode enable broadcast application events
-	recieved from the network.
-	
-	Do not call this class directly.
-	"""
+    This class is called in the cbus.protocol.applications.APPLICATIONS dict in
+    order to describe how to decode enable broadcast application events
+    received from the network.
+
+    Do not call this class directly.
+    """
 
     @classmethod
     def decode_sal(cls, data, packet):
         """
-		Decodes a enable broadcast application packet and returns it's
-		SAL(s).
-		"""
+        Decodes a enable broadcast application packet and returns its SAL(s).
+        """
         return EnableSAL.decode(data, packet)

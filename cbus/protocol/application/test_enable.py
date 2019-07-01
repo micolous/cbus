@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/application/test_enable.py - Enable control unit tests
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -17,8 +17,7 @@
 
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
-from cbus.protocol.application.enable import *
-from cbus.common import *
+from cbus.protocol.application.enable import EnableSetNetworkVariableSAL
 
 
 def S8_11_Test():
@@ -33,6 +32,6 @@ def S8_11_Test():
     assert p.sal[0].variable == 0x37
     assert p.sal[0].value == 0x82
 
-    ## check that it encodes properly again
+    # check that it encodes properly again
     assert p.encode() == '05CB0002378275'
     assert p.confirmation == 'g'

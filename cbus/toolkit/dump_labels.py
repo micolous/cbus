@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """
-toolkit/dump_labels.py - Dumps group address and unit metadata from a Toolkit CBZ.
-Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+toolkit/dump_labels.py
+Dumps group address and unit metadata from a Toolkit CBZ.
+
+Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 
 This library is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -27,44 +29,41 @@ except ImportError:
 
 
 def main():
-    parser = OptionParser(usage='%prog -i input.cbz -o output.json',
-                          version='%prog 1.0')
-    parser.add_option('-o',
-                      '--output',
-                      dest='output',
-                      metavar='FILE',
-                      help='write output to FILE')
-    parser.add_option('-i',
-                      '--input',
-                      dest='input',
-                      metavar='FILE',
-                      help='read Toolkit backup from FILE')
+    parser = OptionParser(
+        usage='%prog -i input.cbz -o output.json', version='%prog 1.0')
     parser.add_option(
-        '-p',
-        '--pretty',
-        dest='pretty',
-        metavar='SPACES',
-        help=
-        'pretty-prints the output with the specified number of spaces between indent levels'
+        '-o', '--output',
+        dest='output', metavar='FILE',
+        help='write output to FILE')
+    parser.add_option(
+        '-i', '--input',
+        dest='input', metavar='FILE',
+        help='read Toolkit backup from FILE')
+    parser.add_option(
+        '-p', '--pretty',
+        dest='pretty', metavar='SPACES',
+        help='pretty-prints the output with the specified number of spaces '
+             'between indent levels'
     )
     options, args = parser.parse_args()
 
-    if options.input == None:
+    if options.input is None:
         parser.error('Input filename not given.')
 
-    if options.output == None:
+    if options.output is None:
         parser.error('Output filename not given.')
 
+    pretty = None
     if options.pretty:
         try:
             pretty = int(options.pretty)
         except ValueError:
             parser.error('Pretty-printing spaces value is not a number.')
+            return
 
         if pretty < 0:
             parser.error('Pretty-printing spaces value must not be negative.')
-    else:
-        pretty = None
+            return
 
     cbz = CBZ(options.input)
     of = open(options.output, 'wb')
@@ -107,8 +106,9 @@ def main():
                                 16)) for c in ch
                     ]
 
-                    #print channels
-                    #print parameter.attrib['Name'], '=', parameter.attrib['Value']
+                    # print channels
+                    # print(parameter.attrib['Name'], '=',
+                    #       parameter.attrib['Value'])
             no['units'][int(unit.Address)] = {
                 'name': unicode(unit.TagName),
                 'address': int(unit.Address),

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-# twisted_passlib.py - ICredentialsChecker interface for passlib.apache.HtpasswdFile
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# twisted_passlib.py
+# ICredentialsChecker interface for passlib.apache.HtpasswdFile
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -16,19 +17,18 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from passlib.apache import HtpasswdFile
-from zope.interface import implements, Interface
+from zope.interface import implements
 from twisted.internet import defer
-from twisted.python import failure, log
 from twisted.cred import error, credentials
 from twisted.cred.checkers import ICredentialsChecker
 
 
 class ApachePasswordDB(object):
     """
-	Very simple glue between passlib.apache.HtpasswdFile to make it an
-	ICredentialsChecker in Twisted.
-	
-	"""
+    Very simple glue between passlib.apache.HtpasswdFile to make it an
+    ICredentialsChecker in Twisted.
+
+    """
     implements(ICredentialsChecker)
 
     # we can only implement non-hashing functions as the passwords

@@ -15,9 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from cbus.common import *
-from struct import unpack, pack
-import warnings
+from cbus.common import CAL_REQ_IDENTIFY
 
 __all__ = [
     'IdentifyCAL',
@@ -26,8 +24,8 @@ __all__ = [
 
 class IdentifyCAL(object):
     """
-	Identify cal
-	"""
+    Identify cal
+    """
 
     def __init__(self, packet, attribute):
         self.packet = packet
@@ -36,8 +34,8 @@ class IdentifyCAL(object):
     @classmethod
     def decode_cal(cls, data, packet):
         """
-		Decodes identify SAL.
-		"""
+        Decodes identify SAL.
+        """
 
         cal = IdentifyCAL(packet, ord(data[1]))
 
@@ -45,7 +43,8 @@ class IdentifyCAL(object):
         return data, cal
 
     def encode(self):
-        assert (0 <= self.attribute <= 255), 'attribute must be in range 0..255'
+        if self.attribute < 0 or self.attribute > 0xff:
+            raise ValueError('attribute must be in range 0..255')
         return [CAL_REQ_IDENTIFY, self.attribute]
 
     def __repr__(self):  # pragma: no cover

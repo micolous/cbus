@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/pm_packet.py - Point to Multipoint packet decoder
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -16,7 +16,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 from cbus.protocol.base_packet import BasePacket
 from cbus.protocol.application import APPLICATIONS
-from cbus.common import *
+from cbus.common import CLASS_4, DAT_PM, add_cbus_checksum, check_ga
 from base64 import b16encode
 
 
@@ -31,19 +31,21 @@ class PointToMultipointPacket(BasePacket):
                  priority_class=CLASS_4,
                  application=None,
                  status_request=False):
-        super(PointToMultipointPacket, self).__init__(checksum, None, DAT_PM, 0,
-                                                      False, priority_class)
+        super(PointToMultipointPacket, self).__init__(
+            checksum, DAT_PM, 0, False, priority_class)
         self.application = application
         self.status_request = status_request
         self.sal = []
 
     def __repr__(self):  # pragma: no cover
-        return '<%s object: application=%r, source_address=%r, status_req=%r, %s>' % (
-            self.__class__.__name__, self.application, self.source_address,
-            self.status_request,
-            ('level_reqest=%r' %
-             (self.level_request,)) if self.status_request else
-            ('sal=%r' % (self.sal,)))
+        return (
+                '<{} object: application={}, source_address={}, '
+                'status_req={}, {}>'.format(
+                    self.__class__.__name__, self.application,
+                    self.source_address,
+                    self.status_request,
+                    ('level_reqest={}'.format(self.level_request))
+                    if self.status_request else ('sal={}'.format(self.sal))))
 
     @classmethod
     def decode_packet(cls, data, checksum, flags, destination_address_type, rc,
@@ -53,7 +55,8 @@ class PointToMultipointPacket(BasePacket):
 
         # is this referencing an application
         packet.application = ord(data[0])
-        assert ord(data[1]) == 0x00, "Routing data in PM message?"
+        if ord(data[1]) != 0x00:
+            raise ValueError('Routing data in PM message?')
 
         if packet.application == 0xFF:
             # status request
@@ -72,13 +75,16 @@ class PointToMultipointPacket(BasePacket):
                 data = data[2:]
                 packet.level_request = True
             else:
-                raise NotImplemented, 'unknown status request type %r' % data[0]
+                raise NotImplementedError(
+                    'Unknown status request type {}'.format(data[0]))
 
             # now read the application
             packet.application = ord(data[0])
             packet.group_address = ord(data[1])
 
-            assert packet.group_address % 0x20 == 0, 'group_address report must be a multiple of 0x20'
+            if packet.group_address % 0x20 != 0:
+                raise ValueError('group_address report must be a multiple of '
+                                 '0x20')
 
             return packet
         else:
@@ -96,26 +102,25 @@ class PointToMultipointPacket(BasePacket):
     def encode(self, source_addr=None):
         # TODO: Implement source address
 
+        if self.application is None:
+            raise ValueError('application must not be None')
+
+        a = int(self.application)
+        if a < 0 or a > 0xff:
+            raise ValueError('application must be in range 0..255 '
+                             '(got {})'.format(a))
+
         if self.status_request:
             # this a level request
-            a = int(self.application)
             ga = int(self.group_address)
+            check_ga(ga)
 
-            assert 0 <= a <= 0xFF, 'application must be in range 0..255 (got %r)' % a
-            assert 0 <= ga <= 0xFF, 'groupaddress must be in range 0..255 (got %r)' % ga
-
-            l = [0x73, 0x07] if self.level_request else [0x7A]
-            o = [0xFF] + l + [packet.application, packet.group_address]
+            req = [0x73, 0x07] if self.level_request else [0x7A]
+            o = [0xFF] + req + [a, ga]
 
         else:
-            assert self.application != None, 'application must not be None'
-            a = int(self.application)
-            assert 0 <= a <= 0xFF, 'application must be in range 0..255 (got %r)' % a
             # encode the remainder
-            o = [
-                a,
-                0,
-            ]
+            o = [a, 0]
             for x in self.sal:
                 o += x.encode()
 

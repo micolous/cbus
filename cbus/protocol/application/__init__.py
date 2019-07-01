@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/application/__init__.py - Applications in CBus
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -19,7 +19,7 @@ from cbus.protocol.application.clock import ClockApplication
 from cbus.protocol.application.enable import EnableApplication
 from cbus.protocol.application.lighting import LightingApplication
 from cbus.protocol.application.temperature import TemperatureApplication
-from cbus.common import *
+from cbus.common import APP_CLOCK, APP_ENABLE, APP_LIGHTING, APP_TEMPERATURE
 
 APPLICATIONS = {
     APP_CLOCK: ClockApplication,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/cal/test_identify.py - Identify CAL unit test
-# Copyright 2013 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2013-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -17,15 +17,18 @@
 
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pp_packet import PointToPointPacket
-from cbus.protocol.cal.identify import *
-from cbus.common import *
+from cbus.protocol.cal.identify import IdentifyCAL
 
 
 def Bennett_get_unit_type_test():
-    "Example of 'get unit type' (identify type) from Geoffry Bennett's protocol reverse engineering docs"
+    """
+    Example of 'get unit type' (identify type) from Geoffry Bennett's
+    protocol reverse engineering docs
+
+    """
     p, r = decode_packet('\\0699002101', server_packet=False, checksum=False)
 
-    assert isinstance(p, PointToPointPacket), 'Packet is not PointToPointPacket'
+    assert isinstance(p, PointToPointPacket)
 
     assert p.unit_address == 0x99
     assert len(p.cal) == 1

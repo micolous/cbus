@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/pp_packet.py - Point to Multipoint packet decoder
-# Copyright 2012-2013 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -17,7 +17,7 @@
 from cbus.protocol.base_packet import BasePacket
 from cbus.protocol.cal import REQUESTS
 from cbus.protocol.cal.reply import ReplyCAL
-from cbus.common import *
+from cbus.common import CLASS_4, DAT_PP, BRIDGE_LENGTHS, add_cbus_checksum
 from base64 import b16encode
 
 
@@ -29,17 +29,21 @@ class PointToPointPacket(BasePacket):
                  unit_address=0,
                  bridge_address=0,
                  hops=None):
-        super(PointToPointPacket, self).__init__(checksum, None, DAT_PP, 0,
-                                                 False, priority_class)
+        super(PointToPointPacket, self).__init__(
+            checksum, DAT_PP, 0, False, priority_class)
 
-        if hops == None:
+        if hops is None:
             self.hops = []
             self.pm_bridged = False
-            assert bridge_address == 0
+            if bridge_address != 0:
+                raise ValueError('bridge_address was specified but are no '
+                                 'hops to traverse!')
         else:
             self.hops = hops
             self.pm_bridged = True
-            assert bridge_address > 0, 'bridge address must be specified'
+            if bridge_address <= 0:
+                raise ValueError('hops were specified, but there is no '
+                                 'bridge_address!')
 
         self.unit_address = unit_address
 
@@ -79,7 +83,7 @@ class PointToPointPacket(BasePacket):
             data = data[1:]
 
         # now decode messages
-        #packet.cal = []
+        # packet.cal = []
         while data:
             # find the cal
             cmd = ord(data[0])
@@ -93,15 +97,15 @@ class PointToPointPacket(BasePacket):
 
                 cal = ReplyCAL.decode_cal(reply_data, packet)
 
-                #print cal
-                #print packet
-                #print ord(data)
+                # print cal
+                # print packet
+                # print ord(data)
             elif cmd & 0xE0 == 0xC0:
                 # STATUS (standard)
-                raise NotImplementedError, 'standard status cal'
+                raise NotImplementedError('standard status cal')
             elif cmd & 0xE0 == 0xE0:
                 # status (extended)
-                raise NotImplementedError, 'extended status cal'
+                raise NotImplementedError('extended status cal')
             else:
                 handler = REQUESTS[cmd]
                 data, cal = handler.decode_cal(data, packet)
@@ -109,14 +113,14 @@ class PointToPointPacket(BasePacket):
             packet.cal.append(cal)
 
         # now read CAL data
-        #print "%s" % data
+        # print "%s" % data
 
         return packet
 
     def encode(self, source_addr=None):
 
         if self.pm_bridged:
-            raise NotImplementedError, 'bridged ptp packets'
+            raise NotImplementedError('bridged ptp packets')
         else:
             o = [
                 self.unit_address,
