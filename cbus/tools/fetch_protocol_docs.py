@@ -28,6 +28,8 @@ from six.moves.urllib.parse import urlparse, urljoin, urlunparse, unquote
 DOCUMENTATION_INDEX = ('https://updates.clipsal.com/ClipsalSoftwareDownload'
                        '/DL/downloads/OpenCBus/OpenCBusProtocolDownloads.html')
 DOCUMENTATION_INDEX_U = urlparse(DOCUMENTATION_INDEX)
+TERMS_URL = ('https://updates.clipsal.com/ClipsalSoftwareDownload/DL/downloads'
+             '/OpenCBus/Open%20C-Bus%20Serial%20Protocol%20Agreement.pdf')
 
 
 class DocumentationParser(HTMLParser):
@@ -50,12 +52,48 @@ class DocumentationParser(HTMLParser):
                 self.links.append(href)
 
 
+def download_file(link, destination, i=0, total_links=0):
+    """
+    Downloads a file from a remote webserver.
+
+    :param link: A urlparsed link to fetch
+    :type link: urllib.parse.ParseResult
+    :param destination: Destination directory for the file
+    :type destination: str
+    :param i: Current file number, when showing progress. 0-indexed.
+    :param total_links: Total number of links to download, when showing
+                        progress. When set to 0, total progress is not
+                        displayed.
+    :return: None
+    """
+    uri = urlunparse(link)
+    short_fname = unquote(link.path.split('/')[-1])
+    fname = os.path.join(destination, short_fname)
+    if os.path.exists(fname):
+        print('Skipping `{}`, file already exists!'.format(short_fname))
+        return
+
+    if total_links:
+        print('[{:02d}/{:02d}]: Downloading `{}` <{}>...'.format(
+            i + 1, total_links, short_fname, uri))
+    else:
+        print('Downloading `{}` <{}>...'.format(short_fname, uri))
+
+    document = requests.get(uri).content
+    fh = open(fname, 'wb')
+    fh.write(document)
+    fh.close()
+
+
 def download_docs(destination):
     if not os.path.exists(destination):
         os.makedirs(destination)
     elif not os.path.isdir(destination):
         raise IOError('Destination {} exists, but is not a directory!'.format(
             destination))
+
+    # Download the terms and conditions
+    download_file(urlparse(TERMS_URL), destination)
 
     print('Fetching documentation index from updates.clipsal.com...')
     r = requests.get(DOCUMENTATION_INDEX)
@@ -68,30 +106,19 @@ def download_docs(destination):
     # and read back the links
     total_links = len(parser.links)
     for i, link in enumerate(parser.links):
-        uri = urlunparse(link)
-        short_fname = unquote(link.path.split('/')[-1])
-        fname = os.path.join(destination, short_fname)
-        if os.path.exists(fname):
-            print('Skipping `{}`, file already exists!'.format(short_fname))
-            continue
-
-        print('[{:02d}/{:02d}]: Downloading `{}` <{}>...'.format(
-            i + 1, total_links, short_fname, uri))
-
-        document = requests.get(uri).content
-        fh = open(fname, 'wb')
-        fh.write(document)
-        fh.close()
+        download_file(link, destination, i, total_links)
 
     print('Downloaded documentation to: {}'.format(destination))
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="""\
+    Downloads C-Bus serial protocol documentation from the Clipsal website.
+    """)
 
     parser.add_argument(
         'destination',
-        help='Controls the output directory for the documentation')
+        help='Directory to save documentation to')
 
     options = parser.parse_args()
 
