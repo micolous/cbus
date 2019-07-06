@@ -362,9 +362,7 @@ class PCIProtocol(LineReceiver):
         return int2byte(o)
 
     def _send(self,
-              cmd,
-              encode=True,
-              checksum=True,
+              cmd: BasePacket,
               confirmation=True,
               basic_mode=False):
         """
@@ -424,7 +422,8 @@ class PCIProtocol(LineReceiver):
         # device on the network.
 
         # full system reset
-        self._send(ResetPacket())
+        for _ in range(3):
+            self._send(ResetPacket())
 
         # serial user interface guide sect 10.2
         # Set application address 1 to 38 (lighting)
@@ -448,10 +447,9 @@ class PCIProtocol(LineReceiver):
         # 5: MONITOR
         # 6: IDMON
         # self._send('A3300059', encode=False, checksum=False)
-        self._send(DeviceManagementPacket(checksum=False,
-                                          parameter=0x30,
-                                          value=0x59),
-                   basic_mode=True)
+        self._send(DeviceManagementPacket(
+            checksum=False, parameter=0x30, value=0x59),
+            basic_mode=True)
 
     def identify(self, unit_address, attribute):
         """
@@ -467,9 +465,8 @@ class PCIProtocol(LineReceiver):
         :returns: Single-byte string with code for the confirmation event.
         :rtype: string
         """
-        p = PointToPointPacket(unit_address=unit_address)
-        p.cal.append(IdentifyCAL(p, attribute))
-
+        p = PointToPointPacket(
+            unit_address=unit_address, cals=[IdentifyCAL(attribute)])
         return self._send(p)
 
     def lighting_group_on(self, group_addr):
@@ -494,10 +491,8 @@ class PCIProtocol(LineReceiver):
             raise ValueError('group_addr iterable length is > 9 ({})'.format(
                 group_addr_count))
 
-        p = PointToMultipointPacket(application=APP_LIGHTING)
-        for ga in group_addr:
-            p.sal.append(LightingOnSAL(p, ga))
-
+        p = PointToMultipointPacket(
+            sals=[LightingOnSAL(ga) for ga in group_addr])
         return self._send(p)
 
     def lighting_group_off(self, group_addr):
@@ -523,10 +518,8 @@ class PCIProtocol(LineReceiver):
             raise ValueError('group_addr iterable length is > 9 ({})'.format(
                 group_addr_count))
 
-        p = PointToMultipointPacket(application=APP_LIGHTING)
-        for ga in group_addr:
-            p.sal.append(LightingOffSAL(p, ga))
-
+        p = PointToMultipointPacket(
+            sals=[LightingOffSAL(ga) for ga in group_addr])
         return self._send(p)
 
     def lighting_group_ramp(self, group_addr, duration, level=1.0):
@@ -550,8 +543,8 @@ class PCIProtocol(LineReceiver):
         :rtype: string
 
         """
-        p = PointToMultipointPacket(application=APP_LIGHTING)
-        p.sal.append(LightingRampSAL(p, group_addr, duration, level))
+        p = PointToMultipointPacket(
+            sals=LightingRampSAL(group_addr, duration, level))
         return self._send(p)
 
     def lighting_group_terminate_ramp(self, group_addr):
@@ -576,10 +569,8 @@ class PCIProtocol(LineReceiver):
             raise ValueError('group_addr iterable length is > 9 ({})'.format(
                 group_addr_count))
 
-        p = PointToMultipointPacket(application=APP_LIGHTING)
-        for ga in group_addr:
-            p.sal.append(LightingTerminateRampSAL(p, ga))
-
+        p = PointToMultipointPacket(
+            sals=[LightingTerminateRampSAL(ga) for ga in group_addr])
         return self._send(p)
 
     def clock_datetime(self, when=None):
