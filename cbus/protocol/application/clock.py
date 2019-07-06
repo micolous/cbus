@@ -103,11 +103,11 @@ class ClockUpdateSAL(ClockSAL):
 
     @property
     def is_date(self):
-        return self.variable == ClockAttribute.DATE
+        return isinstance(self.val, date)
 
     @property
     def is_time(self):
-        return self.variable == ClockAttribute.TIME
+        return isinstance(self.val, time)
 
     def __init__(self, val: Union[date, time]):
         """
@@ -203,15 +203,11 @@ class ClockRequestSAL(ClockSAL):
 
     """
 
-    def __init__(self, packet):
+    def __init__(self):
         """
         Creates a new SAL Clock request message.
-
-        :param packet: The packet that this SAL is to be included in.
-        :type packet: cbus.protocol.base_packet.BasePacket
-
         """
-        super(ClockRequestSAL, self).__init__(packet)
+        super(ClockRequestSAL, self).__init__()
 
     @classmethod
     def decode(cls, data, command_code):
@@ -228,10 +224,11 @@ class ClockRequestSAL(ClockSAL):
                 UserWarning)
             return None, data
 
-        return cls(packet), data
+        return cls(), data
 
     def encode(self):
-        return super(ClockRequestSAL, self).encode() + [0x11, 0x03]
+        return super().encode() + bytes([
+            ClockCommand.REQUEST_REFRESH, 0x03])
 
 
 class ClockApplication(BaseApplication):
