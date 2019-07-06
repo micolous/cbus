@@ -159,8 +159,7 @@ class PCIProtocol(LineReceiver):
                         if isinstance(s, ClockRequestSAL):
                             self.on_clock_request(p.source_address)
                         elif isinstance(s, ClockUpdateSAL):
-                            self.on_clock_update(p.source_address, s.variable,
-                                                 s.val)
+                            self.on_clock_update(p.source_address, s.val)
                     else:
                         log.msg('dce: unhandled SAL type: %r', s)
                         break
@@ -337,7 +336,7 @@ class PCIProtocol(LineReceiver):
         """
         log.msg('recv: clock request from %d' % (source_addr,))
 
-    def on_clock_update(self, source_addr, variable, val):
+    def on_clock_update(self, source_addr, val):
         """
         Event called when a unit sends time to the network.
 
