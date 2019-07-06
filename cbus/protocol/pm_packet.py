@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # cbus/protocol/pm_packet.py - Point to Multipoint packet decoder
 # Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
@@ -15,97 +15,90 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import
+from __future__ import annotations
 
 from base64 import b16encode
 from six import byte2int, indexbytes, int2byte
+from typing import Iterable, Optional, List, Union
 
 from cbus.protocol.base_packet import BasePacket
-from cbus.protocol.application import APPLICATIONS
-from cbus.common import CLASS_4, DAT_PM, add_cbus_checksum, check_ga
+from cbus.protocol.application import get_application
+from cbus.protocol.application.sal import SAL
+from cbus.common import (
+    Application, PriorityClass, DestinationAddressType, add_cbus_checksum,
+    check_ga)
 
 
 class PointToMultipointPacket(BasePacket):
-    status_request = False
-    level_request = False
-    group_address = None
-    application = None
+    """
+    Point to Multipoint Packet
 
-    def __init__(self,
-                 checksum=True,
-                 priority_class=CLASS_4,
-                 application=None,
-                 status_request=False):
+    Ref: Serial Interface User Guide, s4.2.9.2
+    """
+
+    def __init__(
+            self, checksum: bool = True,
+            priority_class: PriorityClass = PriorityClass.CLASS_4,
+            application: Optional[Application] = None,
+            sals: Optional[Union[SAL, List[SAL]]] = None):
         super(PointToMultipointPacket, self).__init__(
-            checksum, DAT_PM, 0, False, priority_class)
+            checksum=checksum,
+            destination_address_type=DestinationAddressType.POINT_TO_MULTIPOINT,
+            priority_class=priority_class)
         self.application = application
-        self.status_request = status_request
-        self.sal = []
+        self._sals = []
+
+        if isinstance(sals, SAL):
+            self.append_sal(sals)
+        else:
+            for sal in sals:
+                self.append_sal(sal)
 
     def __repr__(self):  # pragma: no cover
         return (
                 '<{} object: application={}, source_address={}, '
-                'status_req={}, {}>'.format(
+                'sals={}>'.format(
                     self.__class__.__name__, self.application,
                     self.source_address,
-                    self.status_request,
-                    ('level_reqest={}'.format(self.level_request))
-                    if self.status_request else ('sal={}'.format(self.sal))))
+                    self._sals))
+
+    def append_sal(self, sal: SAL) -> None:
+        sal_application = int(sal.application)
+        if self.application is None:
+            self.application = sal_application
+        elif self.application != sal_application:
+            raise ValueError(
+                f'SAL {sal:r} is part of application {sal_application:x}, '
+                f'but this Packet has application {self.application:x}')
+
+        self._sals.append(sal)
+
+    def clear_sal(self) -> None:
+        """Removes all SALs from this packet."""
+        self._sals = []
+        self.application = None
+
+    @property
+    def sals(self) -> Iterable[SAL]:
+        return iter(self._sals)
 
     @classmethod
-    def decode_packet(cls, data, checksum, flags, destination_address_type, rc,
-                      dp, priority_class):
-        packet = cls(checksum, priority_class)
-        # serial interface guide s4.2.9.2
-
-        # is this referencing an application
-        packet.application = byte2int(data)
-        if indexbytes(data, 1) != 0x00:
+    def decode_packet(cls, data: bytes, checksum: bool,
+                      priority_class: PriorityClass) -> PointToMultipointPacket:
+        application = Application(data[0])
+        if data[1] != 0x00:
             raise ValueError('Routing data in PM message?')
 
-        if packet.application == 0xFF:
-            # status request
-            packet.status_request = True
+        # find an application handler
+        handler = get_application(application)
+        data = data[2:]
+        sals = handler.decode_sals(data)
 
-            # ...decode it.
-            data = data[2:]
+        return cls(
+            checksum=checksum, priority_class=priority_class,
+            application=application, sals=sals)
 
-            if byte2int(data) in (0x7a, 0xfa):
-                # 7A version of the status request (binary)
-                # FA is deprecated and "shouldn't be used".  ha ha.
-                data = data[1:]
-                packet.level_request = False
-            elif data[:2] == b'\x73\x07':
-                # 7307 version of the status request (levels, in v4)
-                data = data[2:]
-                packet.level_request = True
-            else:
-                raise NotImplementedError(
-                    'Unknown status request type {}'.format(data[0]))
-
-            # now read the application
-            packet.application = byte2int(data)
-            packet.group_address = indexbytes(data, 1)
-
-            if packet.group_address % 0x20 != 0:
-                raise ValueError('group_address report must be a multiple of '
-                                 '0x20')
-
-            return packet
-        else:
-            # SAL data (application request)
-            packet.status_request = False
-
-            # find an application handler
-            handler = APPLICATIONS[packet.application]
-
-            data = data[2:]
-            packet.sal = handler.decode_sal(data, packet)
-
-        return packet
-
-    def encode(self, source_addr=None):
-        # TODO: Implement source address
-
+    def encode(self):
         if self.application is None:
             raise ValueError('application must not be None')
 
@@ -114,23 +107,12 @@ class PointToMultipointPacket(BasePacket):
             raise ValueError('application must be in range 0..255 '
                              '(got {})'.format(a))
 
-        if self.status_request:
-            # this a level request
-            ga = int(self.group_address)
-            check_ga(ga)
-
-            req = [0x73, 0x07] if self.level_request else [0x7A]
-            o = [0xFF] + req + [a, ga]
-
-        else:
-            # encode the remainder
-            o = [a, 0]
-            for x in self.sal:
-                o += x.encode()
+        o = bytearray([a, 0])
+        for x in self._sals:
+            o += x.encode()
 
         # join the packet
-        p = bytes(bytearray(
-            super(PointToMultipointPacket, self)._encode() + o))
+        p = super().encode() + bytes(o)
 
         # checksum it, if needed.
         if self.checksum:

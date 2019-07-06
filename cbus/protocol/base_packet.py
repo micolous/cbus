@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # cbus/protocol/base_packet.py - Skeleton class for basic packets
 # Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 #
@@ -15,21 +15,28 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import abc
+from typing import Optional
+
+from cbus.common import DestinationAddressType, PriorityClass
+
 __all__ = [
-    'BasePacket', 'SpecialPacket', 'SpecialClientPacket', 'SpecialServerPacket'
+    'BasePacket',
+    'InvalidPacket',
+    'SpecialClientPacket',
+    'SpecialServerPacket',
 ]
 
 
 class BasePacket(object):
-    confirmation = None
-    source_address = None
-
-    def __init__(self,
-                 checksum=True,
-                 destination_address_type=None,
-                 rc=None,
-                 dp=None,
-                 priority_class=None):
+    def __init__(
+            self,
+            checksum: bool = True,
+            destination_address_type:
+            DestinationAddressType = DestinationAddressType.UNSET,
+            rc: int = 0,
+            dp: bool = False,
+            priority_class: PriorityClass = PriorityClass.CLASS_4):
         # base packet implementation.
         self.checksum = checksum
 
@@ -37,53 +44,36 @@ class BasePacket(object):
         self.rc = rc
         self.dp = dp
         self.priority_class = priority_class
+        self.confirmation = None
+        self.source_address = None
 
-    def _encode(self):
-        # do checks to make sure the maths will work out.
-        if self.destination_address_type > 0x07:
-            raise ValueError('destination_address_type > 0x07')
-        if self.rc > 0x03:
-            raise ValueError('rc > 0x03')
-        if self.priority_class > 0x03:
-            raise ValueError('priority_class > 0x03')
+    @property
+    def flags(self) -> int:
+        return ((self.destination_address_type & 0x07) |
+                ((self.rc & 0x02) << 3) |
+                (0x20 if self.dp else 0) |
+                ((self.priority_class & 0x03) << 6))
 
-        flags = (self.destination_address_type + (self.rc << 3) +
-                 (0x20 if self.dp else 0x00) + (self.priority_class << 6))
-
-        # print(self.destination_address_type, self.rc << 3,
-        #       0x20 if self.dp else 0x00, self.priority_class << 6)
-        if flags < 0 or flags > 0xff:
-            raise ValueError('flags not in range 0..255 ({})'.format(flags))
-
-        if self.source_address:
-            source_address = int(self.source_address)
-            if source_address < 0 or source_address > 0xff:
-                raise ValueError('source_address set, but not in range 0..255 '
-                                 '({})'.format(source_address))
-
-            return [flags, source_address]
+    @abc.abstractmethod
+    def encode(self) -> bytes:
+        if self.source_address is None:
+            return bytes([self.flags])
         else:
-            return [flags]
+            source_address = self.source_address & 0xff
+            return bytes([self.flags, source_address])
 
 
-class SpecialPacket(BasePacket):
-    """
-
-    """
-    checksum = False
-    destination_address_type = None
-    rc = None
-    dp = None
-    priority_class = None
-
+class _SpecialPacket(BasePacket, abc.ABC):
     def __init__(self):
-        pass
+        super(_SpecialPacket, self).__init__(
+            checksum=False)
 
-    def _encode(self):
-        return ''
+    @abc.abstractmethod
+    def encode(self):
+        raise NotImplementedError('encode')
 
 
-class SpecialClientPacket(SpecialPacket):
+class SpecialClientPacket(_SpecialPacket, abc.ABC):
     """
     Client -> PCI communications have some special packets, which we make
     subclasses of SpecialClientPacket to make them entirely separate from
@@ -91,16 +81,30 @@ class SpecialClientPacket(SpecialPacket):
 
     These have non-standard methods for serialisation.
     """
-
     pass
 
 
-class SpecialServerPacket(SpecialPacket):
+class SpecialServerPacket(_SpecialPacket, abc.ABC):
     """
     PCI -> Client has some special packets that we make subclasses of this,
     because they're different to regular packets.
 
     These have non-standard serialisation methods.
     """
-
     pass
+
+
+class InvalidPacket(_SpecialPacket):
+    """Invalid packet data."""
+
+    def __init__(self, payload: bytes, exception: Optional[Exception] = None):
+        super(InvalidPacket, self).__init__()
+        self._payload = payload
+        self._exception = exception
+
+    @property
+    def exception(self):
+        return self._exception
+
+    def encode(self):
+        return self._payload

@@ -17,16 +17,20 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+
+from base64 import b16encode
+from collections import Iterable
+from datetime import datetime
+from six import int2byte
+from traceback import print_exc
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 from twisted.internet import reactor
+
 from cbus.common import (
-    APP_CLOCK, CLOCK_TIME, CLOCK_DATE, APP_LIGHTING, END_COMMAND,
+    END_COMMAND, END_RESPONSE, ClockAttribute,
     CONFIRMATION_CODES, add_cbus_checksum)
-from base64 import b16encode
-from traceback import print_exc
-from collections import Iterable
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.base_packet import (
     BasePacket, SpecialServerPacket, SpecialClientPacket)
@@ -43,7 +47,6 @@ from cbus.protocol.application.clock import (
     ClockSAL, ClockRequestSAL, ClockUpdateSAL)
 from cbus.protocol.cal.identify import IdentifyCAL
 from cbus.protocol.reset_packet import ResetPacket
-from datetime import datetime
 
 __all__ = ['PCIProtocol']
 
@@ -55,7 +58,7 @@ class PCIProtocol(LineReceiver):
 
     """
 
-    delimiter = END_COMMAND
+    delimiter = END_RESPONSE
     _next_confirmation_index = 0
 
     def connectionMade(self):
@@ -102,18 +105,23 @@ class PCIProtocol(LineReceiver):
 
         """
 
-        while line:
-            last_line = line
-            p, line = decode_packet(line, checksum=True, server_packet=True)
+        # FIXME: hack until we port off twisted
+        line += END_RESPONSE
 
-            if line == last_line:
+        while line:
+            p, remainder = decode_packet(
+                line, checksum=True, server_packet=True)
+
+            if remainder == 0:
                 # infinite loop!
                 log.msg('dce: bug: infinite loop detected on %r', line)
                 return
+            else:
+                line = line[remainder:]
 
             # decode special packets
             if p is None:
-                log.msg("dce: packet == None")
+                log.msg('dce: packet == None')
                 continue
 
             log.msg('dce: packet: %r' % p)
@@ -128,7 +136,7 @@ class PCIProtocol(LineReceiver):
 
                 log.msg('dce: unhandled SpecialServerPacket')
             elif isinstance(p, PointToMultipointPacket):
-                for s in p.sal:
+                for s in p.sals:
                     if isinstance(s, LightingSAL):
                         # lighting application
                         if isinstance(s, LightingRampSAL):
@@ -352,7 +360,7 @@ class PCIProtocol(LineReceiver):
         self._next_confirmation_index += 1
         self._next_confirmation_index %= len(CONFIRMATION_CODES)
 
-        return o
+        return int2byte(o)
 
     def _send(self,
               cmd,
@@ -374,9 +382,13 @@ class PCIProtocol(LineReceiver):
             cmd = cmd.encode()
 
             if not basic_mode:
-                cmd = '\\' + cmd
+                cmd = b'\\' + cmd
         else:
             log.msg('send: cmd is not BasePacket!')
+            if not isinstance(cmd, (bytes, bytearray)):
+                # convert iterable of ints to bytes
+                cmd = bytes(bytearray(cmd))
+
             if type(cmd) != str:
                 # must be an iterable of ints
                 cmd = ''.join([chr(x) for x in cmd])
@@ -385,20 +397,21 @@ class PCIProtocol(LineReceiver):
             cmd = add_cbus_checksum(cmd)
 
         if encode:
-            cmd = '\\' + b16encode(cmd)
+            cmd = b'\\' + b16encode(cmd)
 
         if confirmation:
             conf_code = self._get_confirmation_code()
             cmd += conf_code
 
             # TODO: implement proper handling of confirmation codes.
+        else:
+            conf_code = None
 
         log.msg("send: %r" % cmd)
 
         self.transport.write(cmd + END_COMMAND)
 
-        if confirmation:
-            return conf_code
+        return conf_code
 
     def pci_reset(self):
         """
@@ -582,12 +595,17 @@ class PCIProtocol(LineReceiver):
         if when is None:
             when = datetime.now()
 
-        p = PointToMultipointPacket(application=APP_CLOCK)
+        sals = [ClockUpdateSAL(when.date()), ClockUpdateSAL(when.time())]
 
-        p.sal.append(ClockUpdateSAL(p, CLOCK_DATE, when.date()))
-        p.sal.append(ClockUpdateSAL(p, CLOCK_TIME, when.time()))
-
+        p = PointToMultipointPacket(sals=sals)
         return self._send(p)
+
+    def timesync(self, frequency):
+        # setup timesync in the future.
+        reactor.callLater(frequency, self.timesync, frequency)
+
+        # send time packets
+        self.clock_datetime()
 
     # def recall(self, unit_addr, param_no, count):
     #    return self._send('%s%02X%s%s%02X%02X' % (
@@ -668,5 +686,7 @@ if __name__ == '__main__':
     else:
         parser.error(
             'No CBus PCI address was specified!  (See -s or -t option)')
+
+    reactor.callLater(10, protocol.timesync, 10)
 
     reactor.run()

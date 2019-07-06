@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # cbus/protocol/pciserverprotocol.py - Twisted protocol implementation of the
 # CBus PCI as a server.
 # Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
@@ -17,13 +17,17 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
-from twisted.internet.protocol import Factory
-from twisted.protocols.basic import LineReceiver
-from twisted.python import log
-from twisted.internet import reactor
-from cbus.common import (add_cbus_checksum, END_COMMAND, APP_LIGHTING)
+
+import asyncio
+import logging
+import random
+import sys
+
+from cbus.common import add_cbus_checksum, END_RESPONSE
+from cbus.protocol.cbus_protocol import CBusProtocol
 from cbus.protocol.packet import decode_packet
-from cbus.protocol.base_packet import BasePacket, SpecialClientPacket
+from cbus.protocol.base_packet import (
+    BasePacket, InvalidPacket, SpecialClientPacket)
 from cbus.protocol.reset_packet import ResetPacket
 from cbus.protocol.scs_packet import SmartConnectShortcutPacket
 from cbus.protocol.po_packet import PowerOnPacket
@@ -38,9 +42,11 @@ from cbus.protocol.application.clock import (
     ClockSAL, ClockUpdateSAL, ClockRequestSAL)
 
 __all__ = ['PCIServerProtocol']
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
-class PCIServerProtocol(LineReceiver):
+class PCIServerProtocol(CBusProtocol):
     """
     Implements a twisted protocol listening to CBus PCI commands over TCP or
     serial.
@@ -50,18 +56,21 @@ class PCIServerProtocol(LineReceiver):
 
     """
 
-    delimiter = END_COMMAND
-    local_echo = True
-    basic_mode = True
-    connect = False
-    checksum = False
-    monitor = False
-    idmon = False
+    def __init__(self):
+        super(PCIServerProtocol, self).__init__(server=True)
+        self._transport = None
 
-    application_addr1 = 0xFF
-    application_addr2 = 0xFF
+        self.basic_mode = True
+        self.connect = False
+        self.checksum = False
+        self.monitor = False
+        self.idmon = False
 
-    def connectionMade(self):
+        self.application_addr1 = 0xff
+        self.application_addr2 = 0xff
+        self._send_queue = []
+
+    def connection_made(self, transport):
         """
         Called by twisted a connection is made to the PCI.
 
@@ -71,114 +80,71 @@ class PCIServerProtocol(LineReceiver):
         Serial Interface User Guide s4.3.3.4, page 33
 
         """
-
+        self._transport = transport
         self._send(PowerOnPacket())
 
-    def lineReceived(self, line):
-        """
-        Called by LineReciever when a new line has been recieved on the
-        PCI connection.
-
-        Do not override this.
-
-        :param line: Raw CBus event data
-        :type line: str
-
-        """
-        log.msg("recv: %r" % line)
-
+    def echo(self, data: bytes) -> None:
         if self.basic_mode:
-            self._send(line, checksum=False, nl=False)
+            self._transport.write(data)
 
-        # if line == '~~~':
-        #   self.on_reset()
-        #   return
-        #
-        # if len(line) == 0:
-        #   # skip, empty line
-        #   log.msg("recv: empty line")
-        #   return
-
-        # TODO: handle other bus requests properly.
-        while line:
-            line = self.decode_cbus_event(line)
-
-    def decode_cbus_event(self, line):
+    def handle_cbus_packet(self, p: BasePacket) -> None:
         """
-        Decodes a CBus event and calls an event handler appropriate to the
-        event.
-
-        Do not override this.
-
-        :param line: CBus event data
-        :type line: str
-
-        :returns: Remaining unparsed data (str) or None on error.
-        :rtype: str or NoneType
+        Handles a single CBus packet.
 
         """
-
-        # pass the data to the protocol decoder
-        p, remainder = decode_packet(line,
-                                     checksum=self.checksum,
-                                     server_packet=False)
-
         # check for special commands, and handle them.
         if p is None:
-            log.msg("dce: packet == None")
-            return remainder
+            logger.debug("dce: packet == None")
+            return
+
+        if isinstance(p, InvalidPacket):
+            logger.warning("dce: invalid packet: {}".format(p.exception))
+            return
 
         if isinstance(p, SpecialClientPacket):
             # do special things
             # full reset
             if isinstance(p, ResetPacket):
                 self.on_reset()
-                return remainder
+                return
 
             # smart+connect shortcut
             if isinstance(p, SmartConnectShortcutPacket):
                 self.basic_mode = False
                 self.checksum = True
                 self.connect = True
-                return remainder
+                return
 
-            log.msg('dce: unknown SpecialClientPacket: %r', p)
+            logger.debug('dce: unknown SpecialClientPacket: %r', p)
         elif isinstance(p, PointToMultipointPacket):
-            # is this a status inquiry
-
-            if p.status_request is None:
-                # status request
-                # TODO
-                log.msg('dce: unhandled status request packet')
-            else:
-                # application command
-
-                for s in p.sal:
-                    if isinstance(s, LightingSAL):
-                        # lighting application
-                        if isinstance(s, LightingRampSAL):
-                            self.on_lighting_group_ramp(s.group_address,
-                                                        s.duration, s.level)
-                        elif isinstance(s, LightingOnSAL):
-                            self.on_lighting_group_on(s.group_address)
-                        elif isinstance(s, LightingOffSAL):
-                            self.on_lighting_group_off(s.group_address)
-                        elif isinstance(s, LightingTerminateRampSAL):
-                            self.on_lighting_group_terminate_ramp(
-                                s.group_address)
-                        else:
-                            log.msg('dce: unhandled lighting SAL type: %r' % s)
-                            return remainder
-                    elif isinstance(s, ClockSAL):
-                        if isinstance(s, ClockUpdateSAL):
-                            self.on_clock_update(s.variable, s.val)
-                        elif isinstance(s, ClockRequestSAL):
-                            self.on_clock_request()
-                        else:
-                            log.msg('dce: unhandled clock SAL type: %r' % s)
+            for s in p.sals:
+                if isinstance(s, LightingSAL):
+                    # lighting application
+                    if isinstance(s, LightingRampSAL):
+                        self.on_lighting_group_ramp(s.group_address,
+                                                    s.duration, s.level)
+                    elif isinstance(s, LightingOnSAL):
+                        self.on_lighting_group_on(s.group_address)
+                    elif isinstance(s, LightingOffSAL):
+                        self.on_lighting_group_off(s.group_address)
+                    elif isinstance(s, LightingTerminateRampSAL):
+                        self.on_lighting_group_terminate_ramp(
+                            s.group_address)
                     else:
-                        log.msg('dce: unhandled SAL type: %r' % s)
-                        return remainder
+                        logger.debug(
+                            'dce: unhandled lighting SAL type: %r' % s)
+                        return
+                elif isinstance(s, ClockSAL):
+                    if isinstance(s, ClockUpdateSAL):
+                        self.on_clock_update(s.val)
+                    elif isinstance(s, ClockRequestSAL):
+                        self.on_clock_request()
+                    else:
+                        logger.debug(
+                            'dce: unhandled clock SAL type: %r' % s)
+                else:
+                    logger.debug('dce: unhandled SAL type: %r' % s)
+                    return
         elif isinstance(p, DeviceManagementPacket):
             # TODO: send proper confirmation, from p55 of serial interface
             #       guide
@@ -218,7 +184,6 @@ class PCIServerProtocol(LineReceiver):
                 if p.value & 0x10:
                     # smart mode
                     self.basic_mode = False
-                    self.local_echo = False
                 if p.value & 0x20:
                     # monitor mode
                     self.monitor = True
@@ -226,19 +191,18 @@ class PCIServerProtocol(LineReceiver):
                     # idmon
                     self.idmon = True
             else:
-                log.msg('dce: unhandled DeviceManagementPacket (%r = %r)' %
-                        (p.parameter, p.value))
-                return remainder
+                logger.debug(
+                    'dce: unhandled DeviceManagementPacket (%r = %r)' %
+                    (p.parameter, p.value))
+                return
         else:
-            log.msg('dce: unhandled packet type: %r', p)
-            return remainder
+            logger.debug('dce: unhandled packet type: %r', p)
+            return
 
         # TODO: handle parameters
 
         if p.confirmation:
             self.send_confirmation(p.confirmation, True)
-
-        return remainder
 
     # event handlers
 
@@ -249,8 +213,8 @@ class PCIServerProtocol(LineReceiver):
         """
 
         # reset our state to default!
-        log.msg('recv: PCI hard reset')
-        self.local_echo = self.basic_mode = True
+        logger.debug('recv: PCI hard reset')
+        self.basic_mode = True
         self.idmon = self.connect = self.checksum = self.monitor = False
         self.application_addr1 = self.application_addr2 = 0xFF
 
@@ -268,7 +232,7 @@ class PCIServerProtocol(LineReceiver):
         :param level: Target brightness of the ramp (0.0 - 1.0).
         :type level: float
         """
-        log.msg(
+        logger.debug(
             "recv: lighting ramp: %d, duration %d seconds to level %.2f%%" %
             (group_addr, duration, level * 100))
 
@@ -279,7 +243,7 @@ class PCIServerProtocol(LineReceiver):
         :param group_addr: Group address being turned on.
         :type group_addr: int
         """
-        log.msg("recv: lighting on: %d" % group_addr)
+        logger.debug("recv: lighting on: %d" % group_addr)
 
     def on_lighting_group_off(self, group_addr):
         """
@@ -288,7 +252,7 @@ class PCIServerProtocol(LineReceiver):
         :param group_addr: Group address being turned off.
         :type group_addr: int
         """
-        log.msg("recv: lighting off: %d" % group_addr)
+        logger.debug("recv: lighting off: %d" % group_addr)
 
     def on_lighting_group_terminate_ramp(self, group_addr):
         """
@@ -298,15 +262,15 @@ class PCIServerProtocol(LineReceiver):
         :param group_addr: Group address ramp being terminated.
         :type group_addr: int
         """
-        log.msg("recv: lighting terminate ramp: %d" % group_addr)
+        logger.debug("recv: lighting terminate ramp: %d" % group_addr)
 
     def on_clock_request(self):
         """
         Event called when a clock application "request time" is recieved.
         """
-        log.msg("recv: clock request")
+        logger.debug("recv: clock request")
 
-    def on_clock_update(self, variable, val):
+    def on_clock_update(self, val):
         """
         Event called when a clock application "update time" is recieved.
 
@@ -316,38 +280,55 @@ class PCIServerProtocol(LineReceiver):
         :param val: Clock value
         :type variable: datetime.date or datetime.time
         """
-        log.msg("recv: clock update: %r" % val)
+        logger.debug("recv: clock update: %r" % val)
+
+        # DEBUG: randomly trigger lights
+        p = PointToMultipointPacket(
+            self.checksum, sals=LightingOnSAL(random.randint(1, 100)))
+        p.source_address = random.randint(1, 100)
+
+        self._send_later(p)
+
+        p = PointToMultipointPacket(
+            self.checksum, sals=LightingOffSAL(random.randint(1, 100)))
+        p.source_address = random.randint(1, 100)
+        self._send_later(p)
 
     # other things.
+    @staticmethod
+    def _serialize_packet(cmd: BasePacket) -> bytes:
+        nl = True
+        if isinstance(cmd, ConfirmationPacket):
+            nl = False
 
-    def _send(self, cmd, checksum=True, nl=True):
+        cmd = cmd.encode()
+        if nl:
+            cmd += END_RESPONSE
+
+        return cmd
+
+    def _send_later(self, cmd: BasePacket) -> None:
+        self._send_queue.append(self._serialize_packet(cmd))
+
+    def _send(self, cmd: BasePacket):
         """
         Sends a packet of CBus data.
 
         """
-        if isinstance(cmd, BasePacket):
-            checksum = False
+        cmd = self._serialize_packet(cmd)
+        logger.debug("send: %r" % cmd)
 
-            if isinstance(cmd, ConfirmationPacket):
-                nl = False
-            cmd = cmd.encode()
-        else:
-            if nl:
-                # special packets get exemption from this warning
-                log.msg('send: non-basepacket type!')
-            if type(cmd) != str:
-                # must be an iterable of ints
-                cmd = ''.join([chr(x) for x in cmd])
+        self._transport.write(cmd)
 
-        if checksum and self.checksum:
-            cmd = add_cbus_checksum(cmd)
+        # pull up the send queue
+        send_queue = self._send_queue
 
-        log.msg("send: %r" % cmd)
+        # remove the old one
+        self._send_queue = []
 
-        if nl:
-            self.transport.write(cmd + END_COMMAND)
-        else:
-            self.transport.write(cmd)
+        # send it all!
+        for m in send_queue:
+            self._transport.write(m)
 
     def send_error(self):
         self._send(PCIErrorPacket())
@@ -373,10 +354,10 @@ class PCIServerProtocol(LineReceiver):
 
         """
 
-        p = PointToMultipointPacket(application=APP_LIGHTING)
+        p = PointToMultipointPacket(
+            checksum=self.checksum,
+            sals=LightingOnSAL(p, group_addr))
         p.source_address = source_addr
-        p.sal.append(LightingOnSAL(p, group_addr))
-        p.checksum = self.checksum
         return self._send(p)
 
     def lighting_group_off(self, source_addr, group_addr):
@@ -393,10 +374,10 @@ class PCIServerProtocol(LineReceiver):
         :rtype: string
 
         """
-        p = PointToMultipointPacket(application=APP_LIGHTING)
+        p = PointToMultipointPacket(
+            checksum=self.checksum,
+            sals=LightingOffSAL(p, group_addr))
         p.source_address = source_addr
-        p.sal.append(LightingOffSAL(p, group_addr))
-        p.checksum = self.checksum
         return self._send(p)
 
     def lighting_group_ramp(
@@ -427,10 +408,9 @@ class PCIServerProtocol(LineReceiver):
         :rtype: string
 
         """
-        p = PointToMultipointPacket(application=APP_LIGHTING)
-        p.source_address = source_addr
-        p.sal.append(LightingRampSAL(p, group_addr, duration, level))
-        p.checksum = self.checksum
+        p = PointToMultipointPacket(
+            checksum=self.checksum,
+            sals=LightingRampSAL(p, group_addr, duration, level))
         return self._send(p)
 
     def lighting_group_terminate_ramp(self, source_addr, group_addr):
@@ -446,23 +426,21 @@ class PCIServerProtocol(LineReceiver):
         :returns: Single-byte string with code for the confirmation event.
         :rtype: string
         """
-        p = PointToMultipointPacket(application=APP_LIGHTING)
+        p = PointToMultipointPacket(
+            checksum=self.checksum,
+            sals=LightingTerminateRampSAL(p, group_addr))
         p.source_address = source_addr
-        p.sal.append(LightingTerminateRampSAL(p, group_addr))
-        p.checksum = self.checksum
         return self._send(p)
 
 
+async def main():
+    loop = asyncio.get_running_loop()
+    server = await loop.create_server(
+        lambda: PCIServerProtocol(),
+        '127.0.0.1', 10001)
+
+    async with server:
+        await server.serve_forever()
+
 if __name__ == '__main__':
-    # test program for protocol
-    class PCIServerProtocolFactory(Factory):
-
-        def buildProtocol(self, addr):
-            log.msg('Connected.')
-            return PCIServerProtocol()
-
-    import sys
-
-    log.startLogging(sys.stdout)
-    reactor.listenTCP(10001, PCIServerProtocolFactory())
-    reactor.run()
+    asyncio.run(main())

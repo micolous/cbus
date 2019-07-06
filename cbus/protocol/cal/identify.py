@@ -16,9 +16,11 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
-from six import byte2int, indexbytes, int2byte
+from __future__ import annotations
 
-from cbus.common import CAL_REQ_IDENTIFY
+from typing import Tuple
+
+from cbus.common import CAL, IdentifyAttribute
 
 __all__ = [
     'IdentifyCAL',
@@ -27,28 +29,27 @@ __all__ = [
 
 class IdentifyCAL(object):
     """
-    Identify cal
+    Identify CAL request.
+
+    Ref: Serial Interface Guide, s7.1
+
     """
 
-    def __init__(self, packet, attribute):
-        self.packet = packet
+    def __init__(self, attribute: IdentifyAttribute):
         self.attribute = attribute
 
     @classmethod
-    def decode_cal(cls, data, packet):
+    def decode_cal(cls, data) -> Tuple[bytes, IdentifyCAL]:
         """
         Decodes identify SAL.
         """
 
-        cal = IdentifyCAL(packet, indexbytes(data, 1))
-
+        cal = IdentifyCAL(IdentifyAttribute(data[1]))
         data = data[2:]
         return data, cal
 
-    def encode(self):
-        if self.attribute < 0 or self.attribute > 0xff:
-            raise ValueError('attribute must be in range 0..255')
-        return [CAL_REQ_IDENTIFY, self.attribute]
+    def encode(self) -> bytes:
+        return bytes([CAL.IDENTIFY, self.attribute & 0xff])
 
     def __repr__(self):  # pragma: no cover
         return '<%s object: attribute=%r>' % (

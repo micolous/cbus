@@ -16,9 +16,15 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+
+from typing import Union
+
+from cbus.common import CAL
+from cbus.protocol.cal.reply import ReplyCAL
 from cbus.protocol.cal.identify import IdentifyCAL
-from cbus.common import CAL_REQ_IDENTIFY
 
 REQUESTS = {
-    CAL_REQ_IDENTIFY: IdentifyCAL,
+    CAL.IDENTIFY: IdentifyCAL,
 }
+
+AnyCAL = Union[IdentifyCAL, ReplyCAL]

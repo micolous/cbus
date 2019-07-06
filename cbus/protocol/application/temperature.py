@@ -17,10 +17,13 @@
 
 from __future__ import absolute_import
 
+from typing import List, Set
+
 from six import byte2int, indexbytes, int2byte
 import warnings
 
-from cbus.common import APP_TEMPERATURE, check_ga, TEMPERATURE_BROADCAST
+from cbus.common import Application, check_ga, TEMPERATURE_BROADCAST
+from cbus.protocol.application.sal import BaseApplication, SAL
 
 __all__ = [
     'TemperatureApplication',
@@ -34,26 +37,14 @@ class TemperatureSAL(object):
     Base type for temperature broadcast application SALs.
     """
 
-    def __init__(self, packet=None, group_address=None):
+    def __init__(self, group_address=None):
         """
         This should not be called directly by your code!
 
         Use one of the subclasses of cbus.protocol.temperature.TemperatureSAL
         instead.
         """
-        self.packet = packet
         self.group_address = group_address
-
-        if packet is None:
-            raise ValueError('packet must not be None')
-
-        if self.packet.application is None:
-            # no application set on the packet, set it.
-            self.packet.application = APP_TEMPERATURE
-        elif self.packet.application != APP_TEMPERATURE:
-            raise ValueError('packet has a different application set already. '
-                             'Cannot have multiple application SAL in the '
-                             'same packet.')
 
     @classmethod
     def decode(cls, data, packet):
@@ -101,7 +92,7 @@ class TemperatureSAL(object):
                 break
 
             sal, data = TemperatureBroadcastSAL.decode(
-                data, packet, command_code, group_address)
+                data, command_code, group_address)
 
             if sal:
                 output.append(sal)
@@ -123,13 +114,9 @@ class TemperatureBroadcastSAL(TemperatureSAL):
 
     """
 
-    def __init__(self, packet, group_address, temperature):
+    def __init__(self, group_address, temperature):
         """
         Creates a new SAL Temperature Broadcast message.
-
-        :param packet: The packet that this SAL is to be included in.
-        :type packet: cbus.protocol.base_packet.BasePacket
-
         :param group_address: The group address that is reporting the
                               temperature.
         :type group_address: int
@@ -139,19 +126,18 @@ class TemperatureBroadcastSAL(TemperatureSAL):
         :type temperature: float
 
         """
-        super(TemperatureBroadcastSAL, self).__init__(packet, group_address)
-
+        super(TemperatureBroadcastSAL, self).__init__(group_address)
         self.temperature = temperature
 
     @classmethod
-    def decode(cls, data, packet, command_code, group_address):
+    def decode(cls, data, command_code, group_address):
         """
         Do not call this method directly -- use TemperatureSAL.decode
         """
         temperature = byte2int(data) / 4.0
         data = data[1:]
 
-        return cls(packet, group_address, temperature), data
+        return cls(group_address, temperature), data
 
     def encode(self):
         if not (0.0 <= self.temperature <= 63.75):
@@ -165,7 +151,7 @@ class TemperatureBroadcastSAL(TemperatureSAL):
         ]
 
 
-class TemperatureApplication(object):
+class TemperatureApplication(BaseApplication):
     """
     This class is called in the cbus.protocol.applications.APPLICATIONS dict in
     order to describe how to decode temperature broadcast application events
@@ -174,10 +160,14 @@ class TemperatureApplication(object):
     Do not call this class directly.
     """
 
-    @classmethod
-    def decode_sal(cls, data, packet):
+    @staticmethod
+    def supported_applications() -> Set[Application]:
+        return {Application.TEMPERATURE}
+
+    @staticmethod
+    def decode_sals(data: bytes) -> List[SAL]:
         """
         Decodes a temperature broadcast application packet and returns it's
         SAL(s).
         """
-        return TemperatureSAL.decode(data, packet)
+        return TemperatureSAL.decode(data)

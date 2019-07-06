@@ -24,103 +24,221 @@ however it is used internally within the protocol encoders and decoders.
 
 from __future__ import absolute_import
 from base64 import b16encode, b16decode
+from enum import IntEnum
+import logging
 import six
 
 HEX_CHARS = b'0123456789ABCDEF'
 
-END_COMMAND = b'\r\n'
+# <cr>, per Serial Interface Guide, s4.2.1
+END_COMMAND = b'\x0d'
+# <cr><lf>, per Serial Interface Guide, s4.3.2
+END_RESPONSE = b'\x0d\x0f'
 
-# command types
-# TODO: improve this with data from s3.4 of serial interface guide p11/12
-POINT_TO_MULTIPOINT = 0x05
-POINT_TO_POINT = 0x06
+
+class DestinationAddressType(IntEnum):
+    """
+    Destination Address Type (DAT).
+
+    Ref: Serial Interface Guide, s3.4. Other values reserved.
+    """
+    UNSET = 0x00
+    POINT_TO_POINT_TO_MULTIPOINT = 0x03
+    POINT_TO_MULTIPOINT = 0x05
+    POINT_TO_POINT = 0x06
+
+
+class PriorityClass(IntEnum):
+    CLASS_4 = 0x00  # lowest
+    CLASS_3 = 0x01  # medium low
+    CLASS_2 = 0x02  # medium high
+    CLASS_1 = 0x03  # highest
+
+
 # undocumented command type issued for status inquiries by toolkit?
 # POINT_TO_46 = '\\46'
 
 # Applications
-APP_CLOCK = 0xDF
-APP_ENABLE = 0xCB
-APP_LIGHTING = 0x38
-APP_TEMPERATURE = 0x19
+class Application(IntEnum):
+    TEMPERATURE = 0x19
+    LIGHTING_FIRST = LIGHTING_30 = 0x30
+    LIGHTING_31 = 0x31
+    LIGHTING_32 = 0x32
+    LIGHTING_33 = 0x33
+    LIGHTING_34 = 0x34
+    LIGHTING_35 = 0x35
+    LIGHTING_36 = 0x36
+    LIGHTING_37 = 0x37
+    LIGHTING = LIGHTING_38 = 0x38
+    LIGHTING_39 = 0x39
+    LIGHTING_3a = 0x3a
+    LIGHTING_3b = 0x3b
+    LIGHTING_3c = 0x3c
+    LIGHTING_3d = 0x3d
+    LIGHTING_3e = 0x3e
+    LIGHTING_3f = 0x3f
+    LIGHTING_40 = 0x40
+    LIGHTING_41 = 0x41
+    LIGHTING_42 = 0x42
+    LIGHTING_43 = 0x43
+    LIGHTING_44 = 0x44
+    LIGHTING_45 = 0x45
+    LIGHTING_46 = 0x46
+    LIGHTING_47 = 0x47
+    LIGHTING_48 = 0x48
+    LIGHTING_49 = 0x49
+    LIGHTING_4a = 0x4a
+    LIGHTING_4b = 0x4b
+    LIGHTING_4c = 0x4c
+    LIGHTING_4d = 0x4d
+    LIGHTING_4e = 0x4e
+    LIGHTING_4f = 0x4f
+    LIGHTING_50 = 0x50
+    LIGHTING_51 = 0x51
+    LIGHTING_52 = 0x52
+    LIGHTING_53 = 0x53
+    LIGHTING_54 = 0x54
+    LIGHTING_55 = 0x55
+    LIGHTING_56 = 0x56
+    LIGHTING_57 = 0x57
+    LIGHTING_58 = 0x58
+    LIGHTING_59 = 0x59
+    LIGHTING_5a = 0x5a
+    LIGHTING_5b = 0x5b
+    LIGHTING_5c = 0x5c
+    LIGHTING_5d = 0x5d
+    LIGHTING_5e = 0x5e
+    LIGHTING_LAST = LIGHTING_5f = 0x5f
+    CLOCK = 0xDF
+    ENABLE = 0xCB
+    STATUS_REQUEST = 0xff
 
-# CALs
-CAL_REQ_RESET = 0x08
-CAL_REQ_RECALL = 0x1A
-CAL_REQ_IDENTIFY = 0x21
-CAL_REQ_GET_STATUS = 0x2A
 
-CAL_RES_REPLY = 0x80
+class CAL(IntEnum):
+    RESET = 0x08
+    RECALL = 0x1a
+    IDENTIFY = 0x21
+    GET_STATUS = 0x2a
+    ACKNOWLEDGE = 0x32
 
-# identify parameters
-IDENT_MANUFACTURER = 0x00
-IDENT_TYPE = 0x01
-IDENT_FIRMWARE_VER = 0x02
-IDENT_SUMMARY = 0x03
-IDENT_EXTENDED = 0x04
-IDENT_NET_TERM_LVL = 0x05
-IDENT_TERM_LVL = 0x06
-IDENT_NET_VOLTAGE = 0x07
-IDENT_GAV_CURRENT = 0x08
-IDENT_GAV_STORED = 0x09
-IDENT_GAV_PHY_ADDR = 0x0A
-IDENT_LOGIC_ASSIGN = 0x0B
-IDENT_DELAYS = 0x0C
-IDENT_MIN_LVL = 0x0D
-IDENT_MAX_LVL = 0x0E
-IDENT_CUR_LVL = 0x0F
-IDENT_OUT_SUMMARY = 0x10
-IDENT_DSI_STATUS = 0x11
+    # These are bit-masks
+    REPLY = 0x80
+    STANDARD_STATUS = 0xc0
+    EXTENDED_STATUS = 0xe0
+
+
+class IdentifyAttribute(IntEnum):
+    """
+    IDENTIFY attributes.
+
+    See Serial Interface Guide, s7.2.
+    """
+    MANUFACTURER = 0x00
+    TYPE = 0x01
+    FIRMWARE_VER = 0x02
+    SUMMARY = 0x03
+    EXTENDED = 0x04
+    NET_TERM_LVL = 0x05
+    TERM_LVL = 0x06
+    NET_VOLTAGE = 0x07
+    GAV_CURRENT = 0x08
+    GAV_STORED = 0x09
+    GAV_PHY_ADDR = 0x0A
+    LOGIC_ASSIGN = 0x0B
+    DELAYS = 0x0C
+    MIN_LVL = 0x0D
+    MAX_LVL = 0x0E
+    CUR_LVL = 0x0F
+    OUT_SUMMARY = 0x10
+    DSI_STATUS = 0x11
+
 
 # Routing buffer
 ROUTING_NONE = 0x00
 
 # Enable control application commands.
-ENABLE_SET_NETWORK_VARIABLE = 0x02
+class EnableCommand(IntEnum):
+    SET_NETWORK_VARIABLE = 0x02
+
 
 # temperature broadcast commands.
 TEMPERATURE_BROADCAST = 0x02
 
+
 # lighting application commands.
-LIGHT_ON = 0x79
-LIGHT_OFF = 0x01
-LIGHT_TERMINATE_RAMP = 0x09
-# note that 0xA0 - 0xA2 are invalid (minimum label length = 3)
-# Lighting Application s2.6.5 p11
-LIGHT_LABEL = 0xA0
+class LightCommand(IntEnum):
+    # light on
+    # \0538007964 (GA 100)
+    ON = 0x79
 
-# light on
-# \0538007964 (GA 100)
+    # light off
+    # \0538000164 (GA 100)
+    OFF = 0x01
 
-# light off
-# \0538000164 (GA 100)
+    RAMP_INSTANT = RAMP_FASTEST = 0x02
+    RAMP_00_04 = 0x0a
+    RAMP_00_08 = 0x12
+    RAMP_00_12 = 0x1a
+    RAMP_00_20 = 0x22
+    RAMP_00_30 = 0x2a
+    RAMP_00_40 = 0x32
+    RAMP_01_00 = 0x3a
+    RAMP_01_30 = 0x42
+    RAMP_02_00 = 0x4a
+    RAMP_03_00 = 0x52
+    RAMP_05_00 = 0x5a
+    RAMP_07_00 = 0x62
+    RAMP_10_00 = 0x6a
+    RAMP_15_00 = 0x72
+    RAMP_17_00 = RAMP_SLOWEST = 0x7a
 
-# set to level
-# \053800rr64FF (GA 100, to level 100%/0xff)
+    # set to level
+    # \053800rr64FF (GA 100, to level 100%/0xff)
+    TERMINATE_RAMP = 0x09
 
-LIGHT_RAMP_RATES = {
-    0x02: 0,
-    0x0A: 4,
-    0x12: 8,
-    0x1A: 12,
-    0x22: 20,
-    0x2A: 30,
-    0x32: 40,
-    0x3A: 60,
-    0x42: 90,
-    0x4A: 120,
-    0x52: 180,
-    0x5A: 300,
-    0x62: 420,
-    0x6A: 600,
-    0x72: 900,
-    0x7A: 1020
+    # note that 0xA0 - 0xA2 are invalid (minimum label length = 3)
+    # Lighting Application s2.6.5 p11
+    LIGHT_LABEL = 0xA0
+
+
+_LIGHT_RAMP_RATES = {
+    LightCommand.RAMP_INSTANT: 0,
+    LightCommand.RAMP_00_04: 4,
+    LightCommand.RAMP_00_08: 8,
+    LightCommand.RAMP_00_12: 12,
+    LightCommand.RAMP_00_20: 20,
+    LightCommand.RAMP_00_30: 30,
+    LightCommand.RAMP_00_40: 40,
+    LightCommand.RAMP_01_00: 60,
+    LightCommand.RAMP_01_30: 90,
+    LightCommand.RAMP_02_00: 120,
+    LightCommand.RAMP_03_00: 180,
+    LightCommand.RAMP_05_00: 300,
+    LightCommand.RAMP_07_00: 420,
+    LightCommand.RAMP_10_00: 600,
+    LightCommand.RAMP_15_00: 900,
+    LightCommand.RAMP_17_00: 1020,
 }
 
-CLOCK_TIME = 0x01
-CLOCK_DATE = 0x02
+_LIGHT_RAMP_DURATION_TO_RATE = [
+    (d, c) for c, d in sorted(_LIGHT_RAMP_RATES.items(), key=lambda x: x[1])]
+LIGHT_RAMP_COMMANDS = set(_LIGHT_RAMP_RATES.keys())
 
-MIN_RAMP_RATE = 0
-MAX_RAMP_RATE = 1020
+
+# Fastest ramp rate
+LIGHT_RAMP_FASTEST_DURATION = _LIGHT_RAMP_DURATION_TO_RATE[0][0]
+LIGHT_RAMP_SLOWEST_DURATION = _LIGHT_RAMP_DURATION_TO_RATE[-1][0]
+
+
+class ClockAttribute(IntEnum):
+    TIME = 0x01
+    DATE = 0x02
+
+
+class ClockCommand(IntEnum):
+    UPDATE_NETWORK_VARIABLE = 0x08
+    REQUEST_REFRESH = 0x11
+
 
 RECALL = 0x1A
 IDENTIFY = 0x21
@@ -164,26 +282,13 @@ CONFIRMATION_CODES = b'hijklmnopqrstuvwxyzg'
 MIN_GROUP_ADDR = 0
 MAX_GROUP_ADDR = 255
 
-# priority classes.
-CLASS_1 = 0x03
-CLASS_2 = 0x02
-CLASS_3 = 0x01
-CLASS_4 = 0x00
-
-CLASSES = {CLASS_1: '1', CLASS_2: '2', CLASS_3: '3', CLASS_4: '4'}
-
-# destination address type
-DAT_PPM = 0x03
-DAT_PM = 0x05
-DAT_PP = 0x06
-
-DATS = {DAT_PPM: 'PPM', DAT_PM: 'PM', DAT_PP: 'PP'}
-
 # bridge length
 BRIDGE_LENGTHS = {0x09: 0, 0x12: 1, 0x1B: 2, 0x24: 3, 0x2D: 4, 0x36: 5}
 
+logging.basicConfig(format='%(asctime)s %(message)s')
 
-def duration_to_ramp_rate(seconds):
+
+def duration_to_ramp_rate(seconds: int) -> LightCommand:
     """
     Converts a given duration into a ramp rate code.
 
@@ -192,15 +297,12 @@ def duration_to_ramp_rate(seconds):
 
     :returns: The ramp rate code for the duration given.
     :rtype: int
-
-    :raises ValueError: If the given duration is too long and cannot be
-                        represented.
     """
-    for k, v in sorted(six.iteritems(LIGHT_RAMP_RATES),
-                       key=lambda x: x[0]):
-        if seconds <= v:
-            return k
-    raise ValueError('That duration is too long!')
+    for d, cmd in _LIGHT_RAMP_DURATION_TO_RATE:
+        if seconds <= d:
+            return cmd
+
+    return LightCommand.RAMP_SLOWEST
 
 
 def ramp_rate_to_duration(rate):
@@ -216,7 +318,7 @@ def ramp_rate_to_duration(rate):
     :throws KeyError: If the given ramp rate code is invalid.
     """
 
-    return LIGHT_RAMP_RATES[rate]
+    return _LIGHT_RAMP_RATES[rate]
 
 
 def cbus_checksum(i, b16=False):
@@ -326,35 +428,3 @@ def check_ga(group_addr):
         raise ValueError(
             'Group Address out of range ({}..{}), got {}'.format(
                 MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr))
-
-
-def validate_ramp_rate(duration):
-    """
-    Validates the given ramp rate.
-
-    :param duration: A duration, in seconds, to check if it is within the
-                     allowed duration constraints.
-    :type duration: int
-
-    :returns: True if the duration is within range, False otherwise.
-    :rtype: bool
-    """
-    return MIN_RAMP_RATE <= duration <= MAX_RAMP_RATE
-
-
-def check_ramp_rate(duration):
-    """
-    Validates the given ramp rate.
-
-    :param duration: A duration, in seconds, to check if it is within the
-                     allowed duration constraints.
-    :type duration: int
-
-    :returns: None
-    :raises ValueError: If ramp rate is invalid
-
-    """
-    if not validate_ramp_rate(duration):
-        raise ValueError(
-            'Duration is out of range {}..{} (got {})'.format(
-                MIN_RAMP_RATE, MAX_RAMP_RATE, duration))

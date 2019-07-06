@@ -16,13 +16,17 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import annotations
 
+import abc
 from datetime import date, time
 from six import byte2int, indexbytes, int2byte
 from struct import unpack, pack
+from typing import List, FrozenSet, Union, Set
 import warnings
 
-from cbus.common import APP_CLOCK, CLOCK_DATE, CLOCK_TIME
+from cbus.common import Application, ClockAttribute, ClockCommand
+from cbus.protocol.application.sal import BaseApplication, SAL
 
 __all__ = [
     'ClockApplication',
@@ -31,42 +35,24 @@ __all__ = [
     'ClockRequestSAL',
 ]
 
+_SUPPORTED_APPLICATIONS = frozenset({int(Application.CLOCK)})
 
-class ClockSAL(object):
+
+class ClockSAL(SAL, abc.ABC):
     """
     Base type for clock and timekeeping application SALs.
     """
 
-    def __init__(self, packet=None):
-        """
-        This should not be called directly by your code!
+    @property
+    def application(self) -> Application:
+        return Application.CLOCK
 
-        Use one of the subclasses of cbus.protocol.clock.ClockSAL instead.
-        """
-        self.packet = packet
-
-        if packet is None:
-            raise ValueError('packet must not be None')
-
-        if self.packet.application is None:
-            # no application set on the packet, set it.
-            self.packet.application = APP_CLOCK
-        elif self.packet.application != APP_CLOCK:
-            raise ValueError(
-                'packet has a different application set already. Cannot have '
-                'multiple application SAL in the same packet.')
-
-    @classmethod
-    def decode(cls, data, packet):
+    @staticmethod
+    def decode_sals(data: bytes) -> List[ClockSAL]:
         """
         Decodes a clock broadcast application packet and returns it's SAL(s).
 
         :param data: SAL data to be parsed.
-        :type data: str
-
-        :param packet: The packet that this data is associated with.
-        :type packet: cbus.protocol.base_packet.BasePacket
-
         :returns: The SAL messages contained within the given data.
         :rtype: list of cbus.protocol.application.clock.ClockSAL
 
@@ -75,10 +61,9 @@ class ClockSAL(object):
 
         while data:
             # parse the data
-            command_code = byte2int(data)
+            command_code = data[0]
             data = data[1:]
 
-            # if command_code not in SAL_HANDLERS:
             if (command_code & 0x80) == 0x80:
                 warnings.warn(
                     'Got unknown clock command {:x}; long form is not '
@@ -92,12 +77,10 @@ class ClockSAL(object):
                     UserWarning)
                 break
 
-            if (command_code & 0x08) == 0x08:
-                # "update network variable"
-                sal, data = ClockUpdateSAL.decode(data, packet, command_code)
-            elif (command_code & 0x1F) == 0x11:
-                # "request refresh"
-                sal, data = ClockRequestSAL.decode(data, packet, command_code)
+            if (command_code & 0xf8) == ClockCommand.UPDATE_NETWORK_VARIABLE:
+                sal, data = ClockUpdateSAL.decode(data, command_code)
+            elif command_code == ClockCommand.REQUEST_REFRESH:
+                sal, data = ClockRequestSAL.decode(data, command_code)
             else:
                 # unknown
                 warnings.warn(
@@ -108,13 +91,6 @@ class ClockSAL(object):
             if sal:
                 output.append(sal)
         return output
-
-    def encode(self):
-        """
-        Encodes the SAL into a format for sending over the C-Bus network.
-        """
-
-        return []
 
 
 class ClockUpdateSAL(ClockSAL):
@@ -127,18 +103,15 @@ class ClockUpdateSAL(ClockSAL):
 
     @property
     def is_date(self):
-        return self.variable == CLOCK_DATE
+        return self.variable == ClockAttribute.DATE
 
     @property
     def is_time(self):
-        return self.variable == CLOCK_TIME
+        return self.variable == ClockAttribute.TIME
 
-    def __init__(self, packet, variable, val):
+    def __init__(self, val: Union[date, time]):
         """
         Creates a new SAL Clock update message.
-
-        :param packet: The packet that this SAL is to be included in.
-        :type packet: cbus.protocol.base_packet.BasePacket
 
         :param variable: The variable being updated.
         :type variable: int
@@ -149,22 +122,21 @@ class ClockUpdateSAL(ClockSAL):
         :type val: datetime.date or datetime.time
 
         """
-        super(ClockUpdateSAL, self).__init__(packet)
-        self.variable = variable
+        super(ClockUpdateSAL, self).__init__()
         self.val = val
 
     @classmethod
-    def decode(cls, data, packet, command_code):
+    def decode(cls, data, command_code):
         """
         Do not call this method directly -- use ClockSAL.decode
         """
 
-        variable = byte2int(data)
+        variable = data[0]
         data_length = command_code & 0x07
         val = data[1:data_length]
         data = data[data_length:]
 
-        if variable == CLOCK_DATE:
+        if variable == ClockAttribute.DATE:
             # date (23.5.1.2)
             # length must be 0x06
             if data_length != 0x06:
@@ -177,9 +149,9 @@ class ClockUpdateSAL(ClockSAL):
             year, month, day, dow = unpack('>HBBB', val)
             # note: dow / day of week is ignored
 
-            return cls(packet, variable, date(year, month, day)), data
+            return cls(date(year, month, day)), data
 
-        elif variable == CLOCK_TIME:
+        elif variable == ClockAttribute.TIME:
             # time (23.5.1.1)
             # length must be 0x05
             if data_length != 0x05:
@@ -192,7 +164,7 @@ class ClockUpdateSAL(ClockSAL):
             hour, minute, second, dst = unpack('>BBBB', val)
             # note: dst / daylight savings flag is ignored
 
-            return cls(packet, variable, time(hour, minute, second)), data
+            return cls(time(hour, minute, second)), data
         else:
             warnings.warn(
                 'Tried to decode unknown clock update variable '
@@ -201,25 +173,26 @@ class ClockUpdateSAL(ClockSAL):
             return None, data[data_length:]
 
     def encode(self):
-        if self.variable == CLOCK_TIME:
+        if isinstance(self.val, time):
             # time
             # TODO: implement DST flag
             val = pack(
                 '>BBBB', self.val.hour, self.val.minute, self.val.second, 255)
-        elif self.variable == CLOCK_DATE:
+            attr = ClockAttribute.TIME
+        elif isinstance(self.val, date):
             # date
             val = pack(
                 '>HBBB', self.val.year, self.val.month, self.val.day,
                 self.val.weekday())
+            attr = ClockAttribute.DATE
         else:
             # unknown
-            raise ValueError("Don't know how to pack network variable %02x" %
-                             self.variable)
+            raise ValueError("Don't know how to pack clock variable %r" %
+                             self.val)
 
-        return super(ClockUpdateSAL, self).encode() + [
+        return super(ClockUpdateSAL, self).encode() + bytes([
             0x08 | (len(val) + 1),
-            self.variable,
-        ] + [x for x in val]
+            attr]) + val
 
 
 class ClockRequestSAL(ClockSAL):
@@ -241,7 +214,7 @@ class ClockRequestSAL(ClockSAL):
         super(ClockRequestSAL, self).__init__(packet)
 
     @classmethod
-    def decode(cls, data, packet, command_code):
+    def decode(cls, data, command_code):
         """
         Do not call this method directly -- use ClockSAL.decode
         """
@@ -261,7 +234,7 @@ class ClockRequestSAL(ClockSAL):
         return super(ClockRequestSAL, self).encode() + [0x11, 0x03]
 
 
-class ClockApplication(object):
+class ClockApplication(BaseApplication):
     """
     This class is called in the cbus.protocol.applications.APPLICATIONS dict in
     order to describe how to decode clock and timekeeping application events
@@ -270,10 +243,14 @@ class ClockApplication(object):
     Do not call this class directly.
     """
 
-    @classmethod
-    def decode_sal(cls, data, packet):
+    @staticmethod
+    def supported_applications() -> Set[Application]:
+        return {Application.CLOCK}
+
+    @staticmethod
+    def decode_sals(data: bytes) -> List[SAL]:
         """
         Decodes a clock and timekeeping application packet and returns its
         SAL(s).
         """
-        return ClockSAL.decode(data, packet)
+        return ClockSAL.decode_sals(data)

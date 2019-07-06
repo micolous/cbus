@@ -16,6 +16,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+
 from cbus.protocol.base_packet import SpecialServerPacket
 from cbus.common import CONFIRMATION_CODES
 
@@ -31,11 +32,11 @@ class ConfirmationPacket(SpecialServerPacket):
     def __init__(self, code, success):
         super(ConfirmationPacket, self).__init__()
 
-        self.code = str(code)
-
+        self.code = code
         if self.code not in CONFIRMATION_CODES:
             raise ValueError('confirmation code is not valid')
+
         self.success = bool(success)
 
-    def encode(self, source_addr=None):
-        return self.code + ('.' if self.success else '#')
+    def encode(self, source_addr=None) -> bytes:
+        return self.code + (b'.' if self.success else b'#')

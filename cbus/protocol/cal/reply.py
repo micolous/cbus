@@ -16,9 +16,8 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
-from six import byte2int, indexbytes, int2byte, iterbytes
 
-from cbus.common import CAL_RES_REPLY
+from cbus.common import CAL
 
 __all__ = [
     'ReplyCAL',
@@ -27,34 +26,35 @@ __all__ = [
 
 class ReplyCAL(object):
     """
-    Reply cal
+    Reply CAL (Device and Network Management Command).
 
-    TODO: No way at the moment to tell between responses to RECALL,
-          GETSTATUS and IDENTIFY?
+    Ref: Serial Interface Guide, s7.1
+
+    There is no way to tell between ``RECALL``, ``GETSTATUS`` and ``IDENTIFY``
+    responses at the protocol level, without keeping state. This class treats
+    all ``REPLY`` messages in the same way.
+
+    ``parameter`` is the attribute requested for ``IDENTIFY`` responses.
     """
 
-    def __init__(self, packet, parameter, data):
-        self.packet = packet
+    def __init__(self, parameter: int, data: bytes):
         self.parameter = parameter
         self.data = data
 
     @classmethod
-    def decode_cal(cls, data, packet):
+    def decode_cal(cls, data):
         """
         Decodes reply CAL.
         """
 
-        cal = ReplyCAL(packet, byte2int(data), data[1:])
+        cal = ReplyCAL(data[0], data[1:])
 
         return cal
 
-    def encode(self):
-        if self.parameter < 0 or self.parameter > 0xff:
-            raise ValueError('parameter must be in range 0..255')
-        if len(self.data) >= 0x1f:
-            raise ValueError('must be less than 31 bytes of data')
-        return [(CAL_RES_REPLY | (len(self.data) + 1)),
-                self.parameter] + list(iterbytes(self.data))
+    def encode(self) -> bytes:
+        parameter = self.parameter & 0xff
+        data = self.data[:0x1e]
+        return bytes([CAL.REPLY | len(data), parameter]) + data
 
     def __repr__(self):  # pragma: no cover
         return '<%s object: parameter=%r, data=%r>' % (

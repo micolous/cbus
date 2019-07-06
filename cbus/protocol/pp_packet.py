@@ -14,28 +14,35 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
 from __future__ import absolute_import
+from __future__ import annotations
 
 from base64 import b16encode
 from six import byte2int, indexbytes
 from six.moves import range
+from typing import Optional, List
 
-from cbus.common import CLASS_4, DAT_PP, BRIDGE_LENGTHS, add_cbus_checksum
+from cbus.common import (
+    DestinationAddressType, PriorityClass, CAL, BRIDGE_LENGTHS,
+    add_cbus_checksum)
 from cbus.protocol.base_packet import BasePacket
-from cbus.protocol.cal import REQUESTS
+from cbus.protocol.cal import REQUESTS, AnyCAL
 from cbus.protocol.cal.reply import ReplyCAL
 
 
 class PointToPointPacket(BasePacket):
 
-    def __init__(self,
-                 checksum=True,
-                 priority_class=CLASS_4,
-                 unit_address=0,
-                 bridge_address=0,
-                 hops=None):
+    def __init__(
+            self, checksum: bool = True,
+            priority_class: PriorityClass = PriorityClass.CLASS_4,
+            unit_address: int = 0, bridge_address: int = 0,
+            hops: Optional[List[int]] = None,
+            cals: Optional[List[AnyCAL]] = None):
         super(PointToPointPacket, self).__init__(
-            checksum, DAT_PP, 0, False, priority_class)
+            checksum=checksum,
+            destination_address_type=DestinationAddressType.POINT_TO_POINT,
+            priority_class=priority_class)
 
         if hops is None:
             self.hops = []
@@ -51,48 +58,42 @@ class PointToPointPacket(BasePacket):
                                  'bridge_address!')
 
         self.unit_address = unit_address
-
-        self.cal = []
+        self.cals = cals or []
 
     @classmethod
-    def decode_packet(cls, data, checksum, flags, destination_address_type, rc,
-                      dp, priority_class):
-
-        packet = cls(checksum, priority_class)
+    def decode_packet(cls, data: bytes, checksum: bool,
+                      priority_class: PriorityClass) -> PointToPointPacket:
 
         # now decode the unit address or bridge address
-
+        params = {}
         if indexbytes(data, 1) == 0x00:
             # this is a unit address
-            packet.pm_bridged = False
-            packet.unit_address = byte2int(data)
+            unit_address = byte2int(data)
             data = data[2:]
-
         else:
-            # this is a bridge address
-            packet.pm_bridged = True
-            packet.bridge_address = byte2int(data)
+            params['bridge_address'] = byte2int(data)
 
             bridge_length = BRIDGE_LENGTHS[indexbytes(data, 1)]
 
             data = data[2:]
-            packet.hops = []
+            params['hops'] = hops = []
 
             for x in range(bridge_length):
                 # get all the hops
-                packet.hops.append(byte2int(data[0]))
+                hops.append(byte2int(data[0]))
                 data = data[1:]
 
-            packet.unit_address = byte2int(data)
+            unit_address = byte2int(data)
 
             data = data[1:]
 
+
         # now decode messages
-        # packet.cal = []
+        cals = []
         while data:
             # find the cal
             cmd = byte2int(data)
-            if cmd & 0xE0 == 0x80:  # flick off the lower bits
+            if cmd & 0xE0 == CAL.REPLY:  # flick off the lower bits
                 # REPLY
                 reply_len = (cmd & 0x1F)
 
@@ -100,40 +101,35 @@ class PointToPointPacket(BasePacket):
                 reply_data = data[:reply_len]
                 data = data[reply_len:]
 
-                cal = ReplyCAL.decode_cal(reply_data, packet)
-
-                # print cal
-                # print packet
-                # print ord(data)
-            elif cmd & 0xE0 == 0xC0:
+                cal = ReplyCAL.decode_cal(reply_data)
+            elif cmd & 0xE0 == CAL.STANDARD_STATUS:
                 # STATUS (standard)
                 raise NotImplementedError('standard status cal')
-            elif cmd & 0xE0 == 0xE0:
+            elif cmd & 0xE0 == CAL.EXTENDED_STATUS:
                 # status (extended)
                 raise NotImplementedError('extended status cal')
             else:
                 handler = REQUESTS[cmd]
-                data, cal = handler.decode_cal(data, packet)
+                data, cal = handler.decode_cal(data)
 
-            packet.cal.append(cal)
+            cals.append(cal)
 
-        # now read CAL data
-        # print "%s" % data
+        return PointToPointPacket(
+            checksum=checksum, priority_class=priority_class,
+            unit_address=unit_address, cals=cals, **params)
 
-        return packet
-
-    def encode(self, source_addr=None):
+    def encode(self, source_addr=None) -> bytes:
 
         if self.pm_bridged:
             raise NotImplementedError('bridged ptp packets')
         else:
-            o = [
+            o = bytearray([
                 self.unit_address,
                 0,  # no bridge
-            ]
+            ])
 
         # new encode the cals
-        for cal in self.cal:
+        for cal in self.cals:
             o += cal.encode()
 
         # join the packet
