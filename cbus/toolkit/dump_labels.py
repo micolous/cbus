@@ -20,40 +20,32 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import absolute_import
-from cbus.toolkit.cbz import CBZ
-from optparse import OptionParser
+from argparse import ArgumentParser
+import json
+import sys
+
 import six
-try:
-    import json
-except ImportError:
-    # python <2.6
-    import simplejson as json
+
+from cbus.toolkit.cbz import CBZ
 
 
 def main():
-    parser = OptionParser(
-        usage='%prog -i input.cbz -o output.json', version='%prog 1.0')
-    parser.add_option(
-        '-o', '--output',
-        dest='output', metavar='FILE',
+    parser = ArgumentParser(
+        usage='%prog -i input.cbz -o output.json')
+    parser.add_argument(
+        '-o', '--output', metavar='FILE',
         help='write output to FILE')
-    parser.add_option(
-        '-i', '--input',
-        dest='input', metavar='FILE',
+    parser.add_argument(
+        'input', nargs=1, metavar='FILE',
         help='read Toolkit backup from FILE')
-    parser.add_option(
+    parser.add_argument(
         '-p', '--pretty',
-        dest='pretty', metavar='SPACES',
+        type=int, required=False, metavar='SPACES',
         help='pretty-prints the output with the specified number of spaces '
              'between indent levels'
     )
-    options, args = parser.parse_args()
+    options = parser.parse_args()
 
-    if options.input is None:
-        parser.error('Input filename not given.')
-
-    if options.output is None:
-        parser.error('Output filename not given.')
 
     pretty = None
     if options.pretty:
@@ -67,41 +59,44 @@ def main():
             parser.error('Pretty-printing spaces value must not be negative.')
             return
 
-    cbz = CBZ(options.input)
-    of = open(options.output, 'wb')
+    cbz = CBZ(options.input[0])
+    if options.output is None:
+        of = sys.stdout
+    else:
+        of = open(options.output, 'w')
 
     # read in the labels we need into a structure.
     o = {}
 
     # iterate through networks
-    for network in cbz.root.Project.Network:
+    for network in cbz.installation.project.network:
         no = {
-            'name': six.text_type(network.TagName),
-            'address': int(network.Address),
-            'networknumber': int(network.NetworkNumber),
+            'name': network.tag_name,
+            'address': network.address,
+            'networknumber': network.network_number,
             # don't worry about converting CNI/PCI parameters.
             'applications': {},
             'units': {}
         }
-        for application in network.Application:
+        for application in network.applications:
             ao = {
-                'name': six.text_type(application.TagName),
-                'address': int(application.Address),
-                'description': six.text_type(application.Description),
+                'name': application.tag_name,
+                'address': application.address,
+                'description': application.description,
                 'groups': {}
             }
 
-            for group in application.Group:
-                ao['groups'][int(group.Address)] = six.text_type(group.TagName)
+            for group in application.groups:
+                ao['groups'][group.address] = group.tag_name
 
-            no['applications'][int(application.Address)] = ao
+            no['applications'][application.address] = ao
 
-        for unit in network.Unit:
+        for unit in network.units:
             # find the channel configuration
             channels = []
-            for parameter in unit.PP:
-                if parameter.attrib['Name'] == 'GroupAddress':
-                    ch = parameter.attrib['Value'].split(' ')
+            for parameter in unit.pp:
+                if parameter.name == 'GroupAddress':
+                    ch = parameter.value.split(' ')
                     [
                         channels.append(
                             int('0%s' % (c[2:]) if len(c) == 3 else (c[2:]),
@@ -111,17 +106,17 @@ def main():
                     # print channels
                     # print(parameter.attrib['Name'], '=',
                     #       parameter.attrib['Value'])
-            no['units'][int(unit.Address)] = {
-                'name': six.text_type(unit.TagName),
-                'address': int(unit.Address),
-                'unittype': six.text_type(unit.UnitType),
-                'unitname': six.text_type(unit.UnitName),
-                'serial': six.text_type(unit.SerialNumber),
-                'catalog': six.text_type(unit.CatalogNumber),
+            no['units'][unit.address] = {
+                'name': unit.tag_name,
+                'address': unit.address,
+                'unittype': unit.unit_type,
+                'unitname': unit.unit_name,
+                'serial': unit.serial_number,
+                'catalog': unit.catalog_number,
                 'groups': channels
             }
 
-        o[int(network.Address)] = no
+        o[network.address] = no
 
     # dump structure as json.
     json.dump(o, of, indent=pretty)
