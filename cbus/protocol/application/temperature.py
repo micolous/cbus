@@ -16,8 +16,10 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import annotations
 
-from typing import List, Set
+import abc
+from typing import Optional, Sequence, Set, Tuple, Union
 
 from six import byte2int, indexbytes, int2byte
 import warnings
@@ -32,12 +34,12 @@ __all__ = [
 ]
 
 
-class TemperatureSAL(object):
+class TemperatureSAL(SAL, abc.ABC):
     """
     Base type for temperature broadcast application SALs.
     """
 
-    def __init__(self, group_address=None):
+    def __init__(self, group_address: int):
         """
         This should not be called directly by your code!
 
@@ -46,17 +48,17 @@ class TemperatureSAL(object):
         """
         self.group_address = group_address
 
-    @classmethod
-    def decode(cls, data, packet):
+    @property
+    def application(self) -> Union[int, Application]:
+        return Application.TEMPERATURE
+
+    @staticmethod
+    def decode_sals(data: bytes) -> Sequence[TemperatureSAL]:
         """
         Decodes a temperature broadcast application packet and returns its
         SAL(s).
 
         :param data: SAL data to be parsed.
-        :type data: str
-
-        :param packet: The packet that this data is associated with.
-        :type packet: cbus.protocol.base_packet.BasePacket
 
         :returns: The SAL messages contained within the given data.
         :rtype: list of cbus.protocol.application.temperature.TemperatureSAL
@@ -92,18 +94,18 @@ class TemperatureSAL(object):
                 break
 
             sal, data = TemperatureBroadcastSAL.decode(
-                data, command_code, group_address)
+                data, group_address)
 
             if sal:
                 output.append(sal)
         return output
 
-    def encode(self):
+    def encode(self) -> bytes:
         """
         Encodes the SAL into a format for sending over the C-Bus network.
         """
         check_ga(self.group_address)
-        return []
+        return bytes()
 
 
 class TemperatureBroadcastSAL(TemperatureSAL):
@@ -114,14 +116,14 @@ class TemperatureBroadcastSAL(TemperatureSAL):
 
     """
 
-    def __init__(self, group_address, temperature):
+    def __init__(self, group_address: int, temperature: float):
         """
         Creates a new SAL Temperature Broadcast message.
         :param group_address: The group address that is reporting the
                               temperature.
         :type group_address: int
 
-        :param temperature: The temperature, in degrees celcius, between 0.0
+        :param temperature: The temperature, in degrees celsius, between 0.0
                             and 63.75.
         :type temperature: float
 
@@ -130,7 +132,8 @@ class TemperatureBroadcastSAL(TemperatureSAL):
         self.temperature = temperature
 
     @classmethod
-    def decode(cls, data, command_code, group_address):
+    def decode(cls, data: bytes,
+               group_address: int) -> Tuple[TemperatureSAL, bytes]:
         """
         Do not call this method directly -- use TemperatureSAL.decode
         """
@@ -139,16 +142,16 @@ class TemperatureBroadcastSAL(TemperatureSAL):
 
         return cls(group_address, temperature), data
 
-    def encode(self):
+    def encode(self) -> bytes:
         if not (0.0 <= self.temperature <= 63.75):
             raise ValueError(
                 'Temperature is out of bounds. Must be between 0.0 and 63.75 '
                 'celsius (got {}).'.format(self.temperature))
 
-        return super(TemperatureBroadcastSAL, self).encode() + [
+        return super().encode() + bytes([
             TEMPERATURE_BROADCAST, self.group_address,
             int(self.temperature * 4)
-        ]
+        ])
 
 
 class TemperatureApplication(BaseApplication):
@@ -165,9 +168,9 @@ class TemperatureApplication(BaseApplication):
         return {Application.TEMPERATURE}
 
     @staticmethod
-    def decode_sals(data: bytes) -> List[SAL]:
+    def decode_sals(data: bytes) -> Sequence[TemperatureSAL]:
         """
         Decodes a temperature broadcast application packet and returns it's
         SAL(s).
         """
-        return TemperatureSAL.decode(data)
+        return TemperatureSAL.decode_sals(data)

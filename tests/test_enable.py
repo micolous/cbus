@@ -19,23 +19,21 @@ from __future__ import absolute_import
 
 import unittest
 
-from cbus.protocol.packet import decode_packet
-from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.application.enable import EnableSetNetworkVariableSAL
 
+from .utils import CBusTestCase
 
-class ClipsalEnableTest(unittest.TestCase):
+
+class ClipsalEnableTest(CBusTestCase):
     def test_s8_11(self):
         """Example in enable control application guide, s8.11 (page 7)"""
         # Set the network variable 0x37 to 0x82
-        p, r = decode_packet(b'\\05CB0002378275g', server_packet=False)
+        p = self.decode_pm(b'\\05CB0002378275g\r', server_packet=False)
+        self.assertEqual(len(p), 1)
 
-        self.assertIsInstance(p, PointToMultipointPacket)
-        self.assertEqual(len(p.sal), 1)
-
-        self.assertIsInstance(p.sal[0], EnableSetNetworkVariableSAL)
-        self.assertEqual(p.sal[0].variable, 0x37)
-        self.assertEqual(p.sal[0].value, 0x82)
+        self.assertIsInstance(p[0], EnableSetNetworkVariableSAL)
+        self.assertEqual(p[0].variable, 0x37)
+        self.assertEqual(p[0].value, 0x82)
 
         # check that it encodes properly again
         self.assertEqual(p.encode(), b'05CB0002378275')

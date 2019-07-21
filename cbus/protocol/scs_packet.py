@@ -26,5 +26,5 @@ class SmartConnectShortcutPacket(SpecialClientPacket):
     def __init__(self):
         super(SmartConnectShortcutPacket, self).__init__()
 
-    def encode(self, source_addr=None):
-        return '|'
+    def encode(self) -> bytes:
+        return b'|'

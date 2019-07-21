@@ -18,7 +18,7 @@ from __future__ import absolute_import
 from __future__ import annotations
 
 import abc
-from typing import FrozenSet, List, Union
+from typing import FrozenSet, Sequence, Union
 
 from cbus.common import Application
 
@@ -57,7 +57,7 @@ class BaseApplication(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def decode_sals(data: bytes) -> List[SAL]:
+    def decode_sals(data: bytes) -> Sequence[SAL]:
         """
         Decodes a SAL message
 

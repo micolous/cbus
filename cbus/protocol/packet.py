@@ -20,11 +20,12 @@ from __future__ import absolute_import
 
 from base64 import b16decode
 from six import byte2int, indexbytes, int2byte
+from typing import Tuple, Optional
 import warnings
 
 from cbus.protocol.reset_packet import ResetPacket
 from cbus.protocol.scs_packet import SmartConnectShortcutPacket
-from cbus.protocol.base_packet import InvalidPacket
+from cbus.protocol.base_packet import BasePacket, InvalidPacket
 from cbus.protocol.pp_packet import PointToPointPacket
 # from cbus.protocol.ppm_packet import PointToPointToMultipointPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
@@ -38,22 +39,31 @@ from cbus.common import (
     END_RESPONSE, get_real_cbus_checksum, validate_cbus_checksum)
 
 
-def decode_packet(data, checksum=True, strict=True, server_packet=True):
+def decode_packet(
+        data: bytes,
+        checksum: bool = True,
+        strict: bool = True,
+        server_packet: bool = True) -> Tuple[Optional[BasePacket], int]:
     """
     Decodes a packet from or send to the PCI.
 
-    Returns a tuple, the packet that was parsed and the buffer position we
-    parsed up to.
+    The return value is a tuple:
 
-    If no packet was able to be parsed, the first element of the tuple will be
-    None.  However there may be some circumstances where there is still a
-    remainder to be parsed (cancel request).
+    0. The packet that was parsed, or None if there was no packet that could
+       be parsed.
+    1. The buffer position that we parsed up to. This may be non-zero even if
+       the packet was None (eg: Cancel request).
 
-    :type data: bytes
-    :type checksum: bool
-    :type strict: bool
-    :type server_packet: bool
-    :rtype: Pair[Optional[BasePacket], int]
+    Note: this decoder does not support unaddressed packets (such as Standard
+    Format Status Replies).
+
+    :param data: The data to parse, in encapsulated serial format
+    :param checksum: If True, requires a checksum for all packets
+    :param strict: If True, raises ValueError whenever checksum is incorrect.
+                   Otherwise, only emits a warning.
+    :param server_packet: If True, parses the packet as if it were sent by a
+                          PCI. If False, parses the packet as if it were sent
+                          to a PCI (eg: simulation).
     """
     confirmation = None
     consumed = 0
@@ -98,6 +108,7 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
 
     # Look for ending character(s). If there is none, break out now.
     if end == -1:
+        print('no end character {}: {}'.format(END_COMMAND, data))
         return None, consumed
 
     # Make it so the end of the buffer is where the end of the command is, and
@@ -141,6 +152,9 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
             return InvalidPacket(data, ValueError(
                 'Non-base16 input: {} in {}'.format(c, data))), consumed
 
+    # base16 decode
+    data = b16decode(data)
+
     # get the checksum, if it's there.
     if checksum:
         # check the checksum
@@ -148,18 +162,16 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
             real_checksum = get_real_cbus_checksum(data)
             if strict:
                 return InvalidPacket(data, ValueError(
-                    'C-Bus checksum incorrect (expected {}) and strict mode '
-                    'is enabled: {}'.format(real_checksum, data))), consumed
+                    'C-Bus checksum incorrect (expected 0x{:x}) and strict '
+                    'mode is enabled: {}'.format(
+                        real_checksum, data))), consumed
             else:
                 warnings.warn(
-                    'C-Bus checksum incorrect (expected {}) in data '
+                    'C-Bus checksum incorrect (expected 0x{:x}) in data '
                     '{}'.format(real_checksum, data), UserWarning)
 
         # strip checksum
-        data = data[:-2]
-
-    # base16 decode
-    data = b16decode(data)
+        data = data[:-1]
 
     # flags (serial interface guide s3.4)
     flags = byte2int(data)
@@ -201,6 +213,9 @@ def decode_packet(data, checksum=True, strict=True, server_packet=True):
         # return PointToPointToMultipointPacket.decode_packet(data, checksum,
         # flags, destination_address_type, rc, dp, priority_class)
         raise NotImplementedError('Point-to-point-to-multipoint')
+    else:
+        raise NotImplementedError('Destination address type = 0x{:x}'.format(
+            destination_address_type))
 
     if not server_packet:
         p.confirmation = confirmation

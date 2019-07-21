@@ -23,17 +23,22 @@ however it is used internally within the protocol encoders and decoders.
 """
 
 from __future__ import absolute_import
-from base64 import b16encode, b16decode
 from enum import IntEnum
 import logging
 import six
 
 HEX_CHARS = b'0123456789ABCDEF'
 
-# <cr>, per Serial Interface Guide, s4.2.1
+# Serial Interface User Guide, s4.2.1 (Structure of Commands)
+# "Each command is terminated with a carriage return (ASCII character 13,
+# hex $0D)"
 END_COMMAND = b'\x0d'
-# <cr><lf>, per Serial Interface Guide, s4.3.2
-END_RESPONSE = b'\x0d\x0f'
+
+# Serial Interface User Guide, s4.3.2 (Structure of Replies)
+# "Each reply (except Confirmation) is terminated with a carriage return,
+# line feed pair (ASCII character 13, hex $0D; followed by ASCII character
+# 10, hex $0A)"
+END_RESPONSE = b'\x0d\x0a'
 
 
 class DestinationAddressType(IntEnum):
@@ -127,6 +132,18 @@ class CAL(IntEnum):
     EXTENDED_STATUS = 0xe0
 
 
+class ExtendedCALType(IntEnum):
+    BINARY = 0x00
+    LEVEL = 0x07
+
+
+class GroupState(IntEnum):
+    MISSING = 0x00
+    ON = 0x01
+    OFF = 0x02
+    ERROR = 0x03
+
+
 class IdentifyAttribute(IntEnum):
     """
     IDENTIFY attributes.
@@ -155,6 +172,7 @@ class IdentifyAttribute(IntEnum):
 
 # Routing buffer
 ROUTING_NONE = 0x00
+
 
 # Enable control application commands.
 class EnableCommand(IntEnum):
@@ -244,6 +262,7 @@ RECALL = 0x1A
 IDENTIFY = 0x21
 
 # Lighting Application s2.4.3 s6-7
+# TODO: finish entering the list
 LANGUAGE_CODES = {
     # english and dialects
     0x01: 'en',
@@ -275,6 +294,8 @@ LANGUAGE_CODES = {
     0x4C: 'fr-MC',  # french (monaco)
     0x4D: 'fr-CH',  # french (switzerland)
     0x4E: 'gl',  # galician
+    0x4F: 'de-AT',  # german (austria)
+    0x50: 'de',  # german
 }
 # these are valid confirmation codes used in acknowledge events.
 CONFIRMATION_CODES = b'hijklmnopqrstuvwxyzg'
@@ -305,7 +326,7 @@ def duration_to_ramp_rate(seconds: int) -> LightCommand:
     return LightCommand.RAMP_SLOWEST
 
 
-def ramp_rate_to_duration(rate):
+def ramp_rate_to_duration(rate: int) -> int:
     """
     Converts a given ramp rate code into a duration in seconds.
 
@@ -315,46 +336,34 @@ def ramp_rate_to_duration(rate):
     :returns: The number of seconds the ramp runs over.
     :rtype: int
 
-    :throws KeyError: If the given ramp rate code is invalid.
+    :raises KeyError: If the given ramp rate code is invalid.
     """
 
     return _LIGHT_RAMP_RATES[rate]
 
 
-def cbus_checksum(i, b16=False):
+def cbus_checksum(i: bytes) -> int:
     """
     Calculates the checksum of a C-Bus command string.
 
     Fun fact: C-Bus toolkit and C-Gate do not use commands with checksums.
 
-    :param i: The C-Bus data to calculate the checksum of.
+    :param i: The C-Bus data to calculate the checksum of. Must not be in
+              base16 format.
     :type i: bytes
 
-    :param b16: Indicates that the input is in base16 (network) format, and
-                that the return should be in base16 format.
-    :type b16: bool
-
     :returns: The checksum value of the given input
-    :rtype: int (if b16=False), bytes (if b16=True)
     """
-    if b16:
-        if six.byte2int(i) == 0x5c:  # \
-            i = i[1:]
-
-        i = b16decode(i)
-
     c = 0
     for x in six.iterbytes(i):
         c += x
 
     c = ((c & 0xff) ^ 0xff) + 1
 
-    if b16:
-        return b16encode(six.int2byte(c))
     return c
 
 
-def add_cbus_checksum(i):
+def add_cbus_checksum(i: bytes) -> bytes:
     """
     Appends a C-Bus checksum to a given message.
 
@@ -369,58 +378,48 @@ def add_cbus_checksum(i):
     return i + six.int2byte(c)
 
 
-def validate_cbus_checksum(i):
+def validate_cbus_checksum(i: bytes) -> bool:
     """
     Verifies a C-Bus checksum from a given message.
 
-    :param i: The C-Bus message to verify the checksum of. Must be in base16
-              format.
-    :type i: str
+    :param i: The C-Bus message to verify the checksum of, in raw format.
 
     :returns: True if the checksum is correct, False otherwise.
-    :rtype: bool
     """
-    c = i[-2:]
-    d = i[:-2]
-
-    cc = cbus_checksum(d, b16=True)
-    # print "%r: %r == %r ? %r" % (d, c, cc, c == cc)
-    return c == cc
+    packet_checksum = i[-1]
+    actual_checksum = get_real_cbus_checksum(i)
+    return packet_checksum == actual_checksum
 
 
-def get_real_cbus_checksum(i):
+def get_real_cbus_checksum(i: bytes) -> int:
     """
-    Calculates the supposedly correct cbus checksum for a message.
+    Calculates the current C-Bus checksum for a given message which already has
+    a checksum appended to it.
 
-    Assumes input of a base16 encoded message with the checksum ignored.
-
+    :param i: The C-Bus message to generate an actual checksum for, in raw
+              format.
     """
-    d = i[:-2]
-    cc = cbus_checksum(d, b16=True)
-    return cc
+    d = i[:-1]
+    return cbus_checksum(d)
 
 
-def validate_ga(group_addr):
+def validate_ga(group_addr: int) -> bool:
     """
     Validates a given group address.
 
     :param group_addr: Input group address to validate.
-    :type group_addr: int
 
     :returns: True if the given group address is valid, False otherwise.
-    :rtype: bool
 
     """
     return MIN_GROUP_ADDR <= group_addr <= MAX_GROUP_ADDR
 
 
-def check_ga(group_addr):
+def check_ga(group_addr: int) -> None:
     """
     Validates a given group address, throwing ValueError if not.
 
     :param group_addr: Input group address to validate.
-    :type group_addr: int
-    :returns: None
     :raises ValueError: If group address is invalid
 
     """

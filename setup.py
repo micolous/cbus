@@ -21,7 +21,7 @@ if system != 'windows':
 		'pygobject (>=2.28.6)'
 	]
 
-tests_require = ['nose']
+tests_require = ['nose', 'pytype']
 
 setup(
 	name="cbus",

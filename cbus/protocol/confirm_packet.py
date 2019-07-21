@@ -26,17 +26,24 @@ __all__ = ['ConfirmationPacket']
 class ConfirmationPacket(SpecialServerPacket):
     """
     Confirmation special packet.  Serial interface guide s4.3.3.3 p32
-
     """
 
-    def __init__(self, code, success):
+    def __init__(self, code: bytes, success: bool):
         super(ConfirmationPacket, self).__init__()
 
-        self.code = code
-        if self.code not in CONFIRMATION_CODES:
+        self._code = code[:1]
+        if self._code not in CONFIRMATION_CODES:
             raise ValueError('confirmation code is not valid')
 
-        self.success = bool(success)
+        self._success = bool(success)
 
-    def encode(self, source_addr=None) -> bytes:
-        return self.code + (b'.' if self.success else b'#')
+    def encode(self) -> bytes:
+        return self._code + (b'.' if self._success else b'#')
+
+    @property
+    def code(self) -> bytes:
+        return self._code
+
+    @property
+    def success(self) -> bool:
+        return self._success

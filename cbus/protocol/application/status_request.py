@@ -18,7 +18,9 @@
 from __future__ import absolute_import
 from __future__ import annotations
 
-from typing import FrozenSet, List
+from dataclasses import dataclass
+from typing import FrozenSet, Sequence
+import warnings
 
 from cbus.common import Application
 from cbus.protocol.application.sal import BaseApplication, SAL
@@ -34,34 +36,54 @@ class StatusRequestApplication(BaseApplication):
         return _SUPPORTED_APPLICATIONS
 
     @staticmethod
-    def decode_sals(data: bytes) -> List[SAL]:
-        return [StatusRequestSAL(data)]
+    def decode_sals(data: bytes) -> Sequence[SAL]:
+        return StatusRequestSAL.decode_sals(data)
 
 
+@dataclass
 class StatusRequestSAL(SAL):
-    def __init__(self, data: bytes):
-        # TODO: implement parameters to generate these properly
-        if data[0] in (0x7a, 0xfa):
-            # 0x7a version of the status request (binary on/off states)
-            # 0xfa version is deprecated and "shouldn't be used". But it
-            # totally still is...
-            data = data[1:]
-            self.level_request = False
-        elif data.startswith(_LEVEL_REQUEST):
-            # 7307 version of the status request (levels, in v4)
+    level_request: bool
+    group_address: int
+    child_application: int
+
+    @classmethod
+    def decode_sals(cls, data: bytes) -> Sequence[StatusRequestSAL]:
+        output = []
+
+        while data:
+            if data[0] in (0x7a, 0xfa):
+                # 0x7a version of the status request (binary on/off states)
+                # 0xfa version is deprecated and "shouldn't be used". But it
+                # totally still is...
+                data = data[1:]
+                level_request = False
+            elif data.startswith(_LEVEL_REQUEST):
+                # 7307 version of the status request (levels, in v4)
+                data = data[2:]
+                level_request = True
+            else:
+                raise NotImplementedError(
+                    'Unknown status request type 0x{:x}'.format(data[0]))
+
+            if len(data) < 2:
+                # not enough data to go on
+                warnings.warn(
+                    'Got incomplete SAL for status request application'
+                    '(malformed packet)', UserWarning)
+
+            # Application that the status request is about
+            child_application = data[0]
+            group_address = data[1]
             data = data[2:]
-            self.level_request = True
-        else:
-            raise NotImplementedError(
-                'Unknown status request type {}'.format(data[0]))
 
-        # Application that the status request is about
-        self.child_application = data[0]
-        self.group_address = data[1]
+            if group_address & 0x1f != 0:
+                raise ValueError(
+                    'group_address report must be a multiple of 0x20')
 
-        if self.group_address & 0x1f != 0:
-            raise ValueError(
-                'group_address report must be a multiple of 0x20')
+            output.append(StatusRequestSAL(
+                level_request, group_address, child_application))
+
+        return output
 
     @property
     def application(self) -> Application:

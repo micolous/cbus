@@ -24,5 +24,5 @@ class ResetPacket(SpecialClientPacket):
     def __init__(self):
         super(ResetPacket, self).__init__()
 
-    def encode(self, source_addr=None):
+    def encode(self):
         return b'~'

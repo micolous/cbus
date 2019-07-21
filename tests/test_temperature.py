@@ -22,52 +22,51 @@ import unittest
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.application.temperature import TemperatureBroadcastSAL
-from cbus.common import APP_TEMPERATURE
+
+from .utils import CBusTestCase
 
 
-class ClipsalTemperatureTest(unittest.TestCase):
+class ClipsalTemperatureTest(CBusTestCase):
     def test_s9_11(self):
         """Example in temperature broadcast application guide, s9.11"""
         # Temperature of 25 degrees at group 5
-        # note, the guide actually states that there is a checksum, but no
-        # checksum is actually on the packet!
-        p, r = decode_packet(b'\\05190002056477g', server_packet=False)
+        # Note: The guide states that there is a checksum on the packet,
+        # but there is actually no checksum.
+        p = self.decode_pm(
+            b'\\051900020564g\r', server_packet=False, checksum=False)
 
-        self.assertIsInstance(p, PointToMultipointPacket)
-        self.assertEqual(len(p.sal), 1)
+        self.assertEqual(len(p), 1)
 
-        self.assertIsInstance(p.sal[0], TemperatureBroadcastSAL)
-        self.assertEqual(p.sal[0].group_address, 5)
-        self.assertEqual(p.sal[0].temperature, 25)
+        self.assertIsInstance(p[0], TemperatureBroadcastSAL)
+        self.assertEqual(p[0].group_address, 5)
+        self.assertEqual(p[0].temperature, 25)
 
         # check that it encodes properly again
+        p.checksum = True
         self.assertEqual(p.encode(), b'05190002056477')
         self.assertEqual(p.confirmation, b'g')
 
 
-class InternalTemperatureTest(unittest.TestCase):
+class InternalTemperatureTest(CBusTestCase):
     def test_temperature_encode_decode(self):
         """self-made tests of encode then decode"""
 
-        orig = PointToMultipointPacket(application=APP_TEMPERATURE)
+        orig = PointToMultipointPacket(
+            sals=[TemperatureBroadcastSAL(10, 0.5),
+                  TemperatureBroadcastSAL(11, 56)]
+        )
         orig.source_address = 5
-        orig.sal.append(TemperatureBroadcastSAL(orig, 10, 0.5))
-        orig.sal.append(TemperatureBroadcastSAL(orig, 11, 56))
+        data = orig.encode() + b'\r\n'
 
-        data = orig.encode()
-
-        d, r = decode_packet(data)
+        d = self.decode_pm(data)
         self.assertIsInstance(orig, PointToMultipointPacket)
         self.assertEqual(orig.source_address, d.source_address)
-        self.assertEqual(len(orig.sal), len(d.sal))
+        self.assertEqual(len(orig), len(d))
 
-        for x in range(len(d.sal)):
-            self.assertIsInstance(d.sal[x], TemperatureBroadcastSAL)
-            self.assertEqual(orig.sal[x].group_address, d.sal[x].group_address)
-            self.assertEqual(orig.sal[x].temperature, d.sal[x].temperature)
-
-        # ensure there is no remaining data to be parsed
-        self.assertIsNone(r)
+        for x in range(len(d)):
+            self.assertIsInstance(d[x], TemperatureBroadcastSAL)
+            self.assertEqual(orig[x].group_address, d[x].group_address)
+            self.assertEqual(orig[x].temperature, d[x].temperature)
 
 
 if __name__ == '__main__':

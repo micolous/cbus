@@ -19,28 +19,26 @@ from __future__ import absolute_import
 
 import unittest
 
-from cbus.protocol.packet import decode_packet
-from cbus.protocol.pp_packet import PointToPointPacket
 from cbus.protocol.cal.identify import IdentifyCAL
 
+from .utils import CBusTestCase
 
-class BennettIdentifyTest(unittest.TestCase):
+
+class BennettIdentifyTest(CBusTestCase):
     def test_get_unit_type(self):
         """
         Example of 'get unit type' (identify type) from Geoffry Bennett's
         protocol reverse engineering docs
 
         """
-        p, r = decode_packet(
-            b'\\0699002101', server_packet=False, checksum=False)
-
-        self.assertIsInstance(p, PointToPointPacket)
+        p = self.decode_pp(
+            b'\\0699002101\r', server_packet=False, checksum=False)
 
         self.assertEqual(p.unit_address, 0x99)
-        self.assertEqual(len(p.cal), 1)
+        self.assertEqual(len(p), 1)
 
-        self.assertIsInstance(p.cal[0], IdentifyCAL)
-        self.assertEqual(p.cal[0].attribute, 1)
+        self.assertIsInstance(p[0], IdentifyCAL)
+        self.assertEqual(p[0].attribute, 1)
 
         self.assertEqual(p.encode(), b'0699002101')
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/cal/__init__.py - Device and Network Management (CAL)
-# Copyright 2013 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2013-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -20,11 +20,13 @@ from __future__ import absolute_import
 from typing import Union
 
 from cbus.common import CAL
+from cbus.protocol.cal.extended import ExtendedCAL
 from cbus.protocol.cal.reply import ReplyCAL
 from cbus.protocol.cal.identify import IdentifyCAL
 
 REQUESTS = {
     CAL.IDENTIFY: IdentifyCAL,
+    CAL.EXTENDED_STATUS: ExtendedCAL,
 }
 
-AnyCAL = Union[IdentifyCAL, ReplyCAL]
+AnyCAL = Union[ExtendedCAL, IdentifyCAL, ReplyCAL]

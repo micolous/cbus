@@ -16,6 +16,9 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import annotations
+
+from dataclasses import dataclass
 
 from cbus.common import CAL
 
@@ -24,7 +27,8 @@ __all__ = [
 ]
 
 
-class ReplyCAL(object):
+@dataclass
+class ReplyCAL:
     """
     Reply CAL (Device and Network Management Command).
 
@@ -37,25 +41,18 @@ class ReplyCAL(object):
     ``parameter`` is the attribute requested for ``IDENTIFY`` responses.
     """
 
-    def __init__(self, parameter: int, data: bytes):
-        self.parameter = parameter
-        self.data = data
+    parameter: int
+    data: bytes
 
     @classmethod
-    def decode_cal(cls, data):
+    def decode_cal(cls, data: bytes) -> ReplyCAL:
         """
         Decodes reply CAL.
         """
 
-        cal = ReplyCAL(data[0], data[1:])
-
-        return cal
+        return ReplyCAL(parameter=data[0], data=data[1:])
 
     def encode(self) -> bytes:
         parameter = self.parameter & 0xff
         data = self.data[:0x1e]
-        return bytes([CAL.REPLY | len(data), parameter]) + data
-
-    def __repr__(self):  # pragma: no cover
-        return '<%s object: parameter=%r, data=%r>' % (
-            self.__class__.__name__, self.parameter, self.data)
+        return bytes([CAL.REPLY | (len(data) + 1), parameter]) + data

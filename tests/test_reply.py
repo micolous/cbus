@@ -19,23 +19,22 @@ from __future__ import absolute_import
 
 import unittest
 
-from cbus.protocol.packet import decode_packet
-from cbus.protocol.pp_packet import PointToPointPacket
 from cbus.protocol.cal.reply import ReplyCAL
 
+from .utils import CBusTestCase
 
-class ClipsalReplyTest(unittest.TestCase):
+
+class ClipsalReplyTest(CBusTestCase):
     def test_s9_2(self):
         """Example in s9.2 (Serial Interface Guide) of decoding a reply CAL"""
-        p, r = decode_packet(b'8604990082300328', server_packet=True)
-        self.assertIsInstance(p, PointToPointPacket)
+        p = self.decode_pp(b'8604990082300328\r\n', server_packet=True)
         self.assertEqual(p.source_address, 4)
         self.assertEqual(p.unit_address, 0x99)
-        self.assertEqual(len(p.cal), 1)
+        self.assertEqual(len(p), 1)
 
-        self.assertIsInstance(p.cal[0], ReplyCAL)
-        self.assertEqual(p.cal[0].parameter, 0x30)
-        self.assertEqual(p.cal[0].data, b'\x03')
+        self.assertIsInstance(p[0], ReplyCAL)
+        self.assertEqual(p[0].parameter, 0x30)
+        self.assertEqual(p[0].data, b'\x03')
 
         self.assertEqual(p.encode(), b'8604990082300328')
 

@@ -18,6 +18,7 @@
 from __future__ import absolute_import
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Tuple
 
 from cbus.common import CAL, IdentifyAttribute
@@ -27,19 +28,18 @@ __all__ = [
 ]
 
 
-class IdentifyCAL(object):
+@dataclass
+class IdentifyCAL:
     """
     Identify CAL request.
 
     Ref: Serial Interface Guide, s7.1
 
     """
-
-    def __init__(self, attribute: IdentifyAttribute):
-        self.attribute = attribute
+    attribute: IdentifyAttribute
 
     @classmethod
-    def decode_cal(cls, data) -> Tuple[bytes, IdentifyCAL]:
+    def decode_cal(cls, data: bytes) -> Tuple[bytes, IdentifyCAL]:
         """
         Decodes identify SAL.
         """
@@ -50,7 +50,3 @@ class IdentifyCAL(object):
 
     def encode(self) -> bytes:
         return bytes([CAL.IDENTIFY, self.attribute & 0xff])
-
-    def __repr__(self):  # pragma: no cover
-        return '<%s object: attribute=%r>' % (
-            self.__class__.__name__, self.attribute)

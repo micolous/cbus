@@ -24,8 +24,6 @@ from argparse import ArgumentParser
 import json
 import sys
 
-import six
-
 from cbus.toolkit.cbz import CBZ
 
 

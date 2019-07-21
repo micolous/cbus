@@ -26,5 +26,5 @@ class PCIErrorPacket(SpecialServerPacket):
     def __init__(self):
         super(PCIErrorPacket, self).__init__()
 
-    def encode(self, source_addr=None):
+    def encode(self) -> bytes:
         return b'!'

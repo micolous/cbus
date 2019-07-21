@@ -19,11 +19,12 @@ from __future__ import absolute_import
 from __future__ import annotations
 
 import abc
-from datetime import date, time
-from six import byte2int, indexbytes, int2byte
-from struct import unpack, pack
-from typing import List, FrozenSet, Union, Set
 import warnings
+from datetime import date, time
+from struct import unpack, pack
+from typing import Union, Set, Sequence, Tuple, Optional
+
+from six import byte2int
 
 from cbus.common import Application, ClockAttribute, ClockCommand
 from cbus.protocol.application.sal import BaseApplication, SAL
@@ -48,7 +49,7 @@ class ClockSAL(SAL, abc.ABC):
         return Application.CLOCK
 
     @staticmethod
-    def decode_sals(data: bytes) -> List[ClockSAL]:
+    def decode_sals(data: bytes) -> Sequence[ClockSAL]:
         """
         Decodes a clock broadcast application packet and returns it's SAL(s).
 
@@ -80,7 +81,7 @@ class ClockSAL(SAL, abc.ABC):
             if (command_code & 0xf8) == ClockCommand.UPDATE_NETWORK_VARIABLE:
                 sal, data = ClockUpdateSAL.decode(data, command_code)
             elif command_code == ClockCommand.REQUEST_REFRESH:
-                sal, data = ClockRequestSAL.decode(data, command_code)
+                sal, data = ClockRequestSAL.decode(data)
             else:
                 # unknown
                 warnings.warn(
@@ -126,7 +127,8 @@ class ClockUpdateSAL(ClockSAL):
         self.val = val
 
     @classmethod
-    def decode(cls, data, command_code):
+    def decode(cls, data: bytes,
+               command_code: int) -> Tuple[Optional[ClockSAL], bytes]:
         """
         Do not call this method directly -- use ClockSAL.decode
         """
@@ -172,7 +174,7 @@ class ClockUpdateSAL(ClockSAL):
             # attempt to skip the bad data and recover
             return None, data[data_length:]
 
-    def encode(self):
+    def encode(self) -> bytes:
         if isinstance(self.val, time):
             # time
             # TODO: implement DST flag
@@ -190,7 +192,7 @@ class ClockUpdateSAL(ClockSAL):
             raise ValueError("Don't know how to pack clock variable %r" %
                              self.val)
 
-        return super(ClockUpdateSAL, self).encode() + bytes([
+        return super().encode() + bytes([
             0x08 | (len(val) + 1),
             attr]) + val
 
@@ -210,7 +212,7 @@ class ClockRequestSAL(ClockSAL):
         super(ClockRequestSAL, self).__init__()
 
     @classmethod
-    def decode(cls, data, command_code):
+    def decode(cls, data: bytes) -> Tuple[Optional[ClockSAL], bytes]:
         """
         Do not call this method directly -- use ClockSAL.decode
         """
@@ -226,7 +228,7 @@ class ClockRequestSAL(ClockSAL):
 
         return cls(), data
 
-    def encode(self):
+    def encode(self) -> bytes:
         return super().encode() + bytes([
             ClockCommand.REQUEST_REFRESH, 0x03])
 
@@ -245,7 +247,7 @@ class ClockApplication(BaseApplication):
         return {Application.CLOCK}
 
     @staticmethod
-    def decode_sals(data: bytes) -> List[SAL]:
+    def decode_sals(data: bytes) -> Sequence[SAL]:
         """
         Decodes a clock and timekeeping application packet and returns its
         SAL(s).

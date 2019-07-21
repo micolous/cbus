@@ -83,7 +83,7 @@ class LightingSAL(SAL, abc.ABC):
                 # not enough data to go on.
                 warnings.warn(
                     'Got 1 byte of stray SAL for lighting application '
-                    '(malformed packet)', UserWarning)
+                    '(malformed packet): {}'.format(data), UserWarning)
                 break
 
             command_code = data[0]
@@ -115,7 +115,7 @@ class LightingSAL(SAL, abc.ABC):
     @abc.abstractmethod
     def decode(data: bytes, command_code: int,
                group_address: int) -> Tuple[Optional[LightingSAL], bytes]:
-        pass
+        raise NotImplementedError('decode')
 
 
 class LightingRampSAL(LightingSAL):

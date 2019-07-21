@@ -18,8 +18,7 @@ from __future__ import absolute_import
 from __future__ import annotations
 
 from base64 import b16encode
-from six import byte2int, indexbytes, int2byte
-from typing import Iterable, Optional, List, Union
+from typing import Iterable, Iterator, Optional, Sequence, Union
 
 from cbus.protocol.base_packet import BasePacket
 from cbus.protocol.application import get_application
@@ -29,7 +28,7 @@ from cbus.common import (
     check_ga)
 
 
-class PointToMultipointPacket(BasePacket):
+class PointToMultipointPacket(BasePacket, Sequence[SAL]):
     """
     Point to Multipoint Packet
 
@@ -40,7 +39,7 @@ class PointToMultipointPacket(BasePacket):
             self, checksum: bool = True,
             priority_class: PriorityClass = PriorityClass.CLASS_4,
             application: Optional[Application] = None,
-            sals: Optional[Union[SAL, List[SAL]]] = None):
+            sals: Optional[Union[SAL, Sequence[SAL]]] = None):
         super(PointToMultipointPacket, self).__init__(
             checksum=checksum,
             destination_address_type=DestinationAddressType.POINT_TO_MULTIPOINT,
@@ -78,9 +77,25 @@ class PointToMultipointPacket(BasePacket):
         self._sals = []
         self.application = None
 
-    @property
-    def sals(self) -> Iterable[SAL]:
+    def __len__(self) -> int:
+        """Returns the number of SALs associated with this packet."""
+        return len(self._sals)
+
+    def __getitem__(self, item: int) -> SAL:
+        """Returns the indexed SAL associated with this packet."""
+        return self._sals[item]
+
+    def __iter__(self) -> Iterator[SAL]:
+        """Returns an iterator over the SALs associated with this packet."""
         return iter(self._sals)
+
+    def index(self, x: SAL, start: int = ..., end: int = ...) -> int:
+        """
+        Finds a SAL within this packet.
+
+        :raises ValueError: if not present
+        """
+        return self._sals.index(x, start, end)
 
     @classmethod
     def decode_packet(cls, data: bytes, checksum: bool,

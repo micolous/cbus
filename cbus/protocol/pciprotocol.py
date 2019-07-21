@@ -136,7 +136,7 @@ class PCIProtocol(LineReceiver):
 
                 log.msg('dce: unhandled SpecialServerPacket')
             elif isinstance(p, PointToMultipointPacket):
-                for s in p.sals:
+                for s in p:
                     if isinstance(s, LightingSAL):
                         # lighting application
                         if isinstance(s, LightingRampSAL):

@@ -16,6 +16,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
+from dataclasses import dataclass
 from typing import Optional
 
 from cbus.common import DestinationAddressType, PriorityClass
@@ -28,7 +29,7 @@ __all__ = [
 ]
 
 
-class BasePacket(object):
+class BasePacket(abc.ABC):
     def __init__(
             self,
             checksum: bool = True,
@@ -69,7 +70,7 @@ class _SpecialPacket(BasePacket, abc.ABC):
             checksum=False)
 
     @abc.abstractmethod
-    def encode(self):
+    def encode(self) -> bytes:
         raise NotImplementedError('encode')
 
 
@@ -94,17 +95,11 @@ class SpecialServerPacket(_SpecialPacket, abc.ABC):
     pass
 
 
+@dataclass
 class InvalidPacket(_SpecialPacket):
     """Invalid packet data."""
-
-    def __init__(self, payload: bytes, exception: Optional[Exception] = None):
-        super(InvalidPacket, self).__init__()
-        self._payload = payload
-        self._exception = exception
-
-    @property
-    def exception(self):
-        return self._exception
+    payload: bytes
+    exception: Optional[Exception] = None
 
     def encode(self):
-        return self._payload
+        return self.payload

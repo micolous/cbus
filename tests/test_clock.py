@@ -21,31 +21,29 @@ from __future__ import absolute_import
 from datetime import time, date
 import unittest
 
-from cbus.protocol.packet import decode_packet
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.application.clock import ClockRequestSAL, ClockUpdateSAL
 
+from .utils import CBusTestCase
 
-class ClipsalClockTest(unittest.TestCase):
+
+class ClipsalClockTest(CBusTestCase):
     def test_s23_13_1(self):
         """Example in s23.13.1 of decoding a time."""
         # Set network time to 10:43:23 with no DST offset
         # Slight change from guide:
-        p, r = decode_packet(
+        p = self.decode_pm(
             b'\\05DF000D010A2B1700C2g\r', server_packet=False)
+        self.assertEqual(len(p), 1)
 
-        self.assertIsInstance(p, PointToMultipointPacket)
-        sals = list(p.sals)
-        self.assertEqual(len(sals), 1)
+        self.assertIsInstance(p[0], ClockUpdateSAL)
+        self.assertTrue(p[0].is_time)
+        self.assertFalse(p[0].is_date)
+        self.assertIsInstance(p[0].val, time)
 
-        self.assertIsInstance(sals[0], ClockUpdateSAL)
-        self.assertTrue(sals[0].is_time)
-        self.assertFalse(sals[0].is_date)
-        self.assertIsInstance(sals[0].val, time)
-
-        self.assertEqual(sals[0].val.hour, 10)
-        self.assertEqual(sals[0].val.minute, 43)
-        self.assertEqual(sals[0].val.second, 23)
+        self.assertEqual(p[0].val.hour, 10)
+        self.assertEqual(p[0].val.minute, 43)
+        self.assertEqual(p[0].val.second, 23)
 
         # Library doesn't handle DST offset, so this flag is dropped.
 
@@ -58,21 +56,19 @@ class ClipsalClockTest(unittest.TestCase):
     def test_s23_13_2(self):
         """Example in s23.13.2 of decoding a date."""
         # Set network date to 2005-02-25 (Friday)
-        p, r = decode_packet(
+        p = self.decode_pm(
             b'\\05DF000E0207D502190411g\r', server_packet=False)
-        self.assertIsInstance(p, PointToMultipointPacket)
-        sals = list(p.sals)
-        self.assertEqual(len(sals), 1)
+        self.assertEqual(len(p), 1)
 
-        self.assertIsInstance(sals[0], ClockUpdateSAL)
-        self.assertTrue(sals[0].is_date)
-        self.assertFalse(sals[0].is_time)
-        self.assertIsInstance(sals[0].val, date)
+        self.assertIsInstance(p[0], ClockUpdateSAL)
+        self.assertTrue(p[0].is_date)
+        self.assertFalse(p[0].is_time)
+        self.assertIsInstance(p[0].val, date)
 
-        self.assertEqual(sals[0].val.year, 2005)
-        self.assertEqual(sals[0].val.month, 2)
-        self.assertEqual(sals[0].val.day, 25)
-        self.assertEqual(sals[0].val.weekday(), 4)  # friday
+        self.assertEqual(p[0].val.year, 2005)
+        self.assertEqual(p[0].val.month, 2)
+        self.assertEqual(p[0].val.day, 25)
+        self.assertEqual(p[0].val.weekday(), 4)  # friday
 
         # check that it encodes properly again
         self.assertEqual(p.encode(), b'05DF000E0207D502190411')
@@ -85,13 +81,12 @@ class ClipsalClockTest(unittest.TestCase):
         #  - says      05DF00100C
         #  - should be 05DF00110308
 
-        p, r = decode_packet(
+        p = self.decode_pm(
             b'\\05DF00110308g\r', server_packet=False)
         self.assertIsInstance(p, PointToMultipointPacket)
-        sals = list(p.sals)
-        self.assertEqual(len(sals), 1)
+        self.assertEqual(len(p), 1)
 
-        self.assertIsInstance(sals[0], ClockRequestSAL)
+        self.assertIsInstance(p[0], ClockRequestSAL)
 
         # check that it encodes properly again
         self.assertEqual(p.encode(), b'05DF00110308')
