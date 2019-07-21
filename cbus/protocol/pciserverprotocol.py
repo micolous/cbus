@@ -22,8 +22,11 @@ import asyncio
 import logging
 import random
 import sys
+from typing import Text
 
-from cbus.common import add_cbus_checksum, END_RESPONSE
+from cbus.common import END_RESPONSE, Application, GroupState
+from cbus.protocol.cal import AnyCAL
+from cbus.protocol.cal.recall import RecallCAL
 from cbus.protocol.cbus_protocol import CBusProtocol
 from cbus.protocol.packet import decode_packet
 from cbus.protocol.base_packet import (
@@ -40,6 +43,9 @@ from cbus.protocol.application.lighting import (
     LightingTerminateRampSAL)
 from cbus.protocol.application.clock import (
     ClockSAL, ClockUpdateSAL, ClockRequestSAL)
+from cbus.protocol.application.status_request import StatusRequestSAL
+from cbus.protocol.cal.report import BinaryStatusReport
+from cbus.protocol.cal.standard import StandardCAL
 
 __all__ = ['PCIServerProtocol']
 logger = logging.getLogger(__name__)
@@ -101,6 +107,8 @@ class PCIServerProtocol(CBusProtocol):
             logger.warning("dce: invalid packet: {}".format(p.exception))
             return
 
+        logger.debug('dce: %r', p)
+
         if isinstance(p, SpecialClientPacket):
             # do special things
             # full reset
@@ -111,13 +119,15 @@ class PCIServerProtocol(CBusProtocol):
             # smart+connect shortcut
             if isinstance(p, SmartConnectShortcutPacket):
                 self.basic_mode = False
-                self.checksum = True
                 self.connect = True
                 return
 
             logger.debug('dce: unknown SpecialClientPacket: %r', p)
+        elif isinstance(p, RecallCAL):
+            logger.debug('dce: got a cal?: %r', p)
+            return
         elif isinstance(p, PointToMultipointPacket):
-            for s in p.sals:
+            for s in p:
                 if isinstance(s, LightingSAL):
                     # lighting application
                     if isinstance(s, LightingRampSAL):
@@ -142,6 +152,15 @@ class PCIServerProtocol(CBusProtocol):
                     else:
                         logger.debug(
                             'dce: unhandled clock SAL type: %r' % s)
+                elif isinstance(s, StatusRequestSAL):
+                    if (s.child_application == Application.MASTER_APPLICATION
+                            and not s.level_request):
+                        # s4.2.9.2 note: find presence of units
+                        self.on_master_application_status(s.group_address)
+                    else:
+                        logger.debug(
+                            'dce: unhandled status request SAL: %r', s)
+                        return
                 else:
                     logger.debug('dce: unhandled SAL type: %r' % s)
                     return
@@ -294,6 +313,33 @@ class PCIServerProtocol(CBusProtocol):
         p.source_address = random.randint(1, 100)
         self._send_later(p)
 
+    def on_master_application_status(self, group_address: int) -> None:
+        """
+        Event called when a Status Request for the master application is called.
+
+        This expects a binary status report of the presence of every unit on
+        the network.
+        :param group_address: Group number to start from
+        """
+        logger.debug(
+            'recv: master application status request from %d', group_address)
+
+        # TODO: implement this dynamically
+        states = [GroupState.MISSING] + (
+            [GroupState.ON] * 10
+        ) + ([GroupState.MISSING] * (0xfe - 12)) + [GroupState.ON]
+        assert len(states) >= 0xfe
+
+        if self.basic_mode:
+            for x in range(0, 0xff, 0x58):
+                self._send(StandardCAL(
+                    child_application=Application.MASTER_APPLICATION,
+                    block_start=x,
+                    report=BinaryStatusReport(states[x:][:0x58]),
+                ))
+        else:
+            raise NotImplementedError('not implemented except basic mode')
+
     # other things.
     @staticmethod
     def _serialize_packet(cmd: BasePacket) -> bytes:
@@ -301,7 +347,7 @@ class PCIServerProtocol(CBusProtocol):
         if isinstance(cmd, ConfirmationPacket):
             nl = False
 
-        cmd = cmd.encode()
+        cmd = cmd.encode_packet()
         if nl:
             cmd += END_RESPONSE
 
@@ -433,14 +479,22 @@ class PCIServerProtocol(CBusProtocol):
         return self._send(p)
 
 
-async def main():
+async def main(address: Text = '127.0.0.1', port: int = 10001):
+    print(f'Starting fake PCI on {address}:{port}')
     loop = asyncio.get_running_loop()
     server = await loop.create_server(
         lambda: PCIServerProtocol(),
-        '127.0.0.1', 10001)
+        address, port)
 
     async with server:
         await server.serve_forever()
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    parser.add_argument('address', nargs='?', default='127.0.0.1')
+    parser.add_argument('port', nargs='?', default=10001, type=int)
+    options = parser.parse_args()
+
+    asyncio.run(main(options.address, options.port))

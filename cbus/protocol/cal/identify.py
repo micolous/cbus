@@ -39,14 +39,12 @@ class IdentifyCAL:
     attribute: IdentifyAttribute
 
     @classmethod
-    def decode_cal(cls, data: bytes) -> Tuple[bytes, IdentifyCAL]:
+    def decode_cal(cls, data: bytes) -> Tuple[IdentifyCAL, int]:
         """
         Decodes identify SAL.
         """
 
-        cal = IdentifyCAL(IdentifyAttribute(data[1]))
-        data = data[2:]
-        return data, cal
+        return IdentifyCAL(IdentifyAttribute(data[1])), 2
 
     def encode(self) -> bytes:
         return bytes([CAL.IDENTIFY, self.attribute & 0xff])

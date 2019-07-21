@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/cal/extended.py - Extended status CAL
+# cbus/protocol/cal/standard.py - Standard status CAL
 # Copyright 2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
@@ -18,55 +18,55 @@
 from __future__ import absolute_import
 from __future__ import annotations
 
+from base64 import b16encode
 from dataclasses import dataclass
 from typing import Union
 
-from cbus.common import CAL, ExtendedCALType, Application
-from cbus.protocol.cal.report import StatusReport, BinaryStatusReport
+from cbus.common import CAL, Application, add_cbus_checksum
+from cbus.protocol.cal.report import BinaryStatusReport
+from cbus.protocol.base_packet import SpecialServerPacket
 
 __all__ = [
-    'ExtendedCAL',
+    'StandardCAL',
 ]
 
-
 @dataclass
-class ExtendedCAL:
+class StandardCAL(SpecialServerPacket):
     """
 
     """
-    externally_initated: bool
     child_application: Union[Application, int]
     block_start: int
-    report: StatusReport
+    report: BinaryStatusReport
 
-    @property
-    def coding_byte(self) -> int:
-        return ((0x40 if self.externally_initated else 0) |
-                (self.report.block_type & 0x7))
+    # Only used if encoding packets
+    checksum: bool = True
 
     def encode(self) -> bytes:
         report = self.report.encode()
 
         return bytes([
-            CAL.EXTENDED_STATUS | (len(report) + 1),
-            self.coding_byte,
+            CAL.STANDARD_STATUS | (len(report) + 3),
             self.child_application & 0xff,
             self.block_start & 0xff]) + report
 
+    def encode_packet(self) -> bytes:
+        # checksum it, if needed.
+        p = self.encode()
+
+        if self.checksum:
+            p = add_cbus_checksum(p)
+
+        return b16encode(p)
+
     @classmethod
-    def decode_cal(cls, data: bytes) -> ExtendedCAL:
-        # expects an extended status cal, cropped to exact size, starting
-        # from the coding byte
-        externally_initiated = (data[0] & 0x40) > 0
-        block_type = data[0] & 0x7
-        child_application = data[1]
-        block_start = data[2]
-        payload = data[3:]
+    def decode_cal(cls, data: bytes) -> StandardCAL:
+        # expects a standard status cal, cropped to exact size, starting
+        # from the application byte
+        child_application = data[0]
+        block_start = data[1]
+        payload = data[2:]
 
-        if block_type == ExtendedCALType.BINARY:
-            report = BinaryStatusReport.decode(payload)
-        else:
-            raise NotImplementedError('block_type = {:x}'.format(block_type))
+        report = BinaryStatusReport.decode(payload)
 
-        return ExtendedCAL(
-            externally_initiated, child_application, block_start, report)
+        return StandardCAL(child_application, block_start, report)

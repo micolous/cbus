@@ -20,7 +20,7 @@ from __future__ import absolute_import
 
 from base64 import b16decode
 from six import byte2int, indexbytes, int2byte
-from typing import Tuple, Optional
+from typing import Tuple, Union
 import warnings
 
 from cbus.protocol.reset_packet import ResetPacket
@@ -33,6 +33,7 @@ from cbus.protocol.dm_packet import DeviceManagementPacket
 from cbus.protocol.po_packet import PowerOnPacket
 from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.confirm_packet import ConfirmationPacket
+from cbus.protocol.cal import AnyCAL
 from cbus.common import (
     DestinationAddressType, PriorityClass,
     HEX_CHARS, CONFIRMATION_CODES, END_COMMAND,
@@ -43,7 +44,8 @@ def decode_packet(
         data: bytes,
         checksum: bool = True,
         strict: bool = True,
-        server_packet: bool = True) -> Tuple[Optional[BasePacket], int]:
+        server_packet: bool = True)\
+        -> Tuple[Union[BasePacket, AnyCAL, None], int]:
     """
     Decodes a packet from or send to the PCI.
 
@@ -57,6 +59,9 @@ def decode_packet(
     Note: this decoder does not support unaddressed packets (such as Standard
     Format Status Replies).
 
+    Note: Direct Command Access causes this method to return AnyCAL instead
+    of a BasePacket.
+
     :param data: The data to parse, in encapsulated serial format
     :param checksum: If True, requires a checksum for all packets
     :param strict: If True, raises ValueError whenever checksum is incorrect.
@@ -67,6 +72,8 @@ def decode_packet(
     """
     confirmation = None
     consumed = 0
+    # Serial Interface User Guide s4.2.7
+    device_managment_cal = False
 
     if data == b'':
         return None, 0
@@ -79,7 +86,6 @@ def decode_packet(
             # buffer is full / invalid checksum, some requests may be dropped.
             # serial interface guide s4.3.3 p28
             return PCIErrorPacket(), consumed + 1
-
         if data[0] in CONFIRMATION_CODES:
             success = indexbytes(data, 1) == 0x2e  # .
             code = byte2int(data)
@@ -91,7 +97,11 @@ def decode_packet(
             # Reset
             # Serial Interface Guide, s4.2.3
             return ResetPacket(), consumed + 1
-        elif data.startswith(b'|' + END_COMMAND):
+        elif data.startswith(b'null'):
+            # Toolkit is buggy, just ignore it.
+            return None, consumed + 4
+        elif (data.startswith(b'|' + END_COMMAND)
+              or data.startswith(b'||' + END_COMMAND)):
             # SMART + CONNECT shortcut
             consumed += 1 + len(END_COMMAND)
             return SmartConnectShortcutPacket(), consumed
@@ -128,9 +138,12 @@ def decode_packet(
         if data.startswith(b'@'):
             # Once-off BASIC mode command, Serial Interface Guide, s4.2.7
             checksum = False
+            device_managment_cal = True
             data = data[1:]
         elif data.startswith(b'\\'):
             data = data[1:]
+        else:
+            device_managment_cal = True
 
         if data[-1] not in HEX_CHARS:
             # then there is a confirmation code at the end.
@@ -172,6 +185,10 @@ def decode_packet(
 
         # strip checksum
         data = data[:-1]
+
+    if device_managment_cal:
+        cal, cal_len = PointToPointPacket.decode_cal(data)
+        return cal, consumed + cal_len
 
     # flags (serial interface guide s3.4)
     flags = byte2int(data)

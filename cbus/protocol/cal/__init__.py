@@ -21,12 +21,13 @@ from typing import Union
 
 from cbus.common import CAL
 from cbus.protocol.cal.extended import ExtendedCAL
-from cbus.protocol.cal.reply import ReplyCAL
 from cbus.protocol.cal.identify import IdentifyCAL
+from cbus.protocol.cal.recall import RecallCAL
+from cbus.protocol.cal.reply import ReplyCAL
 
 REQUESTS = {
     CAL.IDENTIFY: IdentifyCAL,
-    CAL.EXTENDED_STATUS: ExtendedCAL,
+    CAL.RECALL: RecallCAL,
 }
 
-AnyCAL = Union[ExtendedCAL, IdentifyCAL, ReplyCAL]
+AnyCAL = Union[ExtendedCAL, IdentifyCAL, ReplyCAL, RecallCAL]

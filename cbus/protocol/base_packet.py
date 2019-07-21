@@ -16,6 +16,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
+from base64 import b16encode
 from dataclasses import dataclass
 from typing import Optional
 
@@ -63,6 +64,9 @@ class BasePacket(abc.ABC):
             source_address = self.source_address & 0xff
             return bytes([self.flags, source_address])
 
+    def encode_packet(self) -> bytes:
+        return b16encode(self.encode())
+
 
 class _SpecialPacket(BasePacket, abc.ABC):
     def __init__(self):
@@ -72,6 +76,9 @@ class _SpecialPacket(BasePacket, abc.ABC):
     @abc.abstractmethod
     def encode(self) -> bytes:
         raise NotImplementedError('encode')
+
+    def encode_packet(self):
+        return self.encode()
 
 
 class SpecialClientPacket(_SpecialPacket, abc.ABC):

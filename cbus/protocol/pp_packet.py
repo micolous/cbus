@@ -18,10 +18,9 @@
 from __future__ import absolute_import
 from __future__ import annotations
 
-from base64 import b16encode
 from six import byte2int, indexbytes
 from six.moves import range
-from typing import Iterator, Optional, Sequence
+from typing import Iterator, Optional, Sequence, Tuple
 
 from cbus.common import (
     DestinationAddressType, PriorityClass, CAL, BRIDGE_LENGTHS,
@@ -82,6 +81,36 @@ class PointToPointPacket(BasePacket, Sequence[AnyCAL]):
         return self._cals.index(x, start, end)
 
     @classmethod
+    def decode_cal(cls, data: bytes) -> Tuple[AnyCAL, int]:
+        # find the cal
+        cmd = byte2int(data)
+        if cmd & 0xE0 == CAL.REPLY:  # flick off the lower bits
+            # REPLY
+            reply_len = (cmd & 0x1F) + 1
+
+            reply_data = data[1:reply_len]
+
+            return ReplyCAL.decode_cal(reply_data), reply_len
+        elif cmd & 0xE0 == CAL.STANDARD_STATUS:
+            # STATUS (standard)
+            # Note: these packets never contain addressing information,
+            # so we probably can't support them without a full state
+            # machine anyway.
+            raise NotImplementedError('standard status cal')
+        elif cmd & 0xE0 == CAL.EXTENDED_STATUS:
+            # EXSTAT / Extended status
+            # +3 for cmd byte + coding byte + application which aren't counted
+            status_len = (cmd - CAL.EXTENDED_STATUS) + 3
+
+            # Remove cmd byte
+            reply_data = data[1:status_len]
+
+            return ExtendedCAL.decode_cal(reply_data), status_len
+        else:
+            handler = REQUESTS[cmd]
+            return handler.decode_cal(data)
+
+    @classmethod
     def decode_packet(cls, data: bytes, checksum: bool,
                       priority_class: PriorityClass) -> PointToPointPacket:
 
@@ -111,35 +140,8 @@ class PointToPointPacket(BasePacket, Sequence[AnyCAL]):
         # now decode messages
         cals = []
         while data:
-            # find the cal
-            cmd = byte2int(data)
-            if cmd & 0xE0 == CAL.REPLY:  # flick off the lower bits
-                # REPLY
-                reply_len = (cmd & 0x1F) + 1
-
-                reply_data = data[1:reply_len]
-                data = data[reply_len:]
-
-                cal = ReplyCAL.decode_cal(reply_data)
-            elif cmd & 0xE0 == CAL.STANDARD_STATUS:
-                # STATUS (standard)
-                # Note: these packets never contain addressing information,
-                # so we probably can't support them without a full state
-                # machine anyway.
-                raise NotImplementedError('standard status cal')
-            elif cmd & 0xE0 == CAL.EXTENDED_STATUS:
-                # EXSTAT / Extended status
-                # +2 for coding byte + application which aren't counted
-                status_len = (cmd - CAL.EXTENDED_STATUS) + 2
-
-                reply_data = data[1:status_len]
-                data = data[status_len + 1:]
-
-                cal = ExtendedCAL.decode_cal(reply_data)
-            else:
-                handler = REQUESTS[cmd]
-                data, cal = handler.decode_cal(data)
-
+            cal, cal_len = cls.decode_cal(data)
+            data = data[cal_len:]
             cals.append(cal)
 
         return PointToPointPacket(
@@ -166,7 +168,8 @@ class PointToPointPacket(BasePacket, Sequence[AnyCAL]):
         if self.checksum:
             p = add_cbus_checksum(p)
 
-        return b16encode(p)
+        return p
+
 
     def __repr__(self):  # pragma: no cover
         return '<%s object: unit_address=%r, pm_bridged=%r, cals=%r>' % (

@@ -116,7 +116,7 @@ class Application(IntEnum):
     LIGHTING_LAST = LIGHTING_5f = 0x5f
     CLOCK = 0xDF
     ENABLE = 0xCB
-    STATUS_REQUEST = 0xff
+    MASTER_APPLICATION = STATUS_REQUEST = 0xff
 
 
 class CAL(IntEnum):

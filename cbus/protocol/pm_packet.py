@@ -133,4 +133,4 @@ class PointToMultipointPacket(BasePacket, Sequence[SAL]):
         if self.checksum:
             p = add_cbus_checksum(p)
 
-        return b16encode(p)
+        return p

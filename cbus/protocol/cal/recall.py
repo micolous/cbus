@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# cbus/protocol/po_packet.py - Power on notification packet
-# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+# cbus/protocol/cal/recall.py - recall parameter
+# Copyright 2013-2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -16,15 +16,36 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
-from cbus.protocol.base_packet import SpecialServerPacket
+from __future__ import annotations
 
-__all__ = ['PowerOnPacket']
+from dataclasses import dataclass
+from typing import Tuple
+
+from cbus.common import CAL
+
+__all__ = [
+    'RecallCAL',
+]
 
 
-class PowerOnPacket(SpecialServerPacket):
+@dataclass
+class RecallCAL:
+    """
+    Recall CAL request.
 
-    def __init__(self):
-        super(PowerOnPacket, self).__init__()
+    Ref: Serial Interface Guide, s7.1
 
-    def encode(self):
-        return b'++'
+    """
+    param: int
+    count: int
+
+    @classmethod
+    def decode_cal(cls, data: bytes) -> Tuple[RecallCAL, int]:
+        """
+        Decodes identify SAL.
+        """
+
+        return RecallCAL(data[1], data[2]), 3
+
+    def encode(self) -> bytes:
+        return bytes([CAL.RECALL, self.param & 0xff, self.count & 0xff])
