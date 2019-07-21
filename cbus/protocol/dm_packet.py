@@ -73,3 +73,5 @@ class DeviceManagementPacket(BasePacket):
         # checksum it, if needed.
         if self.checksum:
             p = add_cbus_checksum(p)
+
+        return p

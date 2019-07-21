@@ -25,7 +25,6 @@ however it is used internally within the protocol encoders and decoders.
 from __future__ import absolute_import
 from enum import IntEnum
 import logging
-import six
 
 HEX_CHARS = b'0123456789ABCDEF'
 
@@ -355,7 +354,7 @@ def cbus_checksum(i: bytes) -> int:
     :returns: The checksum value of the given input
     """
     c = 0
-    for x in six.iterbytes(i):
+    for x in i:
         c += x
 
     c = ((c & 0xff) ^ 0xff) + 1
@@ -375,7 +374,7 @@ def add_cbus_checksum(i: bytes) -> bytes:
     :rtype: bytes
     """
     c = cbus_checksum(i)
-    return i + six.int2byte(c)
+    return i + bytes([c])
 
 
 def validate_cbus_checksum(i: bytes) -> bool:

@@ -19,7 +19,7 @@ from __future__ import absolute_import
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Union
 
 from cbus.common import CAL, IdentifyAttribute
 
@@ -36,7 +36,7 @@ class IdentifyCAL:
     Ref: Serial Interface Guide, s7.1
 
     """
-    attribute: IdentifyAttribute
+    attribute: Union[IdentifyAttribute, int]
 
     @classmethod
     def decode_cal(cls, data: bytes) -> Tuple[IdentifyCAL, int]:
