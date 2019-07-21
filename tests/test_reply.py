@@ -36,7 +36,7 @@ class ClipsalReplyTest(CBusTestCase):
         self.assertEqual(p[0].parameter, 0x30)
         self.assertEqual(p[0].data, b'\x03')
 
-        self.assertEqual(p.encode(), b'8604990082300328')
+        self.assertEqual(p.encode_packet(), b'8604990082300328')
 
 
 if __name__ == '__main__':

@@ -49,7 +49,7 @@ class ClipsalClockTest(CBusTestCase):
 
         # check that it encodes properly again
         # fuzzy match to allow packet that has no DST information
-        self.assertIn(p.encode(),
+        self.assertIn(p.encode_packet(),
                       [b'05DF000D010A2B1700C2', b'05DF000D010A2B17FFC3'])
         self.assertEqual(p.confirmation, b'g')
 
@@ -71,7 +71,7 @@ class ClipsalClockTest(CBusTestCase):
         self.assertEqual(p[0].val.weekday(), 4)  # friday
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), b'05DF000E0207D502190411')
+        self.assertEqual(p.encode_packet(), b'05DF000E0207D502190411')
         self.assertEqual(p.confirmation, b'g')
 
     def test_s23_13_3(self):
@@ -89,7 +89,7 @@ class ClipsalClockTest(CBusTestCase):
         self.assertIsInstance(p[0], ClockRequestSAL)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), b'05DF00110308')
+        self.assertEqual(p.encode_packet(), b'05DF00110308')
         self.assertEqual(p.confirmation, b'g')
 
 

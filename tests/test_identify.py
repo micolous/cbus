@@ -40,7 +40,7 @@ class BennettIdentifyTest(CBusTestCase):
         self.assertIsInstance(p[0], IdentifyCAL)
         self.assertEqual(p[0].attribute, 1)
 
-        self.assertEqual(p.encode(), b'0699002101')
+        self.assertEqual(p.encode_packet(), b'0699002101')
 
 
 if __name__ == '__main__':

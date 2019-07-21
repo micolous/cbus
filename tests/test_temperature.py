@@ -43,7 +43,7 @@ class ClipsalTemperatureTest(CBusTestCase):
 
         # check that it encodes properly again
         p.checksum = True
-        self.assertEqual(p.encode(), b'05190002056477')
+        self.assertEqual(p.encode_packet(), b'05190002056477')
         self.assertEqual(p.confirmation, b'g')
 
 
@@ -56,7 +56,7 @@ class InternalTemperatureTest(CBusTestCase):
                   TemperatureBroadcastSAL(11, 56)]
         )
         orig.source_address = 5
-        data = orig.encode() + b'\r\n'
+        data = orig.encode_packet() + b'\r\n'
 
         d = self.decode_pm(data)
         self.assertIsInstance(orig, PointToMultipointPacket)

@@ -39,7 +39,7 @@ class ClipsalSerialLightingTest(CBusTestCase):
         self.assertEqual(p[0].group_address, 8)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), b'0538000108BA')
+        self.assertEqual(p.encode_packet(), b'0538000108BA')
         self.assertEqual(p.confirmation, b'g')
 
         # concatenated packet
@@ -61,7 +61,7 @@ class ClipsalSerialLightingTest(CBusTestCase):
         self.assertEqual(p[2].group_address, 10)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), b'05380001087909090A25')
+        self.assertEqual(p.encode_packet(), b'05380001087909090A25')
         self.assertEqual(p.confirmation, b'h')
 
 
@@ -78,7 +78,7 @@ class ClipsalLightingTest(CBusTestCase):
         self.assertEqual(p[0].group_address, 0x93)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), b'0538007993B7')
+        self.assertEqual(p.encode_packet(), b'0538007993B7')
         self.assertEqual(p.confirmation, b'j')
 
 
@@ -95,7 +95,7 @@ class ClipsalQuickLightingTest(CBusTestCase):
         self.assertEqual(p[0].group_address, 0x21)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), b'053800792129')
+        self.assertEqual(p.encode_packet(), b'053800792129')
         self.assertEqual(p.confirmation, b'i')
 
         # turn off light 0x21
@@ -106,7 +106,7 @@ class ClipsalQuickLightingTest(CBusTestCase):
         self.assertEqual(p[0].group_address, 0x21)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), b'0538000121A1')
+        self.assertEqual(p.encode_packet(), b'0538000121A1')
         self.assertEqual(p.confirmation, b'k')
 
         # ramp light 0x21 to 50% over 4 seconds
@@ -121,7 +121,7 @@ class ClipsalQuickLightingTest(CBusTestCase):
         self.assertEqual(round(p[0].level, 2), 0.5)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), b'0538000A217F19')
+        self.assertEqual(p.encode_packet(), b'0538000A217F19')
         self.assertEqual(p.confirmation, b'l')
 
 
@@ -132,7 +132,7 @@ class InternalLightingTest(CBusTestCase):
         orig = PointToMultipointPacket(sals=LightingOnSAL(27))
         orig.source_address = 5
 
-        data = orig.encode() + b'\r\n'
+        data = orig.encode_packet() + b'\r\n'
 
         d = self.decode_pm(data)
         self.assertEqual(orig.source_address, d.source_address)
@@ -146,7 +146,7 @@ class InternalLightingTest(CBusTestCase):
 
         orig = PointToMultipointPacket(sals=LightingOnSAL(27))
 
-        data = orig.encode() + b'\r'
+        data = b'\\' + orig.encode_packet() + b'\r'
 
         d = self.decode_pm(data, server_packet=False)
         self.assertEqual(len(orig), len(d))

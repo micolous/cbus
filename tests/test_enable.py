@@ -36,7 +36,7 @@ class ClipsalEnableTest(CBusTestCase):
         self.assertEqual(p[0].value, 0x82)
 
         # check that it encodes properly again
-        self.assertEqual(p.encode(), b'05CB0002378275')
+        self.assertEqual(p.encode_packet(), b'05CB0002378275')
         self.assertEqual(p.confirmation, b'g')
 
 
