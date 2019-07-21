@@ -21,31 +21,31 @@ from __future__ import print_function
 from base64 import b16encode
 from collections import Iterable
 from datetime import datetime
-from six import int2byte
 from traceback import print_exc
+
+from six import int2byte
+from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
-from twisted.internet import reactor
 
 from cbus.common import (
-    END_COMMAND, END_RESPONSE, ClockAttribute,
-    CONFIRMATION_CODES, add_cbus_checksum)
-from cbus.protocol.packet import decode_packet
-from cbus.protocol.base_packet import (
-    BasePacket, SpecialServerPacket, SpecialClientPacket)
-# from cbus.protocol.po_packet import PowerOnPacket
-from cbus.protocol.pm_packet import PointToMultipointPacket
-from cbus.protocol.pp_packet import PointToPointPacket
-from cbus.protocol.dm_packet import DeviceManagementPacket
-from cbus.protocol.confirm_packet import ConfirmationPacket
-from cbus.protocol.error_packet import PCIErrorPacket
+    END_COMMAND, END_RESPONSE, CONFIRMATION_CODES, add_cbus_checksum)
+from cbus.protocol.application.clock import (
+    ClockSAL, ClockRequestSAL, ClockUpdateSAL)
 from cbus.protocol.application.lighting import (
     LightingSAL, LightingOnSAL, LightingOffSAL, LightingRampSAL,
     LightingTerminateRampSAL)
-from cbus.protocol.application.clock import (
-    ClockSAL, ClockRequestSAL, ClockUpdateSAL)
+from cbus.protocol.base_packet import (
+    BasePacket, SpecialServerPacket, SpecialClientPacket)
 from cbus.protocol.cal.identify import IdentifyCAL
+from cbus.protocol.confirm_packet import ConfirmationPacket
+from cbus.protocol.dm_packet import DeviceManagementPacket
+from cbus.protocol.error_packet import PCIErrorPacket
+from cbus.protocol.packet import decode_packet
+# from cbus.protocol.po_packet import PowerOnPacket
+from cbus.protocol.pm_packet import PointToMultipointPacket
+from cbus.protocol.pp_packet import PointToPointPacket
 from cbus.protocol.reset_packet import ResetPacket
 
 __all__ = ['PCIProtocol']

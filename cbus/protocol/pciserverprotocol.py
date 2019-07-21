@@ -21,31 +21,28 @@ from __future__ import absolute_import
 import asyncio
 import logging
 import random
-import sys
 from typing import Text
 
 from cbus.common import END_RESPONSE, Application, GroupState
-from cbus.protocol.cal import AnyCAL
-from cbus.protocol.cal.recall import RecallCAL
-from cbus.protocol.cbus_protocol import CBusProtocol
-from cbus.protocol.packet import decode_packet
-from cbus.protocol.base_packet import (
-    BasePacket, InvalidPacket, SpecialClientPacket)
-from cbus.protocol.reset_packet import ResetPacket
-from cbus.protocol.scs_packet import SmartConnectShortcutPacket
-from cbus.protocol.po_packet import PowerOnPacket
-from cbus.protocol.pm_packet import PointToMultipointPacket
-from cbus.protocol.dm_packet import DeviceManagementPacket
-from cbus.protocol.confirm_packet import ConfirmationPacket
-from cbus.protocol.error_packet import PCIErrorPacket
+from cbus.protocol.application.clock import (
+    ClockSAL, ClockUpdateSAL, ClockRequestSAL)
 from cbus.protocol.application.lighting import (
     LightingSAL, LightingRampSAL, LightingOffSAL, LightingOnSAL,
     LightingTerminateRampSAL)
-from cbus.protocol.application.clock import (
-    ClockSAL, ClockUpdateSAL, ClockRequestSAL)
 from cbus.protocol.application.status_request import StatusRequestSAL
+from cbus.protocol.base_packet import (
+    BasePacket, InvalidPacket, SpecialClientPacket)
+from cbus.protocol.cal.recall import RecallCAL
 from cbus.protocol.cal.report import BinaryStatusReport
 from cbus.protocol.cal.standard import StandardCAL
+from cbus.protocol.cbus_protocol import CBusProtocol
+from cbus.protocol.confirm_packet import ConfirmationPacket
+from cbus.protocol.dm_packet import DeviceManagementPacket
+from cbus.protocol.error_packet import PCIErrorPacket
+from cbus.protocol.pm_packet import PointToMultipointPacket
+from cbus.protocol.po_packet import PowerOnPacket
+from cbus.protocol.reset_packet import ResetPacket
+from cbus.protocol.scs_packet import SmartConnectShortcutPacket
 
 __all__ = ['PCIServerProtocol']
 logger = logging.getLogger(__name__)
@@ -315,7 +312,7 @@ class PCIServerProtocol(CBusProtocol):
 
     def on_master_application_status(self, group_address: int) -> None:
         """
-        Event called when a Status Request for the master application is called.
+        Event for Status Request for the master application.
 
         This expects a binary status report of the presence of every unit on
         the network.
@@ -402,7 +399,7 @@ class PCIServerProtocol(CBusProtocol):
 
         p = PointToMultipointPacket(
             checksum=self.checksum,
-            sals=LightingOnSAL(p, group_addr))
+            sals=LightingOnSAL(group_addr))
         p.source_address = source_addr
         return self._send(p)
 
@@ -422,7 +419,7 @@ class PCIServerProtocol(CBusProtocol):
         """
         p = PointToMultipointPacket(
             checksum=self.checksum,
-            sals=LightingOffSAL(p, group_addr))
+            sals=LightingOffSAL(group_addr))
         p.source_address = source_addr
         return self._send(p)
 
@@ -456,7 +453,8 @@ class PCIServerProtocol(CBusProtocol):
         """
         p = PointToMultipointPacket(
             checksum=self.checksum,
-            sals=LightingRampSAL(p, group_addr, duration, level))
+            sals=LightingRampSAL(group_addr, duration, level))
+        p.source_address = source_addr
         return self._send(p)
 
     def lighting_group_terminate_ramp(self, source_addr, group_addr):
@@ -474,7 +472,7 @@ class PCIServerProtocol(CBusProtocol):
         """
         p = PointToMultipointPacket(
             checksum=self.checksum,
-            sals=LightingTerminateRampSAL(p, group_addr))
+            sals=LightingTerminateRampSAL(group_addr))
         p.source_address = source_addr
         return self._send(p)
 

@@ -17,15 +17,13 @@
 from __future__ import absolute_import
 from __future__ import annotations
 
-from base64 import b16encode
-from typing import Iterable, Iterator, Optional, Sequence, Union
+from typing import Iterator, Optional, Sequence, Union
 
-from cbus.protocol.base_packet import BasePacket
+from cbus.common import (
+    Application, PriorityClass, DestinationAddressType, add_cbus_checksum)
 from cbus.protocol.application import get_application
 from cbus.protocol.application.sal import SAL
-from cbus.common import (
-    Application, PriorityClass, DestinationAddressType, add_cbus_checksum,
-    check_ga)
+from cbus.protocol.base_packet import BasePacket
 
 
 class PointToMultipointPacket(BasePacket, Sequence[SAL]):
@@ -42,7 +40,8 @@ class PointToMultipointPacket(BasePacket, Sequence[SAL]):
             sals: Optional[Union[SAL, Sequence[SAL]]] = None):
         super(PointToMultipointPacket, self).__init__(
             checksum=checksum,
-            destination_address_type=DestinationAddressType.POINT_TO_MULTIPOINT,
+            destination_address_type=DestinationAddressType
+            .POINT_TO_MULTIPOINT,
             priority_class=priority_class)
         self.application = application
         self._sals = []
@@ -98,8 +97,9 @@ class PointToMultipointPacket(BasePacket, Sequence[SAL]):
         return self._sals.index(x, start, end)
 
     @classmethod
-    def decode_packet(cls, data: bytes, checksum: bool,
-                      priority_class: PriorityClass) -> PointToMultipointPacket:
+    def decode_packet(
+            cls, data: bytes, checksum: bool, priority_class: PriorityClass)\
+            -> PointToMultipointPacket:
         application = Application(data[0])
         if data[1] != 0x00:
             raise ValueError('Routing data in PM message?')

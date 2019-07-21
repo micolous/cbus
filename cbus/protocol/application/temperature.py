@@ -19,10 +19,10 @@ from __future__ import absolute_import
 from __future__ import annotations
 
 import abc
-from typing import Optional, Sequence, Set, Tuple, Union
-
-from six import byte2int, indexbytes, int2byte
 import warnings
+from typing import Sequence, Set, Tuple, Union
+
+from six import byte2int, indexbytes
 
 from cbus.common import Application, check_ga, TEMPERATURE_BROADCAST
 from cbus.protocol.application.sal import BaseApplication, SAL

@@ -193,9 +193,9 @@ def decode_packet(
     # flags (serial interface guide s3.4)
     flags = byte2int(data)
 
-    destination_address_type = DestinationAddressType(flags & 0x07)
+    address_type = DestinationAddressType(flags & 0x07)
     # "reserved", "must be set to 0"
-    rc = (flags >> 3) & 0x03
+    # rc = (flags >> 3) & 0x03
     dp = (flags & 0x20) == 0x20
     # priority class
     priority_class = PriorityClass((flags >> 6) & 0x03)
@@ -216,15 +216,15 @@ def decode_packet(
         p = DeviceManagementPacket.decode_packet(
             data=data, checksum=checksum, priority_class=priority_class)
 
-    elif destination_address_type == DestinationAddressType.POINT_TO_POINT:
+    elif address_type == DestinationAddressType.POINT_TO_POINT:
         # decode as point-to-point packet
         p = PointToPointPacket.decode_packet(
             data=data, checksum=checksum, priority_class=priority_class)
-    elif destination_address_type == DestinationAddressType.POINT_TO_MULTIPOINT:
+    elif address_type == DestinationAddressType.POINT_TO_MULTIPOINT:
         # decode as point-to-multipoint packet
         p = PointToMultipointPacket.decode_packet(
             data=data, checksum=checksum, priority_class=priority_class)
-    elif (destination_address_type ==
+    elif (address_type ==
           DestinationAddressType.POINT_TO_POINT_TO_MULTIPOINT):
         # decode as point-to-point-to-multipoint packet
         # return PointToPointToMultipointPacket.decode_packet(data, checksum,
@@ -232,7 +232,7 @@ def decode_packet(
         raise NotImplementedError('Point-to-point-to-multipoint')
     else:
         raise NotImplementedError('Destination address type = 0x{:x}'.format(
-            destination_address_type))
+            address_type))
 
     if not server_packet:
         p.confirmation = confirmation

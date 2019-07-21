@@ -281,4 +281,3 @@ class LightingApplication(BaseApplication):
     @staticmethod
     def supported_applications() -> FrozenSet[int]:
         return _SUPPORTED_APPLICATIONS
-

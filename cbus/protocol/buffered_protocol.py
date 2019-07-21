@@ -62,7 +62,7 @@ class BufferedProtocol(asyncio.Protocol, abc.ABC):
 
     def data_received(self, data: bytes) -> None:
         """
-        Adds new data to the buffer, and then starts processing it, if possible.
+        Adds new data to the buffer, and then starts processing it.
 
         :param data: new data to add to the buffer
         :return: None

@@ -18,11 +18,9 @@
 from __future__ import absolute_import
 from __future__ import annotations
 
-from base64 import b16encode
-
-from cbus.protocol.base_packet import BasePacket
 from cbus.common import (
     PriorityClass, DestinationAddressType, add_cbus_checksum)
+from cbus.protocol.base_packet import BasePacket
 
 
 class DeviceManagementPacket(BasePacket):
@@ -33,8 +31,8 @@ class DeviceManagementPacket(BasePacket):
             value: int = 0):
         super().__init__(
             checksum=checksum,
-            destination_address_type=
-            DestinationAddressType.POINT_TO_POINT_TO_MULTIPOINT,
+            destination_address_type=DestinationAddressType
+            .POINT_TO_POINT_TO_MULTIPOINT,
             dp=True,
             priority_class=priority_class,
         )

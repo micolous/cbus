@@ -30,6 +30,7 @@ __all__ = [
     'StandardCAL',
 ]
 
+
 @dataclass
 class StandardCAL(SpecialServerPacket):
     """
@@ -51,6 +52,13 @@ class StandardCAL(SpecialServerPacket):
             self.block_start & 0xff]) + report
 
     def encode_packet(self) -> bytes:
+        """
+        Standard CALs can be also sent as a packet without headers directly
+        onto the network.
+
+        This adds a checksum (if checksum=True) and base16 encodes the CAL
+        like it was a normal packet.
+        """
         # checksum it, if needed.
         p = self.encode()
 

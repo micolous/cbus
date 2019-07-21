@@ -18,10 +18,10 @@
 from __future__ import absolute_import
 from __future__ import annotations
 
-from typing import Union, Set, List
-
-from six import byte2int, indexbytes, int2byte
 import warnings
+from typing import Set, List
+
+from six import byte2int, indexbytes
 
 from cbus.common import Application, EnableCommand
 from cbus.protocol.application.sal import BaseApplication, SAL
