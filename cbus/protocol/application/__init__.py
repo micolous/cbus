@@ -47,19 +47,30 @@ def _register_application(app: Type[BaseApplication]) -> None:
     """
     Adds the application the registry.
 
+    This is a private method and only intended for use inside of
+    ``cbus.protocol.application``. This method is not thread-safe.
+
     :param app: Reference to BaseApplication type.
+    :raises ValueError: on invalid application data, or if re-registering an
+                        existing application ID
     """
 
     app_ids = app.supported_applications()
     if not all((0 <= i <= 0xff for i in app_ids)):
         raise ValueError('Application IDs must be in range 0x00-0xff')
 
-    for i in app_ids:
-        o = _APPLICATIONS_DICT.setdefault(i, app)
-        if o is not None and o is not app:
+    new_apps_dict = _APPLICATIONS_DICT.copy()
+    for app_id in app_ids:
+        existing_app = new_apps_dict.get(app_id)
+        if existing_app is not None and existing_app is not app:
             raise ValueError(
-                f'Attempted to register application {i:x} for {app:r}, '
-                f'which is already registered by {o:r}')
+                f'Attempted to register application 0x{app_id:x} for '
+                f'{app.__name__}, which is already registered by '
+                f'{existing_app.__name__}')
+
+        new_apps_dict[app_id] = app
+
+    _APPLICATIONS_DICT.update(new_apps_dict)
 
 
 for app in _APPLICATIONS:
