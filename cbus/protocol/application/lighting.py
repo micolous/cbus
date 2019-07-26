@@ -56,6 +56,7 @@ class LightingSAL(SAL, abc.ABC):
         Use one of the subclasses of cbus.protocol.lighting.LightingSAL
         instead.
         """
+        check_ga(group_address)
         self.group_address = group_address
 
     @property

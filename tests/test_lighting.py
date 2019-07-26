@@ -154,6 +154,21 @@ class InternalLightingTest(CBusTestCase):
         self.assertIsInstance(d[0], LightingOnSAL)
         self.assertEqual(orig[0].group_address, d[0].group_address)
 
+    def test_invalid_ga(self):
+        """test argument validation"""
+        with self.assertRaises(ValueError):
+            PointToMultipointPacket(sals=LightingOnSAL(999))
+        with self.assertRaises(ValueError):
+            PointToMultipointPacket(sals=LightingOffSAL(-1))
+
+    def test_slow_ramp(self):
+        """test very slow ramps"""
+        p1 = PointToMultipointPacket(
+            sals=LightingRampSAL(1, 18*60, 1.0)).encode_packet()
+        p2 = PointToMultipointPacket(
+            sals=LightingRampSAL(1, 17*60, 1.0)).encode_packet()
+        self.assertEqual(p1, p2)
+
 
 class LightingRegressionTest(CBusTestCase):
     def test_issue2(self):
