@@ -359,7 +359,7 @@ def cbus_checksum(i: bytes) -> int:
 
     c = ((c & 0xff) ^ 0xff) + 1
 
-    return c
+    return c & 0xff
 
 
 def add_cbus_checksum(i: bytes) -> bytes:
