@@ -18,7 +18,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from base64 import b16encode
 from collections import Iterable
 from datetime import datetime
 from traceback import print_exc
@@ -70,7 +69,6 @@ class PCIProtocol(LineReceiver):
         """
         # fired when there is a connection made to the server endpoint
         self.pci_reset()
-        reactor.callLater(10, self.timesync, 10)
 
     def lineReceived(self, line):
         """
@@ -612,16 +610,22 @@ if __name__ == '__main__':
     import sys
     from optparse import OptionParser
     from twisted.internet.endpoints import TCP4ClientEndpoint
-    from twisted.internet.protocol import Factory
 
     class PCIProtocolFactory(ClientFactory):
+
+        def __init__(self, timesync=10):
+            self._timesync = timesync
 
         def startedConnecting(self, connector):
             log.msg('Started to connect')
 
-        def buildProtocol(self, addr):
+        def buildProtocol(self, addr = None):
             log.msg('Connected.')
-            return PCIProtocol()
+            protocol = PCIProtocol()
+            if self._timesync:
+                reactor.callLater(
+                    self._timesync, protocol.timesync, self._timesync)
+            return protocol
 
         def clientConnectionLost(self, connector, reason):
             print('Lost connection.  Reason:', reason)
@@ -657,7 +661,8 @@ if __name__ == '__main__':
             'Both serial and TCP CBus PCI addresses were specified! Use only '
             'one...')
     elif option.serial_pci:
-        SerialPort(PCIProtocol(), option.serial_pci, reactor, baudrate=9600)
+        SerialPort(PCIProtocolFactory().buildProtocol(),
+                   option.serial_pci, reactor, baudrate=9600)
     elif option.tcp_pci:
         addr = option.tcp_pci.split(':', 2)
         point = TCP4ClientEndpoint(reactor, addr[0], int(addr[1]))
