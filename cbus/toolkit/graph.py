@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 cbus/toolkit/graph.py
 Generate graphs of a CBus network.
@@ -19,39 +19,36 @@ You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import absolute_import
 from argparse import ArgumentParser, FileType
 import json
 import pydot
-import six
+from typing import BinaryIO, Text
 
 
-def generate_graph(input, output):
+def generate_graph(in_f: BinaryIO, out_f: Text) -> None:
     """
     Generates a Graphviz DOT graph for the given network.
 
-    :param input: Input file-like object to read the network data from, in JSON
+    :param in_f: Input file-like object to read the network data from, in JSON
                   format from the dump_labels tool.
-    :type input: file
 
-    :param output: Output file name to write the graph to.
-    :type output: str
+    :param out_f: Output file name to write the graph to.
     """
-    networks = json.load(input)
+    networks = json.load(in_f)
 
     # warning: pydot has a bad case of the stupid and doesn't sanitise
     # inputs correctly.
-    graph = pydot.Dot(output.replace('.', '_').replace('-', '_'),
+    graph = pydot.Dot(out_f.replace('.', '_').replace('-', '_'),
                       graph_type='digraph')
 
     # create groups for networks
-    for network_id, network in six.iteritems(networks):
+    for network_id, network in networks.items():
         loads = set()
 
-        subgraph = pydot.Subgraph('Network_%s' % network_id)
+        subgraph = pydot.Subgraph(f'Network_{network_id}')
         # cluster = pydot.Cluster('Network %s' % network_id)
 
-        for unit_id, unit in six.iteritems(network['units']):
+        for unit_id, unit in network['units'].items():
             node = pydot.Node(unit['name'])
             subgraph.add_node(node)
             node.groups = unit['groups']
@@ -59,10 +56,10 @@ def generate_graph(input, output):
             for x in unit['groups']:
                 if x == 255:
                     continue
-                subgraph.add_edge(pydot.Edge(unit['name'], 'GA %s' % x))
+                subgraph.add_edge(pydot.Edge(unit['name'], f'GA {x}'))
 
         for group in loads:
-            node = pydot.Node('GA %s' % group)
+            node = pydot.Node(f'GA {group}')
 
             subgraph.add_node(node)
 
@@ -71,37 +68,27 @@ def generate_graph(input, output):
 
     # Dot.write must be a file name to write to -- not a file-like
     # object.
-    graph.write(output)
+    graph.write(out_f)
 
 
 def main():
     parser = ArgumentParser(
-        usage='%(prog)s -i input.json -o output.dot',
-        version='1.0',
         description='Creates a Graphviz dot-file describing a CBus network.',
         epilog="""\
         Render the output of this tool to an image with a command like:
 
-        python -m cbus.toolkit.dump_labels -i mynetwork.cbz -o mynetwork.json;
-        python -m cbus.toolkit.graph -i mynetwork.json -o mynetwork.dot;
+        python -m cbus.toolkit.dump_labels mynetwork.cbz -o mynetwork.json;
+        python -m cbus.toolkit.graph mynetwork.json -o mynetwork.dot;
         fdp mynetwork.dot -Tpng -o mynetwork.png;""")
     parser.add_argument(
-        '-o', '--output',
-        dest='output', metavar='FILE',
+        '-o', '--output', metavar='FILE', required=True,
         help='write dot output to FILE')
     parser.add_argument(
-        '-i', '--input',
-        dest='input', metavar='FILE', type=FileType('rb'),
+        'input', nargs=1, metavar='FILE', type=FileType('rb'),
         help='read JSON dump from FILE')
     options = parser.parse_args()
 
-    if options.input is None:
-        parser.error('Input filename not given.')
-
-    if options.output is None:
-        parser.error('Output filename not given.')
-
-    generate_graph(options.input, options.output)
+    generate_graph(options.input[0], options.output)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-pyserial==2.6
+pyserial==3.4
 lxml
 Twisted>=12.0.0a
 
@@ -15,3 +15,6 @@ six
 
 # official protocol documentation downloading
 requests
+
+# required for cbus.toolkit.graph
+pydot

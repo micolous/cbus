@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 cbus/tools/decode_packet.py - Attempt to decode a packet from a C-Bus network.
-Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+Copyright 2012, 2019 Michael Farrell <micolous+git@gmail.com>
 
 This library is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -19,11 +19,17 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
 from __future__ import print_function
+
+
 from argparse import ArgumentParser
 from cbus.protocol.packet import decode_packet
 
 
-def pretty_packet(packet, checksum=True, strict=True, server_packet=True):
+def pretty_packet(
+        packet: bytes,
+        checksum: bool = True,
+        strict: bool = True,
+        server_packet: bool = True):
     packet, remainder = decode_packet(packet, checksum, strict, server_packet)
 
     print(packet)
@@ -35,6 +41,7 @@ def main():
     parser.add_argument('packet',
                         metavar='PACKET',
                         nargs=1,
+                        type=bytes,
                         help='Packet to decode')
 
     parser.add_argument('-C',

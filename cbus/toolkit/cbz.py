@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 cbus/toolkit/cbz.py
 Library for reading CBus Toolkit CBZ files.
@@ -23,11 +22,10 @@ from __future__ import absolute_import
 
 import dataclasses
 from datetime import datetime
-from typing import Any, BinaryIO, Sequence, Optional, Union, Text, \
-    Type, TypeVar
+from typing import Any, BinaryIO, Sequence, Text, Type, TypeVar
 from uuid import UUID
 from xml.etree import ElementTree
-from zipfile import ZipFile
+from zipfile import BadZipFile, ZipFile
 
 
 BaseCBZElementType = TypeVar('BaseCBZElementType', bound='BaseCBZElement')
@@ -50,7 +48,7 @@ def _new(typ: Type) -> Any:
 class _Element:
     @staticmethod
     def _normalise_name(name: Text):
-        return name.lower().replace('_', '')
+        return name.lower().replace('_', '').rstrip('s')
 
     @classmethod
     def from_element(cls: Type[BaseCBZElementType],
@@ -97,7 +95,7 @@ class _Element:
             else:
                 child_type = field.type
 
-            if issubclass(child_type, BaseCBZElement):
+            if issubclass(child_type, _Element):
                 # Delegate parsing for child
                 value = child_type.from_element(child)
             elif child_type == datetime:
@@ -129,6 +127,7 @@ class BaseCBZElement(_Element):
 class BaseNetworkElement(BaseCBZElement):
     tag_name: Text
     address: int
+    description: Text
 
 
 @dataclasses.dataclass
@@ -164,7 +163,6 @@ class Application(BaseNetworkElement):
 
 @dataclasses.dataclass
 class Network(BaseNetworkElement):
-    description: Text
     network_number: int
     interface: Interface
     applications: Sequence[Application]
@@ -208,29 +206,37 @@ class CBZException(Exception):
     pass
 
 
-class CBZ(object):
+class CBZ:
 
-    def __init__(self, fh: Union[BinaryIO, Text]):
+    def __init__(self, fh: BinaryIO):
         """
         Opens the file as a CBZ.
-
-        fh can either be a string poining to a file name or a file-like object.
         """
-        self.zip = ZipFile(fh, 'r')
-        files = self.zip.namelist()
+        xml_fh = None
+        zip_h = None
 
-        if len(files) != 1:
-            raise CBZException(
-                f'Expected 1 file in CBZ archive, got {len(files)}')
+        try:
+            zip_h = ZipFile(fh, 'r')
+        except BadZipFile:
+            # Try to load as XML instead.
+            xml_fh = fh
 
-        # validate the filename.
-        xmlfilename = files[0]
-        if not xmlfilename.endswith('.xml'):
-            raise CBZException(
-                'The file in this archive does not have a .xml extension. '
-                'It is probably not a CBZ.')
+        if zip_h:
+            files = zip_h.namelist()
+
+            if len(files) != 1:
+                raise CBZException(
+                    f'Expected 1 file in CBZ archive, got {len(files)}')
+
+            # validate the filename.
+            xml_filename = files[0]
+            if not xml_filename.endswith('.xml'):
+                raise CBZException(
+                    'The file in this archive does not have a .xml extension. '
+                    'It is probably not a CBZ.')
+
+            xml_fh = zip_h.open(xml_filename, 'r')
 
         # now open the inner file and objectify.
-        self._tree = ElementTree.parse(
-            self.zip.open(xmlfilename, 'r')).getroot()
+        self._tree = ElementTree.parse(xml_fh).getroot()
         self.installation = Installation.from_element(self._tree)

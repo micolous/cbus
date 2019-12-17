@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 toolkit/dump_labels.py
 Dumps group address and unit metadata from a Toolkit CBZ.
@@ -20,6 +20,7 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import absolute_import
+
 from argparse import ArgumentParser
 import json
 import sys
@@ -28,8 +29,7 @@ from cbus.toolkit.cbz import CBZ
 
 
 def main():
-    parser = ArgumentParser(
-        usage='%prog -i input.cbz -o output.json')
+    parser = ArgumentParser()
     parser.add_argument(
         '-o', '--output', metavar='FILE',
         help='write output to FILE')
@@ -43,7 +43,6 @@ def main():
              'between indent levels'
     )
     options = parser.parse_args()
-
 
     pretty = None
     if options.pretty:
@@ -74,14 +73,14 @@ def main():
             'networknumber': network.network_number,
             # don't worry about converting CNI/PCI parameters.
             'applications': {},
-            'units': {}
+            'units': {},
         }
         for application in network.applications:
             ao = {
                 'name': application.tag_name,
                 'address': application.address,
                 'description': application.description,
-                'groups': {}
+                'groups': {},
             }
 
             for group in application.groups:
@@ -94,12 +93,8 @@ def main():
             channels = []
             for parameter in unit.pp:
                 if parameter.name == 'GroupAddress':
-                    ch = parameter.value.split(' ')
-                    [
-                        channels.append(
-                            int('0%s' % (c[2:]) if len(c) == 3 else (c[2:]),
-                                16)) for c in ch
-                    ]
+                    channels += [int(c[2:], 16) for c in
+                                 parameter.value.split(' ')]
 
                     # print channels
                     # print(parameter.attrib['Name'], '=',
@@ -111,7 +106,7 @@ def main():
                 'unitname': unit.unit_name,
                 'serial': unit.serial_number,
                 'catalog': unit.catalog_number,
-                'groups': channels
+                'groups': channels,
             }
 
         o[network.address] = no
