@@ -376,7 +376,7 @@ class PCIServerProtocol(CBusProtocol):
     def send_error(self):
         self._send(PCIErrorPacket())
 
-    def send_confirmation(self, code, ok=True):
+    def send_confirmation(self, code: bytes, ok: bool = True):
         # if not ok:
         #   raise NotImplementedError, 'ok != true not implemented'
 

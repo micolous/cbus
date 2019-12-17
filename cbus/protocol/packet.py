@@ -88,7 +88,7 @@ def decode_packet(
             return PCIErrorPacket(), consumed + 1
         if data[0] in CONFIRMATION_CODES:
             success = indexbytes(data, 1) == 0x2e  # .
-            code = byte2int(data)
+            code = data[:1]
             return ConfirmationPacket(code, success), consumed + 2
 
         end = data.find(END_RESPONSE)
@@ -163,7 +163,7 @@ def decode_packet(
     for c in data:
         if c not in HEX_CHARS:
             return InvalidPacket(data, ValueError(
-                'Non-base16 input: {} in {}'.format(c, data))), consumed
+                f'Non-base16 input: {c:x} in {data}')), consumed
 
     # base16 decode
     data = b16decode(data)
@@ -185,10 +185,6 @@ def decode_packet(
 
         # strip checksum
         data = data[:-1]
-
-    if device_managment_cal:
-        cal, cal_len = PointToPointPacket.decode_cal(data)
-        return cal, consumed + cal_len
 
     # flags (serial interface guide s3.4)
     flags = byte2int(data)
@@ -215,6 +211,9 @@ def decode_packet(
         # this is used to set parameters of the PCI
         p = DeviceManagementPacket.decode_packet(
             data=data, checksum=checksum, priority_class=priority_class)
+    elif device_managment_cal:
+        cal, cal_len = PointToPointPacket.decode_cal(data)
+        return cal, consumed + cal_len
 
     elif address_type == DestinationAddressType.POINT_TO_POINT:
         # decode as point-to-point packet

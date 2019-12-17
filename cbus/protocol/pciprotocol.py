@@ -70,6 +70,7 @@ class PCIProtocol(LineReceiver):
         """
         # fired when there is a connection made to the server endpoint
         self.pci_reset()
+        reactor.callLater(10, self.timesync, 10)
 
     def lineReceived(self, line):
         """
@@ -114,7 +115,7 @@ class PCIProtocol(LineReceiver):
 
             if remainder == 0:
                 # infinite loop!
-                log.msg('dce: bug: infinite loop detected on %r', line)
+                log.msg('dce: bug: infinite loop detected on', line)
                 return
             else:
                 line = line[remainder:]
@@ -124,7 +125,7 @@ class PCIProtocol(LineReceiver):
                 log.msg('dce: packet == None')
                 continue
 
-            log.msg('dce: packet: %r' % p)
+            log.msg('dce: packet:', p)
 
             if isinstance(p, SpecialServerPacket):
                 if isinstance(p, PCIErrorPacket):
@@ -153,7 +154,7 @@ class PCIProtocol(LineReceiver):
                             self.on_lighting_group_terminate_ramp(
                                 p.source_address, s.group_address)
                         else:
-                            log.msg('dce: unhandled lighting SAL type: %r', s)
+                            log.msg('dce: unhandled lighting SAL type', s)
                             break
                     elif isinstance(s, ClockSAL):
                         if isinstance(s, ClockRequestSAL):
@@ -161,11 +162,11 @@ class PCIProtocol(LineReceiver):
                         elif isinstance(s, ClockUpdateSAL):
                             self.on_clock_update(p.source_address, s.val)
                     else:
-                        log.msg('dce: unhandled SAL type: %r', s)
+                        log.msg('dce: unhandled SAL type', s)
                         break
 
             else:
-                log.msg('dce: unhandled other packet %r', p)
+                log.msg('dce: unhandled other packet', p)
                 continue
 
     # event handlers
@@ -363,8 +364,8 @@ class PCIProtocol(LineReceiver):
 
     def _send(self,
               cmd: BasePacket,
-              confirmation=True,
-              basic_mode=False):
+              confirmation: bool = True,
+              basic_mode: bool = False):
         """
         Sends a packet of CBus data.
 
@@ -376,7 +377,7 @@ class PCIProtocol(LineReceiver):
                 basic_mode = True
                 confirmation = False
 
-            cmd = cmd.encode()
+            cmd = cmd.encode_packet()
 
             if not basic_mode:
                 cmd = b'\\' + cmd
@@ -392,9 +393,6 @@ class PCIProtocol(LineReceiver):
 
         if checksum:
             cmd = add_cbus_checksum(cmd)
-
-        if encode:
-            cmd = b'\\' + b16encode(cmd)
 
         if confirmation:
             conf_code = self._get_confirmation_code()
@@ -633,14 +631,6 @@ if __name__ == '__main__':
             print('Connection failed. Reason:', reason)
             reactor.stop()
 
-    class CBusProtocolHandlerFactory(Factory):
-
-        def __init__(self, protocol):
-            self.protocol = protocol
-
-        def buildProtocol(self, addr):
-            return self.protocol
-
     parser = OptionParser(usage='%prog',
                           description="""\
         Library for communications with a CBus PCI in Twisted.  Acts as a test
@@ -662,21 +652,18 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-    protocol = PCIProtocol()
     if option.serial_pci and option.tcp_pci:
         parser.error(
             'Both serial and TCP CBus PCI addresses were specified! Use only '
             'one...')
     elif option.serial_pci:
-        SerialPort(protocol, option.serial_pci, reactor, baudrate=9600)
+        SerialPort(PCIProtocol(), option.serial_pci, reactor, baudrate=9600)
     elif option.tcp_pci:
         addr = option.tcp_pci.split(':', 2)
         point = TCP4ClientEndpoint(reactor, addr[0], int(addr[1]))
-        d = point.connect(CBusProtocolHandlerFactory(protocol))
+        d = point.connect(PCIProtocolFactory())
     else:
         parser.error(
             'No CBus PCI address was specified!  (See -s or -t option)')
-
-    reactor.callLater(10, protocol.timesync, 10)
 
     reactor.run()

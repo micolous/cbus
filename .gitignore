@@ -12,3 +12,5 @@ dist
 *.egg-info
 docs/_build
 .pytype
+example.*
+home.*
