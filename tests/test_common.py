@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# test_application.py - Internal application registration tests.
+# test_common.py - Common functionality unit tests
 # Copyright 2019 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@ import unittest
 from cbus.common import add_cbus_checksum
 
 
-class InternalApplicationRegistrationTest(unittest.TestCase):
+class CommonTest(unittest.TestCase):
 
     def test_cbus_checksum(self):
         """Test that adding a cbus checksum works for every byte value."""
@@ -31,6 +31,8 @@ class InternalApplicationRegistrationTest(unittest.TestCase):
             c = bytes([x, ((x ^ 0xff) + 1) & 0xff])
             self.assertEqual(c, add_cbus_checksum(b), f'bad checksum for {x}')
 
+    def test_empty_checksum(self):
+        self.assertEqual(b'\0', add_cbus_checksum(b''))
 
 
 if __name__ == '__main__':
