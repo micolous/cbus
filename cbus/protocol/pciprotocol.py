@@ -616,9 +616,6 @@ if __name__ == '__main__':
         def __init__(self, timesync=10):
             self._timesync = timesync
 
-        def startedConnecting(self, connector):
-            log.msg('Started to connect')
-
         def buildProtocol(self, addr = None):
             log.msg('Connected.')
             protocol = PCIProtocol()
