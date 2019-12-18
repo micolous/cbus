@@ -118,7 +118,7 @@ def decode_packet(
 
     # Look for ending character(s). If there is none, break out now.
     if end == -1:
-        print('no end character {}: {}'.format(END_COMMAND, data))
+        print(f'no end character {END_COMMAND}: {data}')
         return None, consumed
 
     # Make it so the end of the buffer is where the end of the command is, and
@@ -151,8 +151,10 @@ def decode_packet(
 
             if confirmation not in CONFIRMATION_CODES:
                 if strict:
-                    return InvalidPacket(data, ValueError(
-                        'Confirmation code is not in range g..z')), consumed
+                    return InvalidPacket(
+                        payload=data,
+                        exception=ValueError(
+                            'Confirmation code is not in range g..z')), consumed
                 else:
                     warnings.warn(
                         'Confirmation code is not in range g..z')
@@ -162,7 +164,7 @@ def decode_packet(
 
     for c in data:
         if c not in HEX_CHARS:
-            return InvalidPacket(data, ValueError(
+            return InvalidPacket(payload=data, exception=ValueError(
                 f'Non-base16 input: {c:x} in {data}')), consumed
 
     # base16 decode
@@ -174,14 +176,13 @@ def decode_packet(
         if not validate_cbus_checksum(data):
             real_checksum = get_real_cbus_checksum(data)
             if strict:
-                return InvalidPacket(data, ValueError(
-                    'C-Bus checksum incorrect (expected 0x{:x}) and strict '
-                    'mode is enabled: {}'.format(
-                        real_checksum, data))), consumed
+                return InvalidPacket(payload=data, exception=ValueError(
+                    f'C-Bus checksum incorrect (expected 0x{real_checksum:x}) '
+                    f'and strict mode is enabled: {data}')), consumed
             else:
                 warnings.warn(
-                    'C-Bus checksum incorrect (expected 0x{:x}) in data '
-                    '{}'.format(real_checksum, data), UserWarning)
+                    f'C-Bus checksum incorrect (expected 0x{real_checksum:x}) '
+                    f'in data {data}', UserWarning)
 
         # strip checksum
         data = data[:-1]
@@ -230,8 +231,8 @@ def decode_packet(
         # flags, destination_address_type, rc, dp, priority_class)
         raise NotImplementedError('Point-to-point-to-multipoint')
     else:
-        raise NotImplementedError('Destination address type = 0x{:x}'.format(
-            address_type))
+        raise NotImplementedError(
+            f'Destination address type = 0x{address_type:x}')
 
     if not server_packet:
         p.confirmation = confirmation

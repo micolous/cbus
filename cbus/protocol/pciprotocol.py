@@ -18,9 +18,9 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from collections import Iterable
 from datetime import datetime
 from traceback import print_exc
+from typing import Iterable, Optional, Text, Union
 
 from six import int2byte
 from twisted.internet import reactor
@@ -168,7 +168,7 @@ class PCIProtocol(LineReceiver):
                 continue
 
     # event handlers
-    def on_confirmation(self, code, success):
+    def on_confirmation(self, code: bytes, success: bool):
         """
         Event called when a command confirmation event was received.
 
@@ -189,7 +189,7 @@ class PCIProtocol(LineReceiver):
         """
         log.msg('recv: pci reset in progress!')
 
-    def on_mmi(self, application, data):
+    def on_mmi(self, application: int, data: bytes):
         """
         Event called when a MMI was received.
 
@@ -202,7 +202,8 @@ class PCIProtocol(LineReceiver):
         """
         log.msg("recv: mmi: application %r, data %r" % (application, data))
 
-    def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
+    def on_lighting_group_ramp(self, source_addr: int, group_addr: int,
+                               duration: int, level: float):
         """
         Event called when a lighting application ramp (fade) request is
         received.
@@ -224,7 +225,7 @@ class PCIProtocol(LineReceiver):
             'recv: lighting ramp: from {} to {}, duration {} seconds to level '
             '{:.2f}%'.format(source_addr, group_addr, duration, level * 100))
 
-    def on_lighting_group_on(self, source_addr, group_addr):
+    def on_lighting_group_on(self, source_addr: int, group_addr: int):
         """
         Event called when a lighting application "on" request is received.
 
@@ -238,7 +239,7 @@ class PCIProtocol(LineReceiver):
         log.msg('recv: lighting on: from {} to {}'.format(
             source_addr, group_addr))
 
-    def on_lighting_group_off(self, source_addr, group_addr):
+    def on_lighting_group_off(self, source_addr: int, group_addr: int):
         """
         Event called when a lighting application "off" request is received.
 
@@ -252,7 +253,8 @@ class PCIProtocol(LineReceiver):
         log.msg('recv: lighting off: from {} to {}'.format(
             source_addr, group_addr))
 
-    def on_lighting_group_terminate_ramp(self, source_addr, group_addr):
+    def on_lighting_group_terminate_ramp(
+            self, source_addr: int, group_addr: int):
         """
         Event called when a lighting application "terminate ramp" request is
         received.
@@ -267,8 +269,8 @@ class PCIProtocol(LineReceiver):
         log.msg('recv: lighting terminate ramp: from {} to {}'.format(
             source_addr, group_addr))
 
-    def on_lighting_label_text(self, source_addr, group_addr, flavour,
-                               language_code, label):
+    def on_lighting_label_text(self, source_addr: int, group_addr: int,
+                               flavour: int, language_code: int, label: Text):
         """
         Event called when a group address' label text is updated.
 
@@ -465,7 +467,7 @@ class PCIProtocol(LineReceiver):
             unit_address=unit_address, cals=[IdentifyCAL(attribute)])
         return self._send(p)
 
-    def lighting_group_on(self, group_addr):
+    def lighting_group_on(self, group_addr: Union[int, Iterable[int]]):
         """
         Turns on the lights for the given group_id.
 
@@ -491,7 +493,7 @@ class PCIProtocol(LineReceiver):
             sals=[LightingOnSAL(ga) for ga in group_addr])
         return self._send(p)
 
-    def lighting_group_off(self, group_addr):
+    def lighting_group_off(self, group_addr: Union[int, Iterable[int]]):
         """
         Turns off the lights for the given group_id.
 
@@ -518,7 +520,8 @@ class PCIProtocol(LineReceiver):
             sals=[LightingOffSAL(ga) for ga in group_addr])
         return self._send(p)
 
-    def lighting_group_ramp(self, group_addr, duration, level=1.0):
+    def lighting_group_ramp(
+            self, group_addr: int, duration: int, level: float = 1.0):
         """
         Ramps (fades) a group address to a specified lighting level.
 
@@ -543,7 +546,8 @@ class PCIProtocol(LineReceiver):
             sals=LightingRampSAL(group_addr, duration, level))
         return self._send(p)
 
-    def lighting_group_terminate_ramp(self, group_addr):
+    def lighting_group_terminate_ramp(
+            self, group_addr: Union[int, Iterable[int]]):
         """
         Stops ramping a group address at the current point.
 
@@ -569,7 +573,7 @@ class PCIProtocol(LineReceiver):
             sals=[LightingTerminateRampSAL(ga) for ga in group_addr])
         return self._send(p)
 
-    def clock_datetime(self, when=None):
+    def clock_datetime(self, when: Optional[datetime] = None):
         """
         Sends the system's local time to the CBus network.
 
@@ -586,7 +590,7 @@ class PCIProtocol(LineReceiver):
         p = PointToMultipointPacket(sals=sals)
         return self._send(p)
 
-    def timesync(self, frequency):
+    def timesync(self, frequency: int):
         # setup timesync in the future.
         reactor.callLater(frequency, self.timesync, frequency)
 

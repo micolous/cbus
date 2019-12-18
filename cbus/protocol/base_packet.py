@@ -102,7 +102,7 @@ class SpecialServerPacket(_SpecialPacket, abc.ABC):
     pass
 
 
-@dataclass
+@dataclass(init=True)
 class InvalidPacket(_SpecialPacket):
     """Invalid packet data."""
     payload: bytes

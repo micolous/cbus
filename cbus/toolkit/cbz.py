@@ -29,11 +29,11 @@ from zipfile import BadZipFile, ZipFile
 
 
 BaseCBZElementType = TypeVar('BaseCBZElementType', bound='BaseCBZElement')
-C_co = TypeVar('C_co', covariant=True)
+C_co = TypeVar('C_co', covariant=True)  # pytype: disable=not-supported-yet
 T = TypeVar('T')
 
 
-def _new(typ: Type) -> Any:
+def _new(typ: type) -> Any:
     if typ == type(None):
         return None
     # TODO: implement better
@@ -60,7 +60,7 @@ class _Element:
 
         # Initialise Optional and Lists
         for field in fields:
-            params[field.name] = _new(field.type)
+            params[field.name] = _new(field.type)  # pytype: disable=invalid-typevar
 
         # Read all attributes on the class
         for key, value in element.items():
