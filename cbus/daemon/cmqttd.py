@@ -18,7 +18,7 @@
 from argparse import ArgumentParser
 import json
 import sys
-from typing import Any, Dict, Text
+from typing import Any, Dict, Optional, Text
 
 import paho.mqtt.client as mqtt
 
@@ -36,6 +36,7 @@ _TOPIC_PREFIX = 'homeassistant/light/cbus_'
 _TOPIC_SET_SUFFIX = '/set'
 _TOPIC_CONF_SUFFIX = '/config'
 _TOPIC_STATE_SUFFIX = '/state'
+_META_TOPIC = 'homeassistant/binary_sensor/cbus_cmqttd'
 
 
 def ga_range():
@@ -134,7 +135,7 @@ class MqttClient(mqtt.Client):
             log.msg(f'Invalid group address in topic {msg.topic}', e)
             return
 
-        # process the message per homeassistant JSON
+        # https://www.home-assistant.io/integrations/light.mqtt/#json-schema
         payload = json.loads(msg.payload)
         light_on = payload['state'].upper() == 'ON'
         brightness = payload.get('brightness', 255) / 255.
@@ -147,12 +148,12 @@ class MqttClient(mqtt.Client):
             transition_time = 0
 
         if light_on:
-            if brightness == 1. and transition_time > 0:
+            if brightness == 1. and transition_time == 0:
                 # lighting on
                 userdata.lighting_group_on(ga)
             else:
                 # ramp
-                userdata.lighting_group_ramp(ga, 1, brightness)
+                userdata.lighting_group_ramp(ga, transition_time, brightness)
         else:
             # lighting off
             userdata.lighting_group_off(ga)
@@ -165,19 +166,38 @@ class MqttClient(mqtt.Client):
 
     def publish_all_lights(self):
         """Publishes a configuration topic for all lights."""
+        # Meta-device which holds all the C-Bus group addresses
+        self.publish(_META_TOPIC + _TOPIC_CONF_SUFFIX, {
+            '~': _META_TOPIC,
+            'name': 'cmqttd',
+            'unique_id': 'cmqttd',
+            'stat_t': '~' + _TOPIC_STATE_SUFFIX,  # unused
+            'device': {
+                'identifiers': ['cmqttd'],
+                'sw_version': 'cmqttd https://github.com/micolous/cbus',
+                'name': 'cmqttd',
+                'manufacturer': 'micolous',
+                'model': 'libcbus',
+            },
+        }, 1, True)
+
         for ga in ga_range():
             self.publish(conf_topic(ga), {
                 '~': _TOPIC_PREFIX + str(ga),
-                'name': f'CBus Light {ga:03d}',
+                'name': f'C-Bus Light {ga:03d}',
                 'unique_id': f'cbus_light_{ga}',
                 'cmd_t': '~' + _TOPIC_SET_SUFFIX,
                 'stat_t': '~' + _TOPIC_STATE_SUFFIX,
                 'schema': 'json',
                 'brightness': True,
                 'device': {
-                    'identifiers': f'cbus_{ga}',
+                    'identifiers': [f'cbus_light_{ga}'],
                     'connections': [['cbus_group_address', str(ga)]],
-                    'sw_version': 'cmqttd',
+                    'sw_version': 'cmqttd https://github.com/micolous/cbus',
+                    'name': f'C-Bus Light {ga:03d}',
+                    'manufacturer': 'Clipsal',
+                    'model': 'C-Bus Lighting Application',
+                    'via_device': 'cmqttd',
                 },
             }, 1, True)
 
