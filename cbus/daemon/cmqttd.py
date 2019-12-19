@@ -32,37 +32,52 @@ from cbus.protocol.pciprotocol import PCIProtocol
 from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga
 
 
+_TOPIC_PREFIX = 'homeassistant/light/cbus_'
+_TOPIC_SET_SUFFIX = '/set'
+_TOPIC_CONF_SUFFIX = '/config'
+_TOPIC_STATE_SUFFIX = '/state'
+
+
 def ga_range():
     return range(MIN_GROUP_ADDR, MAX_GROUP_ADDR + 1)
+
+
+def get_topic_group_address(topic: Text) -> int:
+    """Gets the group address for the given topic."""
+    if not topic.startswith(_TOPIC_PREFIX):
+        raise ValueError(
+            f'Invalid topic {topic}, must start with {_TOPIC_PREFIX}')
+    ga = int(topic[len(_TOPIC_PREFIX):].split('/', maxsplit=1)[0])
+    check_ga(ga)
+    return ga
+
+
+def set_topic(group_addr: int) -> Text:
+    """Gets the Set topic for a group address."""
+    return _TOPIC_PREFIX + str(group_addr) + _TOPIC_SET_SUFFIX
+
+
+def state_topic(group_addr: int) -> Text:
+    """Gets the State topic for a group address."""
+    return _TOPIC_PREFIX + str(group_addr) + _TOPIC_STATE_SUFFIX
+
+
+def conf_topic(group_addr: int) -> Text:
+    """Gets the Config topic for a group address."""
+    return _TOPIC_PREFIX + str(group_addr) + _TOPIC_CONF_SUFFIX
 
 
 class CBusHandler(PCIProtocol):
     """
     Glue to wire events from the PCI onto MQTT
     """
-    cbus_api = None
     mqtt_api = None
 
-    def on_confirmation(self, code, success):
-        if not self.cbus_api:
-            return
-        self.cbus_api.on_confirmation(code, success)
-
-    def on_reset(self):
-        if not self.cbus_api:
-            return
-        self.cbus_api.on_reset()
-
-    def on_mmi(self, application, data):
-        if not self.cbus_api:
-            return
-        self.cbus_api.on_mmi(application, data)
-
     def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
-        if not self.cbus_api:
+        if not self.mqtt_api:
             return
-        self.cbus_api.on_lighting_group_ramp(source_addr, group_addr, duration,
-                                             level)
+        self.mqtt_api.lighting_group_ramp(
+            source_addr, group_addr, duration, level)
 
     def on_lighting_group_on(self, source_addr, group_addr):
         if not self.mqtt_api:
@@ -88,19 +103,12 @@ class CBusHandler(PCIProtocol):
         self.clock_datetime()
 
 
-_TOPIC_PREFIX = 'homeassistant/light/cbus_'
-_TOPIC_SET_SUFFIX = '/set'
-_TOPIC_CONF_SUFFIX = '/config'
-_TOPIC_STATE_SUFFIX = '/state'
-
-
 class MqttClient(mqtt.Client):
 
     def on_connect(self, client, userdata: CBusHandler, flags, rc):
         log.msg('Connected to MQTT broker')
         userdata.mqtt_api = self
-        self.subscribe([(_TOPIC_PREFIX + str(t) + _TOPIC_SET_SUFFIX, 2)
-                        for t in ga_range()])
+        self.subscribe([(set_topic(ga), 2) for ga in ga_range()])
         self.publish_all_lights()
 
     def loop_twisted(self) -> None:
@@ -114,16 +122,16 @@ class MqttClient(mqtt.Client):
         reactor.callLater(1, self.loop_twisted)
 
     def on_message(self, client, userdata: CBusHandler, msg: mqtt.MQTTMessage):
+        """Handle a message from an MQTT subscription."""
         if not (msg.topic.startswith(_TOPIC_PREFIX) and
                 msg.topic.endswith(_TOPIC_SET_SUFFIX)):
             return
 
         try:
-            ga = int(msg.topic[len(_TOPIC_PREFIX):][:-len(_TOPIC_SET_SUFFIX)])
-            check_ga(ga)
-        except ValueError:
+            ga = get_topic_group_address(msg.topic)
+        except ValueError as e:
             # Invalid group address
-            log.msg(f'Invalid group address in topic {msg.topic}')
+            log.msg(f'Invalid group address in topic {msg.topic}', e)
             return
 
         # process the message per homeassistant JSON
@@ -151,12 +159,14 @@ class MqttClient(mqtt.Client):
 
     def publish(self, topic: Text, payload: Dict[Text, Any], qos: int = 0,
                 retain: bool = False):
+        """Publishes a payload as JSON."""
         payload = json.dumps(payload)
         return super().publish(topic, payload, qos, retain, properties=None)
 
     def publish_all_lights(self):
+        """Publishes a configuration topic for all lights."""
         for ga in ga_range():
-            self.publish(_TOPIC_PREFIX + str(ga) + _TOPIC_CONF_SUFFIX, {
+            self.publish(conf_topic(ga), {
                 '~': _TOPIC_PREFIX + str(ga),
                 'name': f'CBus Light {ga:03d}',
                 'unique_id': f'cbus_light_{ga}',
@@ -164,16 +174,16 @@ class MqttClient(mqtt.Client):
                 'stat_t': '~' + _TOPIC_STATE_SUFFIX,
                 'schema': 'json',
                 'brightness': True,
-                #'device': {
-                #    'identifiers': f'cbus_{ga}',
-                #    'connections': [['cbus_group_address', str(ga)]],
-                #    'sw_version': 'cmqttd',
-                #},
+                'device': {
+                    'identifiers': f'cbus_{ga}',
+                    'connections': [['cbus_group_address', str(ga)]],
+                    'sw_version': 'cmqttd',
+                },
             }, 1, True)
 
     def lighting_group_on(self, source_addr: int, group_addr: int):
-        topic = _TOPIC_PREFIX + str(group_addr) + _TOPIC_STATE_SUFFIX
-        self.publish(topic, {
+        """Relays a lighting-on event from CBus to MQTT."""
+        self.publish(state_topic(group_addr), {
             'state': 'ON',
             'brightness': 255,
             'transition': 0,
@@ -181,17 +191,23 @@ class MqttClient(mqtt.Client):
         })
 
     def lighting_group_off(self, source_addr: int, group_addr: int):
-        topic = _TOPIC_PREFIX + str(group_addr) + _TOPIC_STATE_SUFFIX
-        self.publish(topic, {
+        """Relays a lighting-off event from CBus to MQTT."""
+        self.publish(state_topic(group_addr), {
             'state': 'OFF',
             'brightness': 0,
             'transition': 0,
             'cbus_source_addr': source_addr,
         })
 
-
-
-
+    def lighting_group_ramp(self, source_addr: int, group_addr: int,
+                            duration: int, level: float):
+        """Relays a lighting-ramp event from CBus to MQTT."""
+        self.publish(state_topic(group_addr), {
+            'state': 'ON',
+            'brightness': int(level * 255.),
+            'transition': duration,
+            'cbus_source_addr': source_addr,
+        })
 
 
 class PCIProtocolFactory(ClientFactory):
@@ -232,8 +248,7 @@ def main():
         '-P', '--pid',
         dest='pid_file', default='/var/run/cdbusd.pid',
         help='Location to write the PID file. Only has effect in daemon mode. '
-             '[default: %(default)s]'
-    )
+             '[default: %(default)s]')
 
     group.add_argument(
         '-l', '--log-file',
@@ -244,46 +259,43 @@ def main():
     group.add_argument(
         '-b', '--broker-address',
         required=True,
-        help='Address of the MQTT broker',
-    )
+        help='Address of the MQTT broker')
 
     group.add_argument(
         '-p', '--broker-port',
         type=int, default=1883,  # TODO: TLS
-        help='Port to use to connect to the MQTT broker',
-    )
+        help='Port to use to connect to the MQTT broker.')
 
     group.add_argument(
         '--broker-keepalive',
-        type=int, default=60,
-    )
+        type=int, default=60, metavar='SECONDS',
+        help='Send a MQTT keep-alive message every n seconds. Most people '
+             'should not need to change this. [default: %(default)s seconds]')
 
     # TODO: Authentication
     # TODO: TLS
 
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_argument_group(
+        'C-Bus PCI options', 'You must specify exactly one of these options:')
+    group = group.add_mutually_exclusive_group(required=True)
 
     group.add_argument(
         '-s', '--serial-pci',
-        dest='serial_pci', default=None,
-        help='Serial port where the PCI is located. Either this or -t must be '
-             'specified.'
-    )
+        dest='serial_pci', default=None, metavar='DEVICE',
+        help='Device node that the PCI is connected to. USB PCIs act as a '
+             'USB-Serial adapter (eg: /dev/ttyUSB0).')
 
     group.add_argument(
         '-t', '--tcp-pci',
-        dest='tcp_pci', default=None,
-        help='IP address and TCP port where the PCI is located (CNI). Either '
-             'this or -s must be specified.'
-    )
+        dest='tcp_pci', default=None, metavar='HOST_PORT',
+        help='IP address and TCP port of the CNI or PCI.')
 
-    group = parser.add_argument_group('Extras')
+    group = parser.add_argument_group('Time settings')
     group.add_argument(
-        '-T', '--timesync',
+        '-T', '--timesync', metavar='SECONDS',
         dest='timesync', type=int, default=10,  # TODO: 300s
         help='Send time synchronisation packets every n seconds '
-             '(or 0 to disable). [default: %(default)s seconds]'
-    )
+             '(or 0 to disable). [default: %(default)s seconds]')
 
     group.add_argument(
         '-C', '--no-clock',
@@ -293,8 +305,7 @@ def main():
              'time (ie: do not provide the CBus network the time when '
              'requested). Enable if your machine does not have a reliable '
              'time source, or you have another device on the CBus network '
-             'providing time services. [default: %(default)s]'
-    )
+             'providing time services. [default: %(default)s]')
 
     option = parser.parse_args()
 

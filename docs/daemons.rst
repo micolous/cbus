@@ -6,6 +6,7 @@ C-Bus network.
 
 .. toctree::
 	daemons.cdbusd
+	daemons.cmqttd
 	daemons.dbuspcid
 	daemons.sage
 	daemons.staged
