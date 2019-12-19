@@ -2,7 +2,7 @@
 Introduction
 ************
 
-Welcome to libcbus!
+Welcome to ``libcbus``!
 
 This is a Python library for interacting with Clipsal C-Bus networks through the PCI.  This also
 includes:

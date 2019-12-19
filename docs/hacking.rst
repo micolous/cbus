@@ -89,8 +89,8 @@ CP210X USB-serial bridge. ``cbususb.inf`` lists the following products:
   (`C-5000CT2`_)
 * ``166A:0401``: C-Bus Architectural Dimmer (L51xx series)
 
-Linux kernel module
--------------------
+Linux driver
+------------
 
 The ``cp210x`` kernel module in Linux 2.6.30 and later supports this chipset.
 However, only the generic adapter and `5500PCU`_ device IDs are included with
@@ -109,17 +109,22 @@ If the following is returned, you only have support for the `5500PCU`_::
 If more lines come back, then your kernel supports all the hardware that is
 known about at this time.
 
+macOS driver
+------------
+
+`SiLabs' macOS drivers`__ (v5.2.3) do not list any Clipsal devices, so it may not be possible to
+use this.
+
+__ https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers
+
 Unit Tests
 ==========
 
-There's some basic unit tests that are written that require you have the
-``nosetests`` package (``nose`` on pip).
+Tests use the :py:mod:`unittest` package.  To run them::
 
-When you run ``nosetests``, it will discover all the unit tests in the package
-and try to run them.
+    $ python3 -m unittest
 
-I'm targeting Python 2.6 and 2.7 at this time. Python 3 support is currently a
-work in progress.  Patches still welcome.
+This targets Python 3.7 and later.  Python 2.x are no longer supported.
 
 When implementing a new application, you should copy all of the examples given
 in the documentation of that application into some tests for that application.
