@@ -9,5 +9,3 @@ C-Bus network.
 	daemons.cmqttd
 	daemons.dbuspcid
 	daemons.sage
-	daemons.staged
-
