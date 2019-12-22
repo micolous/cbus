@@ -313,7 +313,7 @@ def main():
     group = parser.add_argument_group('Time settings')
     group.add_argument(
         '-T', '--timesync', metavar='SECONDS',
-        dest='timesync', type=int, default=10,  # TODO: 300s
+        dest='timesync', type=int, default=300,
         help='Send time synchronisation packets every n seconds '
              '(or 0 to disable). [default: %(default)s seconds]')
 
