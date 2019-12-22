@@ -1,0 +1,4 @@
+pyserial==3.4
+Twisted>=12.0.0a
+six
+paho-mqtt==1.5.0

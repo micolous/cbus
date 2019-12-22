@@ -18,3 +18,5 @@ requests
 
 # required for cbus.toolkit.graph
 pydot
+
+paho-mqtt==1.5.0
