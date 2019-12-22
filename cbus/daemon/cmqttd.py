@@ -147,22 +147,25 @@ class MqttClient(mqtt.Client):
         if transition_time < 0:
             transition_time = 0
 
+        # push state to CBus and republish on MQTT
         if light_on:
             if brightness == 1. and transition_time == 0:
                 # lighting on
                 userdata.lighting_group_on(ga)
+                self.lighting_group_on(None, ga)
             else:
                 # ramp
                 userdata.lighting_group_ramp(ga, transition_time, brightness)
+                self.lighting_group_ramp(None, ga, transition_time, brightness)
         else:
             # lighting off
             userdata.lighting_group_off(ga)
+            self.lighting_group_off(None, ga)
 
-    def publish(self, topic: Text, payload: Dict[Text, Any], qos: int = 0,
-                retain: bool = False):
+    def publish(self, topic: Text, payload: Dict[Text, Any]):
         """Publishes a payload as JSON."""
         payload = json.dumps(payload)
-        return super().publish(topic, payload, qos, retain, properties=None)
+        return super().publish(topic, payload, 1, True, properties=None)
 
     def publish_all_lights(self):
         """Publishes a configuration topic for all lights."""
@@ -179,7 +182,7 @@ class MqttClient(mqtt.Client):
                 'manufacturer': 'micolous',
                 'model': 'libcbus',
             },
-        }, 1, True)
+        })
 
         for ga in ga_range():
             self.publish(conf_topic(ga), {
@@ -199,9 +202,9 @@ class MqttClient(mqtt.Client):
                     'model': 'C-Bus Lighting Application',
                     'via_device': 'cmqttd',
                 },
-            }, 1, True)
+            })
 
-    def lighting_group_on(self, source_addr: int, group_addr: int):
+    def lighting_group_on(self, source_addr: Optional[int], group_addr: int):
         """Relays a lighting-on event from CBus to MQTT."""
         self.publish(state_topic(group_addr), {
             'state': 'ON',
@@ -210,7 +213,7 @@ class MqttClient(mqtt.Client):
             'cbus_source_addr': source_addr,
         })
 
-    def lighting_group_off(self, source_addr: int, group_addr: int):
+    def lighting_group_off(self, source_addr: Optional[int], group_addr: int):
         """Relays a lighting-off event from CBus to MQTT."""
         self.publish(state_topic(group_addr), {
             'state': 'OFF',
@@ -219,7 +222,7 @@ class MqttClient(mqtt.Client):
             'cbus_source_addr': source_addr,
         })
 
-    def lighting_group_ramp(self, source_addr: int, group_addr: int,
+    def lighting_group_ramp(self, source_addr: Optional[int], group_addr: int,
                             duration: int, level: float):
         """Relays a lighting-ramp event from CBus to MQTT."""
         self.publish(state_topic(group_addr), {
