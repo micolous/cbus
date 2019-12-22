@@ -17,4 +17,7 @@ home.*
 .git
 .gitignore
 .travis.yml
-
+img
+docs
+platform
+wiser-swf-de
