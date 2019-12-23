@@ -13,7 +13,9 @@ dist
 docs/_build
 .pytype
 example.*
+EXAMPLE.*
 home.*
+HOME.*
 .git
 .gitignore
 .travis.yml
@@ -23,3 +25,4 @@ platform
 wiser-swf-de
 .idea
 venv
+debian_platform_install.sh
