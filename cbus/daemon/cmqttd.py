@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, FileType
 import json
 import sys
-from typing import Any, Dict, Optional, Text
+from typing import Any, Dict, Optional, Text, TextIO
 
 import paho.mqtt.client as mqtt
 
@@ -258,6 +258,13 @@ class PCIProtocolFactory(ClientFactory):
         reactor.stop()
 
 
+def read_auth(client: mqtt.Client, auth_file: TextIO):
+    """Reads authentication from a file."""
+    username = auth_file.readline()
+    password = auth_file.readline()
+    client.username_pw_set(username, password)
+
+
 def main():
     parser = ArgumentParser()
 
@@ -286,8 +293,9 @@ def main():
 
     group.add_argument(
         '-p', '--broker-port',
-        type=int, default=1883,  # TODO: TLS
-        help='Port to use to connect to the MQTT broker.')
+        type=int, default=0,
+        help='Port to use to connect to the MQTT broker. [default: 8883 if '
+             'using TLS (default), otherwise 1883]')
 
     group.add_argument(
         '--broker-keepalive',
@@ -295,8 +303,38 @@ def main():
         help='Send a MQTT keep-alive message every n seconds. Most people '
              'should not need to change this. [default: %(default)s seconds]')
 
-    # TODO: Authentication
-    # TODO: TLS
+    group.add_argument(
+        '--broker-disable-tls',
+        action='store_true',
+        help='Disables TLS [default: TLS is enabled]. Setting this option is '
+             'insecure.')
+
+    group.add_argument(
+        '-A', '--broker-auth',
+        type=FileType('rt'),
+        help='File containing the username and password to authenticate to the '
+             'MQTT broker with. The first line in the filename is the '
+             'username, and the second line is the password. The file must '
+             'be UTF-8 encoded. If not specified, authentication will be '
+             'disabled (insecure!)')
+
+    group.add_argument(
+        '-c', '--broker-ca',
+        help='Path to directory containing CA certificates to trust. If not '
+             'specified, the default (Python) CA store is used instead.')
+
+    group.add_argument(
+        '-k', '--broker-client-cert',
+        help='Path to PEM-encoded client certificate (public part). If not '
+             'specified, client authentication will not be used. Must also '
+             'supply the private key (-K).')
+
+    group.add_argument(
+        '-K', '--broker-client-key',
+        help='Path to PEM-encoded client key (private part). If not '
+             'specified, client authentication will not be used. Must also '
+             'supply the public key (-k). If this file is encrypted, Python '
+             'will prompt for the password at the command-line.')
 
     group = parser.add_argument_group(
         'C-Bus PCI options', 'You must specify exactly one of these options:')
@@ -336,6 +374,10 @@ def main():
         return parser.error(
             'Running in daemon mode requires a PID file.')
 
+    if bool(option.broker_client_cert) != bool(option.broker_client_key):
+        return parser.error(
+            'To use client certificates, both -k and -K must be specified.')
+
     if option.log:
         log.startLogging(option.log)
     else:
@@ -361,8 +403,22 @@ def main():
                             'option)')
 
     mqtt_client = MqttClient(userdata=factory.protocol)
-    mqtt_client.connect(option.broker_address, option.broker_port,
-                        option.broker_keepalive)
+    if option.broker_auth:
+        read_auth(mqtt_client, option.broker_auth)
+    if option.broker_disable_tls:
+        log.msg('Transport security has been disabled!')
+        port = option.broker_port or 1883
+    else:
+        tls_args = {}
+        if option.broker_ca:
+            tls_args['ca_certs'] = option.broker_ca
+        if option.broker_client_cert:
+            tls_args['certfile'] = option.broker_client_cert
+            tls_args['keyfile'] = option.broker_client_key
+        mqtt_client.tls_set(**tls_args)
+        port = option.broker_port or 8883
+
+    mqtt_client.connect(option.broker_address, port, option.broker_keepalive)
     reactor.callLater(0, mqtt_client.loop_twisted)
 
     # TODO: replace this with twistd.
