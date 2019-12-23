@@ -42,6 +42,7 @@ setup(
 		'console_scripts': [
 			'cbz_dump_labels = cbus.toolkit.dump_labels:main',
 			'cdbusd = cbus.daemon.cdbusd:main',
+			'cmqttd = cbus.daemon.cmqttd:main',
 			'dbuspcid = cbus.daemon.dbuspcid:main',
 			'staged = cbus.daemon.staged:main',
 			'cbus_fetch_protocol_docs = cbus.tools.fetch_protocol_docs:main',
