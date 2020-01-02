@@ -39,6 +39,9 @@ END_COMMAND = b'\x0d'
 # 10, hex $0A)"
 END_RESPONSE = b'\x0d\x0a'
 
+MIN_MESSAGE_SIZE = 2
+MAX_BUFFER_SIZE = 256
+
 
 class DestinationAddressType(IntEnum):
     """

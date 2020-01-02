@@ -118,7 +118,6 @@ def decode_packet(
 
     # Look for ending character(s). If there is none, break out now.
     if end == -1:
-        print(f'no end character {END_COMMAND}: {data}')
         return None, consumed
 
     # Make it so the end of the buffer is where the end of the command is, and

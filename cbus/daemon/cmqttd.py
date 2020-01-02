@@ -15,21 +15,26 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from asyncio import get_event_loop, run
 from argparse import ArgumentParser, FileType
 import json
+from serial_asyncio import create_serial_connection
 import sys
 from typing import Any, Dict, Optional, Text, TextIO
 
 import paho.mqtt.client as mqtt
 
-from twisted.internet import reactor
-from twisted.internet.endpoints import TCP4ClientEndpoint
-from twisted.internet.protocol import ClientFactory
-from twisted.internet.serialport import SerialPort
+from serial_asyncio import create_serial_connection
+
+#from twisted.internet import reactor
+#from twisted.internet.endpoints import TCP4ClientEndpoint
+#from twisted.internet.protocol import ClientFactory
+#from twisted.internet.serialport import SerialPort
 from twisted.python import log
 
 from cbus.protocol.pciprotocol import PCIProtocol
 from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga
+from cbus.paho_asyncio import AsyncioHelper
 
 
 _BINSENSOR_TOPIC_PREFIX = 'homeassistant/binary_sensor/cbus_'
@@ -103,14 +108,6 @@ class CBusHandler(PCIProtocol):
 
     # TODO: on_lighting_group_terminate_ramp
 
-    def timesync(self, frequency):
-        # setup timesync in the future.
-        reactor.callLater(frequency, self.timesync, frequency)
-
-        # send time packets
-        log.msg('send time')
-        self.clock_datetime()
-
     def on_clock_request(self, source_addr):
         self.clock_datetime()
 
@@ -122,16 +119,6 @@ class MqttClient(mqtt.Client):
         userdata.mqtt_api = self
         self.subscribe([(set_topic(ga), 2) for ga in ga_range()])
         self.publish_all_lights()
-
-    def loop_twisted(self) -> None:
-        # TODO: tie into twisted reactor properly
-        ret = self.loop(timeout=0)
-        if ret != mqtt.MQTT_ERR_SUCCESS:
-            log.err("MQTT connector error", mqtt.error_string(ret))
-            reactor.stop()
-            return
-
-        reactor.callLater(1, self.loop_twisted)
 
     def on_message(self, client, userdata: CBusHandler, msg: mqtt.MQTTMessage):
         """Handle a message from an MQTT subscription."""
@@ -266,31 +253,6 @@ class MqttClient(mqtt.Client):
         self.publish_binary_sensor(group_addr, True)
 
 
-class PCIProtocolFactory(ClientFactory):
-
-    def __init__(self, timesync: int = 10, disable_clock: bool = False):
-        self._timesync = timesync
-        self.protocol = CBusHandler()
-        if disable_clock:
-            self.protocol.on_clock_request = lambda *_, **__: None
-
-    def buildProtocol(self, addr=None):
-        log.msg('Connected to PCI.')
-        if self._timesync:
-            reactor.callLater(
-                10, self.protocol.timesync, self._timesync)
-
-        return self.protocol
-
-    def clientConnectionLost(self, connector, reason):
-        log.err('Lost connection.  Reason:', reason)
-        reactor.stop()
-
-    def clientConnectionFailed(self, connector, reason):
-        log.err('Connection failed. Reason:', reason)
-        reactor.stop()
-
-
 def read_auth(client: mqtt.Client, auth_file: TextIO):
     """Reads authentication from a file."""
     username = auth_file.readline()
@@ -298,7 +260,7 @@ def read_auth(client: mqtt.Client, auth_file: TextIO):
     client.username_pw_set(username, password)
 
 
-def main():
+async def main():
     parser = ArgumentParser()
 
     group = parser.add_argument_group('Daemon options')
@@ -416,26 +378,31 @@ def main():
     else:
         log.startLogging(sys.stdout)
 
-    factory = PCIProtocolFactory(
-        timesync=option.timesync,
-        disable_clock=option.no_clock,
-    )
+    loop = get_event_loop()
+    connection_lost_future = loop.create_future()
+
+    def factory():
+        return CBusHandler(
+            timesync_frequency=option.timesync,
+            handle_clock_requests=not option.no_clock,
+            connection_lost_future=connection_lost_future,
+        )
 
     if option.serial_pci and option.tcp_pci:
         return parser.error('Both serial and TCP CBus PCI addresses were '
                             'specified!')
     elif option.serial_pci:
-        SerialPort(factory.buildProtocol(), option.serial_pci, reactor,
-                   baudrate=9600)
+        _, protocol = await create_serial_connection(
+            loop, factory, option.serial_pci, baudrate=9600)
     elif option.tcp_pci:
-        addr, port = option.tcp_pci.split(':', 2)
-        point = TCP4ClientEndpoint(reactor, addr, int(port))
-        point.connect(factory)
+        addr = option.tcp_pci.split(':', 2)
+        _, protocol = await loop.create_connection(
+            factory, addr[0], int(addr[1]))
     else:
         return parser.error('No CBus PCI address was specified! (-s or -t '
                             'option)')
 
-    mqtt_client = MqttClient(userdata=factory.protocol)
+    mqtt_client = MqttClient(userdata=protocol)
     if option.broker_auth:
         read_auth(mqtt_client, option.broker_auth)
     if option.broker_disable_tls:
@@ -451,8 +418,8 @@ def main():
         mqtt_client.tls_set(**tls_args)
         port = option.broker_port or 8883
 
+    aioh = AsyncioHelper(loop, mqtt_client)
     mqtt_client.connect(option.broker_address, port, option.broker_keepalive)
-    reactor.callLater(0, mqtt_client.loop_twisted)
 
     # TODO: replace this with twistd.
     if option.daemon:
@@ -460,8 +427,8 @@ def main():
         from daemon import daemonize
         daemonize(option.pid_file)
 
-    reactor.run()
+    await connection_lost_future
 
 
 if __name__ == '__main__':
-    main()
+    run(main())

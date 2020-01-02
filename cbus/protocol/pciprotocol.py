@@ -18,18 +18,18 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+from asyncio import (CancelledError, Future, Lock, Protocol, create_task,
+                     get_event_loop, run, sleep)
+from asyncio.transports import BaseTransport
 from datetime import datetime
-from traceback import print_exc
 from typing import Iterable, Optional, Text, Union
 
 from six import int2byte
-from twisted.internet import reactor
-from twisted.internet.protocol import ClientFactory
-from twisted.protocols.basic import LineReceiver
-from twisted.python import log
+from twisted.python import log  # TODO: remove
 
 from cbus.common import (
-    END_COMMAND, END_RESPONSE, CONFIRMATION_CODES, add_cbus_checksum)
+    CONFIRMATION_CODES, END_COMMAND, END_RESPONSE, MIN_MESSAGE_SIZE,
+    MAX_BUFFER_SIZE, add_cbus_checksum)
 from cbus.protocol.application.clock import (
     ClockSAL, ClockRequestSAL, ClockUpdateSAL)
 from cbus.protocol.application.lighting import (
@@ -50,122 +50,129 @@ from cbus.protocol.reset_packet import ResetPacket
 __all__ = ['PCIProtocol']
 
 
-class PCIProtocol(LineReceiver):
+class PCIProtocol(Protocol):
     """
     Implements a twisted protocol for communicating with a CBus PCI over serial
     or TCP.
 
     """
 
-    delimiter = END_RESPONSE
-    _next_confirmation_index = 0
+    def __init__(
+            self,
+            timesync_frequency: int = 10,
+            handle_clock_requests: bool = True,
+            connection_lost_future: Optional[Future] = None):
+        self._transport = None  # type: Optional[BaseTransport]
+        self._next_confirmation_index = 0
+        self._recv_buffer = bytearray()
+        self._recv_buffer_lock = Lock()
+        self._timesync_frequency = timesync_frequency
+        self._connection_lost_future = connection_lost_future
+        self._handle_clock_requests = bool(handle_clock_requests)
 
-    def connectionMade(self):
+    def connection_made(self, transport: BaseTransport) -> None:
         """
         Called by twisted when a connection is made to the PCI.  This will
         perform a reset of the PCI to establish the correct communications
-        protocol.
+        protocol, and start time synchronisation.
 
         """
-        # fired when there is a connection made to the server endpoint
+        self._transport = transport
         self.pci_reset()
+        if self._timesync_frequency:
+            create_task(self.timesync())
 
-    def lineReceived(self, line):
+    def connection_lost(self, exc: Optional[Exception]) -> None:
+        self._transport = None
+        self._connection_lost_future.set_result(True)
+
+    def data_received(self, data: bytes) -> None:
         """
-        Called by LineReciever when a new line has been received on the
-        PCI connection.
+        Called when there is new data from the PCI. Do not override this.
 
-        Do not override this.
-
-        :param line: Raw CBus event data
-        :type line: str
-
+        :param data: Raw CBus event data
         """
-        log.msg("recv: %r" % line)
+        # log.msg("recv: %r" % data)
+        create_task(self._data_received_async(data))
 
-        try:
-            self.decode_cbus_event(line)
-        except Exception:
-            # caught exception.  dump stack trace to log and move on
-            log.msg("recv: caught exception. line state = %r" % line)
-            print_exc()
+    async def _data_received_async(self, data: bytes) -> None:
 
-    def decode_cbus_event(self, line):
+        async with self._recv_buffer_lock:
+            if len(self._recv_buffer) >= MAX_BUFFER_SIZE:
+                log.msg(f'Buffer too big ({len(self._recv_buffer)} >= '
+                        f'{MAX_BUFFER_SIZE}, truncating!')
+                # Buffer too big, truncate it.
+                eol = self._recv_buffer.find(END_RESPONSE)
+                if eol == -1:
+                    # reset buffer
+                    self._recv_buffer = bytearray()
+                else:
+                    # shift buffer to where the next eol is
+                    self._recv_buffer = self._recv_buffer[eol:]
+
+            self._recv_buffer += data
+
+            # Decode all waiting packets.
+            while len(self._recv_buffer) >= MIN_MESSAGE_SIZE:
+                p, remainder = decode_packet(
+                    self._recv_buffer, checksum=True, server_packet=True)
+
+                if remainder == 0:
+                    # We don't have enough to do a proper decode yet, break!
+                    return
+                else:
+                    self._recv_buffer = self._recv_buffer[remainder:]
+
+                if p is None:
+                    log.msg('dce: packet == None')
+                    continue
+
+                log.msg('dce: packet:', p)
+
+                # Create a bunch of Tasks for handling these events,
+                # so we don't need to hold the _recv_buffer_lock for too long.
+                create_task(self.on_packet(p))
+
+    async def on_packet(self, p: BasePacket) -> None:
         """
-        Decodes a CBus event and calls an event handler.
-
-        Do not override this.
-
-        :param line: CBus event data
-        :type line: str
-
-        :returns: Remaining unparsed data (str) or None on error.
-        :rtype: str or NoneType
-
+        Dispatches all packet types into a high level event handler.
         """
 
-        # FIXME: hack until we port off twisted
-        line += END_RESPONSE
-
-        while line:
-            p, remainder = decode_packet(
-                line, checksum=True, server_packet=True)
-
-            if remainder == 0:
-                # infinite loop!
-                log.msg('dce: bug: infinite loop detected on', line)
-                return
+        if isinstance(p, SpecialServerPacket):
+            if isinstance(p, PCIErrorPacket):
+                self.on_pci_cannot_accept_data()
+            elif isinstance(p, ConfirmationPacket):
+                self.on_confirmation(p.code, p.success)
             else:
-                line = line[remainder:]
-
-            # decode special packets
-            if p is None:
-                log.msg('dce: packet == None')
-                continue
-
-            log.msg('dce: packet:', p)
-
-            if isinstance(p, SpecialServerPacket):
-                if isinstance(p, PCIErrorPacket):
-                    self.on_pci_cannot_accept_data()
-                    continue
-                elif isinstance(p, ConfirmationPacket):
-                    self.on_confirmation(p.code, p.success)
-                    continue
-
                 log.msg('dce: unhandled SpecialServerPacket')
-            elif isinstance(p, PointToMultipointPacket):
-                for s in p:
-                    if isinstance(s, LightingSAL):
-                        # lighting application
-                        if isinstance(s, LightingRampSAL):
-                            self.on_lighting_group_ramp(p.source_address,
-                                                        s.group_address,
-                                                        s.duration, s.level)
-                        elif isinstance(s, LightingOnSAL):
-                            self.on_lighting_group_on(p.source_address,
-                                                      s.group_address)
-                        elif isinstance(s, LightingOffSAL):
-                            self.on_lighting_group_off(p.source_address,
-                                                       s.group_address)
-                        elif isinstance(s, LightingTerminateRampSAL):
-                            self.on_lighting_group_terminate_ramp(
-                                p.source_address, s.group_address)
-                        else:
-                            log.msg('dce: unhandled lighting SAL type', s)
-                            break
-                    elif isinstance(s, ClockSAL):
-                        if isinstance(s, ClockRequestSAL):
-                            self.on_clock_request(p.source_address)
-                        elif isinstance(s, ClockUpdateSAL):
-                            self.on_clock_update(p.source_address, s.val)
+        elif isinstance(p, PointToMultipointPacket):
+            for s in p:
+                if isinstance(s, LightingSAL):
+                    # lighting application
+                    if isinstance(s, LightingRampSAL):
+                        self.on_lighting_group_ramp(p.source_address,
+                                                    s.group_address,
+                                                    s.duration, s.level)
+                    elif isinstance(s, LightingOnSAL):
+                        self.on_lighting_group_on(p.source_address,
+                                                  s.group_address)
+                    elif isinstance(s, LightingOffSAL):
+                        self.on_lighting_group_off(p.source_address,
+                                                   s.group_address)
+                    elif isinstance(s, LightingTerminateRampSAL):
+                        self.on_lighting_group_terminate_ramp(
+                            p.source_address, s.group_address)
                     else:
-                        log.msg('dce: unhandled SAL type', s)
-                        break
-
-            else:
-                log.msg('dce: unhandled other packet', p)
-                continue
+                        log.msg('dce: unhandled lighting SAL type', s)
+                elif isinstance(s, ClockSAL):
+                    if isinstance(s, ClockRequestSAL):
+                        self.on_clock_request(p.source_address)
+                    elif isinstance(s, ClockUpdateSAL):
+                        self.on_clock_update(p.source_address, s.val)
+                else:
+                    log.msg('dce: unhandled SAL type', s)
+        else:
+            log.msg('dce: unhandled other packet', p)
 
     # event handlers
     def on_confirmation(self, code: bytes, success: bool):
@@ -336,6 +343,9 @@ class PCIProtocol(LineReceiver):
         :type source_addr: int
         """
         log.msg('recv: clock request from %d' % (source_addr,))
+        if self._handle_clock_requests:
+            self.clock_datetime()
+
 
     def on_clock_update(self, source_addr, val):
         """
@@ -363,33 +373,26 @@ class PCIProtocol(LineReceiver):
         return int2byte(o)
 
     def _send(self,
-              cmd: BasePacket,
+              cmd: Union[BasePacket],
               confirmation: bool = True,
               basic_mode: bool = False):
         """
         Sends a packet of CBus data.
 
         """
-        if isinstance(cmd, BasePacket):
-            encode = checksum = False
+        if not isinstance(cmd, BasePacket):
+            raise TypeError('cmd must be BasePacket')
 
-            if isinstance(cmd, SpecialClientPacket):
-                basic_mode = True
-                confirmation = False
+        checksum = False
 
-            cmd = cmd.encode_packet()
+        if isinstance(cmd, SpecialClientPacket):
+            basic_mode = True
+            confirmation = False
 
-            if not basic_mode:
-                cmd = b'\\' + cmd
-        else:
-            log.msg('send: cmd is not BasePacket!')
-            if not isinstance(cmd, (bytes, bytearray)):
-                # convert iterable of ints to bytes
-                cmd = bytes(bytearray(cmd))
+        cmd = cmd.encode_packet()
 
-            if type(cmd) != str:
-                # must be an iterable of ints
-                cmd = ''.join([chr(x) for x in cmd])
+        if not basic_mode:
+            cmd = b'\\' + cmd
 
         if checksum:
             cmd = add_cbus_checksum(cmd)
@@ -404,7 +407,7 @@ class PCIProtocol(LineReceiver):
 
         log.msg("send: %r" % cmd)
 
-        self.transport.write(cmd + END_COMMAND)
+        self._transport.write(cmd + END_COMMAND)
 
         return conf_code
 
@@ -590,12 +593,17 @@ class PCIProtocol(LineReceiver):
         p = PointToMultipointPacket(sals=sals)
         return self._send(p)
 
-    def timesync(self, frequency: int):
-        # setup timesync in the future.
-        reactor.callLater(frequency, self.timesync, frequency)
+    async def timesync(self):
+        frequency = self._timesync_frequency
+        if frequency <= 0:
+            return
 
-        # send time packets
-        self.clock_datetime()
+        while True:
+            try:
+                self.clock_datetime()
+                await sleep(frequency)
+            except CancelledError:
+                break
 
     # def recall(self, unit_addr, param_no, count):
     #    return self._send('%s%02X%s%s%02X%02X' % (
@@ -608,68 +616,61 @@ class PCIProtocol(LineReceiver):
     #    ))
 
 
-if __name__ == '__main__':
-    # test program for protocol
-    from twisted.internet.serialport import SerialPort
+async def main():
+    """
+    Test program for PCIProtocol.
+
+    Imports are included inside of this method in order to avoid loading
+    unneeded dependencies.
+    """
     import sys
-    from optparse import OptionParser
-    from twisted.internet.endpoints import TCP4ClientEndpoint
 
-    class PCIProtocolFactory(ClientFactory):
+    from argparse import ArgumentParser
+    from serial_asyncio import create_serial_connection
 
-        def __init__(self, timesync=10):
-            self._timesync = timesync
-
-        def buildProtocol(self, addr = None):
-            log.msg('Connected.')
-            protocol = PCIProtocol()
-            if self._timesync:
-                reactor.callLater(
-                    self._timesync, protocol.timesync, self._timesync)
-            return protocol
-
-        def clientConnectionLost(self, connector, reason):
-            print('Lost connection.  Reason:', reason)
-            reactor.stop()
-
-        def clientConnectionFailed(self, connector, reason):
-            print('Connection failed. Reason:', reason)
-            reactor.stop()
-
-    parser = OptionParser(usage='%prog',
-                          description="""\
+    parser = ArgumentParser(description="""\
         Library for communications with a CBus PCI in Twisted.  Acts as a test
         program to dump events from a PCI.
     """)
-    parser.add_option(
+    parser.add_argument(
         '-s', '--serial-pci',
         dest='serial_pci', default=None,
         help='Serial port where the PCI is located. Either this or -t must be '
              'specified.')
 
-    parser.add_option(
+    parser.add_argument(
         '-t', '--tcp-pci',
         dest='tcp_pci', default=None,
         help='IP address and TCP port where the PCI is located (CNI). Either '
              'this or -s must be specified.')
 
-    option, args = parser.parse_args()
+    option = parser.parse_args()
 
     log.startLogging(sys.stdout)
+    loop = get_event_loop()
+    connection_lost_future = loop.create_future()
 
     if option.serial_pci and option.tcp_pci:
-        parser.error(
+        return parser.error(
             'Both serial and TCP CBus PCI addresses were specified! Use only '
             'one...')
     elif option.serial_pci:
-        SerialPort(PCIProtocolFactory().buildProtocol(),
-                   option.serial_pci, reactor, baudrate=9600)
+        await create_serial_connection(
+            loop,
+            lambda: PCIProtocol(connection_lost_future=connection_lost_future),
+            option.serial_pci, baudrate=9600)
     elif option.tcp_pci:
+        # TODO
         addr = option.tcp_pci.split(':', 2)
-        point = TCP4ClientEndpoint(reactor, addr[0], int(addr[1]))
-        d = point.connect(PCIProtocolFactory())
+        await loop.create_connection(
+            lambda: PCIProtocol(connection_lost_future=connection_lost_future),
+            addr[0], int(addr[1]))
     else:
-        parser.error(
+        return parser.error(
             'No CBus PCI address was specified!  (See -s or -t option)')
 
-    reactor.run()
+    await connection_lost_future
+
+
+if __name__ == '__main__':
+    run(main())
