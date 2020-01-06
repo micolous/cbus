@@ -128,13 +128,17 @@ class MqttClient(mqtt.Client):
 
         try:
             ga = get_topic_group_address(msg.topic)
-        except ValueError as e:
+        except ValueError:
             # Invalid group address
-            log.msg(f'Invalid group address in topic {msg.topic}', e)
+            log.err(f'Invalid group address in topic {msg.topic}')
             return
 
         # https://www.home-assistant.io/integrations/light.mqtt/#json-schema
-        payload = json.loads(msg.payload)
+        try:
+            payload = json.loads(msg.payload)
+        except Exception as e:
+            log.err(e, f'JSON parse error in {msg.topic}')
+            return
         light_on = payload['state'].upper() == 'ON'
         brightness = payload.get('brightness', 255) / 255.
         if brightness < 0.:
