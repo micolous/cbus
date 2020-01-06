@@ -7,4 +7,3 @@ C-Bus network.
 .. toctree::
 	daemons.cdbusd
 	daemons.cmqttd
-	daemons.dbuspcid

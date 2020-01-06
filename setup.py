@@ -43,7 +43,6 @@ setup(
 			'cbz_dump_labels = cbus.toolkit.dump_labels:main',
 			'cdbusd = cbus.daemon.cdbusd:main',
 			'cmqttd = cbus.daemon.cmqttd:main',
-			'dbuspcid = cbus.daemon.dbuspcid:main',
 			'cbus_fetch_protocol_docs = cbus.tools.fetch_protocol_docs:main',
 			'cbus_decode_packet = cbus.tools.decode_packet:main',
 		]
