@@ -1,9 +1,5 @@
 pyserial==3.4
-lxml
 Twisted>=12.0.0a
-
-argparse
-configparser
 six
 
 # official protocol documentation downloading
@@ -12,4 +8,8 @@ requests
 # required for cbus.toolkit.graph
 pydot
 
+# required for cmqttd
 paho-mqtt==1.5.0
+
+# required for cbz
+lxml

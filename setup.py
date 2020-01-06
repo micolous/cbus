@@ -1,26 +1,17 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from setuptools import setup, find_packages
-from platform import system
-system = system().lower()
 
 deps = [
-	'configparser (>=3.7.0)',
-	'serial (>=2.6)',
+	'serial (==3.4)',
 	'lxml (>=2.3.2)',
 	'Twisted (>=12.0.0)',
 	'six',
+	'pydot',
+	'paho_mqtt (==1.5.0)'
 ]
 
-if system != 'windows':
-	# Windows doesn't support some of these things so we run it in reduced
-	# functionality mode.
-	deps += [
-		'daemon (>=1.0)',
-		'pygobject (>=2.28.6)'
-	]
-
-tests_require = ['nose', 'pytype']
+tests_require = ['pytype']
 
 setup(
 	name="cbus",
@@ -31,7 +22,6 @@ setup(
 	url="https://github.com/micolous/cbus",
 	license="LGPL3+",
 	requires=deps,
-	test_suite='nose.collector',
 	tests_require=tests_require,
 	extras_require={'test': tests_require},
 	# TODO: add scripts to this.

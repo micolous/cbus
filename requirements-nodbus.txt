@@ -1,7 +1,0 @@
-pyserial==2.6
-lxml
-Twisted>=12.0.0
-configparser
-argparse
-requests
-six
