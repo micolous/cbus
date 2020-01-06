@@ -8,4 +8,3 @@ C-Bus network.
 	daemons.cdbusd
 	daemons.cmqttd
 	daemons.dbuspcid
-	daemons.sage
