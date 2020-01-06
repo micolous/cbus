@@ -275,7 +275,7 @@ async def main():
 
     group.add_argument(
         '-P', '--pid',
-        dest='pid_file', default='/var/run/cdbusd.pid',
+        dest='pid_file', default='/var/run/cmqttd.pid',
         help='Location to write the PID file. Only has effect in daemon mode. '
              '[default: %(default)s]')
 
