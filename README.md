@@ -54,10 +54,7 @@ The most useful bits of this project are:
 
 * `cdbusd`, which shares events from the C-Bus PCI in D-Bus.
 
-* `saged`, which is a WebSocket server that communicates with `cdbusd`.
-
-* `sage` (in `sage_root`), which is a jQueryMobile-based JavaScript web app
-  which can connect to `saged`.
+* `cmqttd`, which bridges a C-Bus PCI to an MQTT Broker (for use with Home Assistant).
 
 [rtd]: https://cbus.rtfd.org/
 [coveralls]: https://coveralls.io/github/micolous/cbus
