@@ -66,13 +66,12 @@ So where does libcbus come in?
 ``libcbus`` primarily provides three ways to communicate with C-Bus, with varying levels of
 complexity and abstraction:
 
-* A low level API which allows direct encoding and decoding of packets. It exposes parts of the
+* A low-level API which allows direct encoding and decoding of packets. It exposes parts of the
   packet as classes with attributes.
 
-* A medium level API which handles access to the C-Bus PCI through the Twisted networking library
-  and PySerial. You can insert your own protocol handler, or work with the lower level API in order
-  to access the library at a level that suits you. There are both server (FakePCI) and client
-  interfaces.
+* A medium-level API which handles access to the C-Bus PCI through ``asyncio`` and PySerial. You
+  can insert your own protocol handler, or work with the lower level API in order to access the
+  library at a level that suits you. There are both server (FakePCI) and client interfaces.
 
 * A high level API which provides access to C-Bus over MQTT. This allows anything that can talk to
   MQTT to interact with the network using a single PCI.
@@ -93,24 +92,10 @@ Installing
 Linux
 -----
 
-Most Linux distributions have D-Bus installed by default.  As a result, you should only need to install the Python bindings:
 
-* python-dbus
 
 Mac OS X
 --------
 
-In order to run this software, you'll need to first install Xcode (from the App Store) and MacPorts.
-
-You then need to install dbus and the Python bindings for it:
-
-.. code-block:: console
-
-	# port install dbus +universal
-
 Windows
 -------
-
-Windows doesn't have a D-Bus, so you can't use ``cdbusd``.
-
-However, you can use the libraries with Twisted directly.  But most of the applications interface with ``cdbusd``.

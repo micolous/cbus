@@ -17,7 +17,6 @@ Contents:
    wiser-swf-protocol
    daemons
    dump_labels
-   dbus_client
    modules
 
 

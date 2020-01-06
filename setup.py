@@ -17,7 +17,6 @@ if system != 'windows':
 	# functionality mode.
 	deps += [
 		'daemon (>=1.0)',
-		'dbus (>=1.1.1)',
 		'pygobject (>=2.28.6)'
 	]
 
@@ -41,7 +40,6 @@ setup(
 	entry_points={
 		'console_scripts': [
 			'cbz_dump_labels = cbus.toolkit.dump_labels:main',
-			'cdbusd = cbus.daemon.cdbusd:main',
 			'cmqttd = cbus.daemon.cmqttd:main',
 			'cbus_fetch_protocol_docs = cbus.tools.fetch_protocol_docs:main',
 			'cbus_decode_packet = cbus.tools.decode_packet:main',
