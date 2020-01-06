@@ -346,7 +346,6 @@ class PCIProtocol(Protocol):
         if self._handle_clock_requests:
             self.clock_datetime()
 
-
     def on_clock_update(self, source_addr, val):
         """
         Event called when a unit sends time to the network.
