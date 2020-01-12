@@ -6,7 +6,7 @@ cmqttd
 :program:`cdbusd` (which required D-Bus) as the abstraction mechanism for all other components.
 
 It uses `Home Assistant`__ style `MQTT-JSON Light components`__, and supports `MQTT discovery`__.
-This eliminates the need for ``sage`` (our custom web interface which replaced
+This replaces :program:`sage` (our custom web interface which replaced
 :doc:`Wiser <wiser-swf-protocol>`).
 
 __ https://www.home-assistant.io/
@@ -33,7 +33,10 @@ one running on ``192.0.2.1``, and USB or serial PCI connected on ``/dev/ttyUSB0`
 
     $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 -s /dev/ttyUSB0
 
-.. note:: :program:`cmqttd` does not yet support authentication or encryption.
+.. note::
+
+    :program:`cmqttd` uses TLS to connect to your MQTT Broker by default.  If you want to disable
+    TLS, add the ``--broker-disable-tls`` option.
 
 Time synchronisation
 --------------------
@@ -45,7 +48,7 @@ other device providing a time signal, this can be _disabled_ with::
     $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 -s /dev/ttyUSB0 --timesync 0 --no-clock
 
 Local time is always used for time synchronisation.  You can specify a different timezone with
-`the ``TZ`` environment variable`__.
+`the TZ environment variable`__.
 
 __ https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
 

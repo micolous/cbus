@@ -3,9 +3,9 @@
 [![Build Status](https://secure.travis-ci.org/micolous/cbus.png?branch=master)][travis]
 [![Coverage Status](https://coveralls.io/repos/github/micolous/cbus/badge.svg)][coveralls]
 
-Talks to Clipsal C-Bus using Python.
+Talks to Clipsal C-Bus using Python 3.7+.
 
-Copyright 2012-2019 Michael Farrell. Licensed under the GNU LGPL3+. For more
+Copyright 2012-2020 Michael Farrell. Licensed under the GNU LGPL3+. For more
 details see `COPYING` and `COPYING.LESSER`.
 
 **Note:** This software is not certified or endorsed by Clipsal or Schneider
@@ -15,6 +15,32 @@ software may void your warranty.
 More information about the project is available on
 [the libcbus ReadTheDocs site][rtd], and in the `docs` directory of the source
 repository.
+
+## About this project
+
+This is a reimplementation of the PCI serial protocol _from scratch_. This is
+done using a combination [Clipsal's _Open C-Bus_ documentation][clipsal-docs]
+and reverse engineering (to fill in the gaps).
+
+Unlike some contemporary alternatives, it does **not** use the `libcbm`
+library/DLL from Clipsal, or C-Gate, which have serious problems:
+
+* The `libcbm` module only runs on `x86_32` systems, and is only available
+  as a static library (closed source).
+
+* C-Gate requires an OS and architecture specific closed source serial
+  library (SerialIO), the Java runtime, and itself has various licensing
+  restrictions.
+
+As such, it should run on any Python supported platform. The software itself
+has been primarily developed on Linux with on armhf, x86_32 and x86_64
+systems.
+
+At a high level, this project includes `cmqttd`, a daemon to bridge a C-Bus PCI
+to an MQTT Broker. `cmqttd` supports Home Assistant's
+[MQTT Light model][ha-mqtt] and [MQTT topic auto-discovery][ha-auto].
+
+_Integration with Hass.io is still a work in progress._
 
 ## Hardware interface support
 
@@ -31,29 +57,6 @@ This should work with the following C-Bus PC Interfaces (PCIs):
   This software _does not_ support configuring the Ethernet PCI for the first
   time. It must already have an IP address on your network.
 
-## About this project
-
-This is a reimplementation of the PCI serial protocol _from scratch_.
-
-It does **not** use the `libcbm` library/DLL from Clipsal, or C-Gate:
-
-* The `libcbm` module only runs on `x86_32` systems, and is only available
-  as a static library (closed source).
-
-* C-Gate requires an OS and architecture specific closed source serial
-  library (SerialIO), the Java runtime, and itself has various licensing
-  restrictions.
-
-As such, it should run on any Python supported platform. The software itself
-has been primarily developed on Linux with on armhf, x86_32 and x86_64
-systems.
-
-At a high level, `cmqttd` is a daemon to bridge a C-Bus PCI to an MQTT
-Broker.  This uses [Home Assistant's MQTT Light model][ha-mqtt], and
-implements [topic auto-discovery][ha-auto].
-
-_Integration with Hass.io is still a work in progress._
-
 [rtd]: https://cbus.rtfd.org/
 [coveralls]: https://coveralls.io/github/micolous/cbus
 [travis]: https://travis-ci.org/micolous/cbus
@@ -63,3 +66,4 @@ _Integration with Hass.io is still a work in progress._
 [5500CN2]: https://www.clipsal.com/Trade/Products/ProductDetail?catno=5500CN2
 [ha-auto]: https://www.home-assistant.io/docs/mqtt/discovery/
 [ha-mqtt]: https://www.home-assistant.io/integrations/light.mqtt/#json-schema
+[clipsal-docs]: https://updates.clipsal.com/ClipsalSoftwareDownload/DL/downloads/OpenCBus/OpenCBusProtocolDownloads.html

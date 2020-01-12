@@ -4,12 +4,17 @@ Introduction
 
 Welcome to ``libcbus``!
 
-This is a Python library for interacting with Clipsal C-Bus networks through the PCI.  This also
-includes:
+This is a Python library for interacting with Clipsal C-Bus networks through a
+:abbr:`PCI (PC Interface)` or :abbr:`CNI (C-Bus Network Interface)`. This also includes:
 
-* A high-level MQTT API for sharing a C-Bus PCI with other systems
+* :doc:`A C-Bus MQTT bridge (cmqttd) <daemons.cmqttd>`, which provides a high level API for
+  controlling C-Bus networks with other systems (such as Home Assistant)
+
+* A low-level interface for parsing and producing C-Bus packets
+
 * A library for parsing information from C-Bus Toolkit project backup files, and visualising
   networks with :program:`graphviz`
+
 * A "fake PCI" test server for parsing data sent by C-Bus applications.
 
 What is C-Bus?
@@ -18,15 +23,18 @@ What is C-Bus?
 C-Bus is a home automation and electrical control system made by Clipsal. It's also known as Square
 D in the United States, and sold under other brands worldwide by Schnider Electric.
 
-It uses low voltage wiring for light switches (panels) and other sensors, and centrally-fed dimmer
-and relay controls for devices (such as lights).
+It uses low voltage (36 volts) wiring for light switches (panels) and other sensors, and
+centrally-fed dimmer and relay controls for devices (such as lights).
 
-The C-Bus :abbr:`PCI (PC Interface)` and :abbr:`CNI (C-Bus Network Interface)` can interfare with
-a C-Bus network via Serial [#f1]_ and TCP/IPv4 respectively.  These use a common interface described in
-the Serial Interface Guide, and other public C-Bus documentation.
+The C-Bus :abbr:`PCI (PC Interface)` and :abbr:`CNI (C-Bus Network Interface)` can interface with
+a C-Bus network via Serial [#f1]_ and TCP/IPv4 respectively. These use a common interface described
+in the `Serial Interface Guide`__, and `other public C-Bus documentation`__.
 
-.. [#f1] The PCI is also available in a USB variant, which uses an in-built USB to Serial converter.
-         It is otherwise functionally identical to the Serial version.
+__ https://updates.clipsal.com/ClipsalSoftwareDownload/DL/downloads/OpenCBus/Serial%20Interface%20User%20Guide.pdf
+__ https://updates.clipsal.com/ClipsalSoftwareDownload/DL/downloads/OpenCBus/OpenCBusProtocolDownloads.html
+
+.. [#f1] The PCI is also available in a USB variant, which uses an in-built ``cp210x`` USB to
+   Serial converter.  It is otherwise functionally identical to the Serial version.
 
 Clipsal's official interfaces
 =============================
@@ -85,17 +93,65 @@ I've tested this primarily with Linux on armel, armhf, amd64 and i386, and macOS
 Installing
 ==========
 
+.. highlight:: console
+
 .. note::
 
 	This section is incomplete.
 
-Linux
------
+All components
+--------------
 
+You need Python 3.7 or later installed.  You can build the software and its dependencies with::
 
+    $ pip3 install -r requirements.txt
+    $ python3 setup.py install
 
-Mac OS X
---------
+C-Bus MQTT bridge (``cmqttd``)
+------------------------------
 
-Windows
--------
+If you just want to use :doc:`the C-Bus MQTT bridge (cmqttd) <daemons.cmqttd>`, then you should
+use the ``Dockerfile`` included in this repository.
+
+This uses a minimal `Alpine Linux`__ image as a base, and contains the bare minimum needed to make
+``cmqttd`` work.
+
+__ https://alpinelinux.org/
+
+On a system with Docker installed, clone the ``libcbus`` repository and then run::
+
+    # docker build -t cmqttd .
+
+This will download about 120 MiB of dependencies, and result in about 100 MiB image.
+
+The default setup supports a serial or USB PCI, and can connect to an unauthenticated MQTT Broker
+in the clear. The image uses the following environment variables:
+
+* ``SERIAL_PORT``: The serial port that the PCI is connected to. USB PCIs appear as a serial device
+  (``/dev/ttyUSB0``). Also requires the ``--device`` option so Docker forwards the device into the
+  container.
+
+  This environment variable is only used by the default start-up script.
+
+* ``MQTT_SERVER``: IP address where the MQTT Broker is running.
+
+  This environment variable is only used by the default start-up script.
+
+* ``TZ``: The timezone to use when sending a time signal to the C-Bus network.
+
+  This environment variable is _always_ used. If you don't set it, your C-Bus network will be sent
+  a time signal in UTC.
+
+For example, to use a PCI on ``/dev/ttyUSB0``, with an MQTT Broker at ``192.2.0.1`` and the time
+zone set to ``Australia/Adelaide``::
+
+    # docker run --device /dev/ttyUSB0 -e "SERIAL_PORT=/dev/ttyUSB0" \
+        -e "MQTT_SERVER=192.2.0.1" -e "TZ=Australia/Adelaide" cmqttd
+
+If you want to run the daemon manually with other settings (eg: a CNI at 192.2.0.2), you can do so
+with::
+
+    # docker run -e "TZ=Australia/Adelaide" cmqttd cmqttd \
+      -b 192.2.0.1 -t 192.2.0.2 --broker-disable-tls
+
+More information about options is available from :doc:`the cmqttd doc page <daemons.cmqttd>`.

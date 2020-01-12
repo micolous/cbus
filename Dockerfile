@@ -7,7 +7,7 @@
 #
 # $ docker build -t cmqttd .
 # $ docker run --device /dev/ttyUSB0 -e "SERIAL_PORT=/dev/ttyUSB0" \
-#     -e "MQTT_SERVER=172.26.3.230" -e "TZ=Australia/Adelaide" -it cmqttd
+#     -e "MQTT_SERVER=192.2.0.1" -e "TZ=Australia/Adelaide" -it cmqttd
 FROM alpine:3.11 as base
 
 # Install most Python deps here, because that way we don't need to include build tools in the
