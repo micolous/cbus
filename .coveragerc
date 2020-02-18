@@ -1,4 +1,14 @@
 [run]
+source = cbus/
 omit =
+    # experiments
     *test*.py
-    venv/
+
+    # wrapper only used by MQTT library code
+    cbus/paho_asyncio.py
+
+    # tools are generally simple wrappers, don't include them.
+    cbus/tools/*
+
+    # don't include things not in scope
+    venv/*
