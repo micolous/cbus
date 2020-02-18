@@ -18,23 +18,16 @@
 from asyncio import get_event_loop, run
 from argparse import ArgumentParser, FileType
 import json
-from serial_asyncio import create_serial_connection
 import sys
 from typing import Any, Dict, Optional, Text, TextIO
 
 import paho.mqtt.client as mqtt
-
 from serial_asyncio import create_serial_connection
-
-#from twisted.internet import reactor
-#from twisted.internet.endpoints import TCP4ClientEndpoint
-#from twisted.internet.protocol import ClientFactory
-#from twisted.internet.serialport import SerialPort
 from twisted.python import log
 
-from cbus.protocol.pciprotocol import PCIProtocol
 from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga
 from cbus.paho_asyncio import AsyncioHelper
+from cbus.protocol.pciprotocol import PCIProtocol
 
 
 _BINSENSOR_TOPIC_PREFIX = 'homeassistant/binary_sensor/cbus_'
