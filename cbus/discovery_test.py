@@ -18,6 +18,8 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 http://stackoverflow.com/a/3632240
 
+Note: this is an experimental and incomplete piece of code.
+
 """
 
 from __future__ import absolute_import
@@ -29,6 +31,8 @@ import socket
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
 
+CBUS_DISCOVERY_PORT = 20050
+CBUS_DISCOVERY_FAMILY = socket.AF_INET
 CBUS_DISCOVERY_QUERY = b'\xcb\x80\0\0'
 CBUS_DISCOVERY_REPLY = b'\xcb\x81\0\0'
 
@@ -36,7 +40,7 @@ CBUS_DISCOVERY_REPLY = b'\xcb\x81\0\0'
 class CNIDiscoveryProtocol(DatagramProtocol):
 
     def __init__(self):
-        self.transport = reactor.listenUDP(20050, self)
+        self.transport = reactor.listenUDP(CBUS_DISCOVERY_PORT, self)
         self.transport.getHandle().setsockopt(socket.SOL_SOCKET,
                                               socket.SO_BROADCAST, 1)
 
