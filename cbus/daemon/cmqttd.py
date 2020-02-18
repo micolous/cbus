@@ -267,17 +267,6 @@ async def main():
 
     group = parser.add_argument_group('Daemon options')
     group.add_argument(
-        '-D', '--daemon',
-        dest='daemon', action='store_true', default=False,
-        help='Start as a daemon [default: %(default)s]')
-
-    group.add_argument(
-        '-P', '--pid',
-        dest='pid_file', default='/var/run/cmqttd.pid',
-        help='Location to write the PID file. Only has effect in daemon mode. '
-             '[default: %(default)s]')
-
-    group.add_argument(
         '-l', '--log-file',
         dest='log', default=None,
         help='Destination to write logs [default: stdout]')
@@ -367,10 +356,6 @@ async def main():
 
     option = parser.parse_args()
 
-    if option.daemon and not option.pid_file:
-        return parser.error(
-            'Running in daemon mode requires a PID file.')
-
     if bool(option.broker_client_cert) != bool(option.broker_client_key):
         return parser.error(
             'To use client certificates, both -k and -K must be specified.')
@@ -422,12 +407,6 @@ async def main():
 
     aioh = AsyncioHelper(loop, mqtt_client)
     mqtt_client.connect(option.broker_address, port, option.broker_keepalive)
-
-    # TODO: replace this with twistd.
-    if option.daemon:
-        # this module is only needed if daemonising.
-        from daemon import daemonize
-        daemonize(option.pid_file)
 
     await connection_lost_future
 
