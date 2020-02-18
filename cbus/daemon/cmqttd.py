@@ -257,8 +257,8 @@ class MqttClient(mqtt.Client):
 
 def read_auth(client: mqtt.Client, auth_file: TextIO):
     """Reads authentication from a file."""
-    username = auth_file.readline()
-    password = auth_file.readline()
+    username = auth_file.readline().strip()
+    password = auth_file.readline().strip()
     client.username_pw_set(username, password)
 
 

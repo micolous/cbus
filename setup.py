@@ -3,7 +3,8 @@
 from setuptools import setup, find_packages
 
 deps = [
-	'serial (==3.4)',
+	'pyserial (==3.4)',
+	'pyserial_asyncio (==0.4)',
 	'lxml (>=2.3.2)',
 	'Twisted (>=12.0.0)',
 	'six',
@@ -11,7 +12,10 @@ deps = [
 	'paho_mqtt (==1.5.0)'
 ]
 
-tests_require = ['pytype']
+tests_require = [
+	'pytype',
+	'parameterized',
+]
 
 setup(
 	name="cbus",
