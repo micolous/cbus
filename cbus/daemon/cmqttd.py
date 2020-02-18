@@ -22,8 +22,13 @@ import sys
 from typing import Any, Dict, Optional, Text, TextIO
 
 import paho.mqtt.client as mqtt
-from serial_asyncio import create_serial_connection
 from twisted.python import log
+
+try:
+    from serial_asyncio import create_serial_connection
+except ImportError:
+    def create_serial_connection(*_, **__):
+        raise ImportError('Serial device support requires pyserial-asyncio')
 
 from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga
 from cbus.paho_asyncio import AsyncioHelper
