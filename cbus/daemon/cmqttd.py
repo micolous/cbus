@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # cmqttd.py - MQTT connector for C-Bus
-# Copyright 2019 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2019-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
