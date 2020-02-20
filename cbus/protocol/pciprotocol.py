@@ -386,11 +386,14 @@ class PCIProtocol(CBusProtocol):
             checksum=False, parameter=0x21, value=0x38),
             basic_mode=True)
 
-        # Interface options #3 set to 02
-        # "LOCAL_SAL".
-        # self._send('A3420002', encode=False, checksum=False)
+        # Interface options #3
+        # = 0x0E / 0000 1110
+        # 1: LOCAL_SAL
+        # 2: PUN - power-up notification
+        # 3: EXSTAT
+        # self._send('A342000E', encode=False, checksum=False)
         self._send(DeviceManagementPacket(
-            checksum=False, parameter=0x42, value=0x02),
+            checksum=False, parameter=0x42, value=0x0E),
             basic_mode=True)
 
         # Interface options #1
