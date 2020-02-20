@@ -27,7 +27,7 @@ from cbus.protocol.scs_packet import SmartConnectShortcutPacket
 from .utils import CBusTestCase
 
 
-class SpecialPCICommandTest(CBusTestCase):
+class SpecialPacketTest(CBusTestCase):
 
     def check_packet_type(self, data: bytes,
                           typ=None,
