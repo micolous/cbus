@@ -39,6 +39,7 @@ class ClipsalPointToMultipointTest(CBusTestCase):
         self.assertEqual(p[0].group_address, 8)
 
         self.assertEqual(p.confirmation, b'g')
+        self.assertEqual(p.encode_packet(), b'0538000108BA')
 
     def test_s4_2_9_2_2(self):
         """Serial interface guide s4.2.9.2 (page 23) second test."""
@@ -50,7 +51,9 @@ class ClipsalPointToMultipointTest(CBusTestCase):
 
         self.assertEqual(p[0].child_application, 0x38)
         self.assertEqual(p[0].group_address, 0)
+
         self.assertEqual(p.confirmation, b'h')
+        self.assertEqual(p.encode_packet(), b'05FF007A38004A')
 
 
 class InternalPointToMultipointTest(CBusTestCase):
