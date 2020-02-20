@@ -1,6 +1,6 @@
-#!/usr/bin/env python
-# cbus/protocol/error_packet.py - PCI Error parket
-# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+#!/usr/bin/env python3
+# cbus/protocol/error_packet.py - PCI Error packet
+# Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -28,3 +28,6 @@ class PCIErrorPacket(SpecialServerPacket):
 
     def encode(self) -> bytes:
         return b'!'
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}()'
