@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # cbus/protocol/pm_packet.py - Point to Multipoint packet decoder
-# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -48,7 +48,7 @@ class PointToMultipointPacket(BasePacket, Sequence[SAL]):
 
         if isinstance(sals, SAL):
             self.append_sal(sals)
-        else:
+        elif sals:
             for sal in sals:
                 self.append_sal(sal)
 
@@ -66,7 +66,7 @@ class PointToMultipointPacket(BasePacket, Sequence[SAL]):
             self.application = sal_application
         elif self.application != sal_application:
             raise ValueError(
-                f'SAL {sal:r} is part of application {sal_application:x}, '
+                f'SAL {sal!r} is part of application {sal_application:x}, '
                 f'but this Packet has application {self.application:x}')
 
         self._sals.append(sal)
