@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/cal/extended.py - Extended status CAL
-# Copyright 2019 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2019-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -22,7 +22,8 @@ from dataclasses import dataclass
 from typing import Union
 
 from cbus.common import CAL, ExtendedCALType, Application
-from cbus.protocol.cal.report import StatusReport, BinaryStatusReport
+from cbus.protocol.cal.report import (
+    StatusReport, BinaryStatusReport, LevelStatusReport)
 
 __all__ = [
     'ExtendedCAL',
@@ -65,6 +66,8 @@ class ExtendedCAL:
 
         if block_type == ExtendedCALType.BINARY:
             report = BinaryStatusReport.decode(payload)
+        elif block_type == ExtendedCALType.LEVEL:
+            report = LevelStatusReport.decode(payload)
         else:
             raise NotImplementedError('block_type = {:x}'.format(block_type))
 

@@ -45,6 +45,7 @@ class ClipsalPointToMultipointTest(CBusTestCase):
         """Serial interface guide s4.2.9.2 (page 23) second test."""
         p = self.decode_pm(b'\\05FF007A38004Ah\r', from_pci=False)
 
+        self.assertEqual(p.application, 0xff)
         self.assertEqual(len(p), 1)
 
         self.assertIsInstance(p[0], StatusRequestSAL)
