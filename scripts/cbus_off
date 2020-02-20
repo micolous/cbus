@@ -3,9 +3,9 @@
 #
 # Usage: cbus_off <group_address>
 #
-# NOTE: This presumes that you have an MQTT server running on `localhost`, without authentication.
-# You will need to adapt this script to your local installation, or create
-# `~/.config/mosquitto_pub` with additional options; see `man mosquitto_pub` for details.
+# NOTE: mosquitto_pub presumes that you have an MQTT server running on localhost, without
+# authentication. You will need to create `~/.config/mosquitto_pub` for additional options.
+# See the mosquitto_pub man page for details.
 
 if [[ -z "$1" ]]; then
     echo "Usage: $0 <group_address>"
@@ -14,4 +14,4 @@ if [[ -z "$1" ]]; then
     exit 1
 fi
 
-mosquitto_pub -q -t "homeassistant/light/cbus_${1}/set" -m '{ "state": "OFF" }'
+mosquitto_pub -q 1 -t "homeassistant/light/cbus_${1}/set" -m '{ "state": "OFF" }'
