@@ -33,7 +33,7 @@ class CBusTestCase(unittest.TestCase):
             self, data: bytes,
             checksum: bool = True,
             strict: bool = True,
-            server_packet: bool = True,
+            from_pci: bool = True,
             expected_position: Optional[int] = None) -> Optional[BasePacket]:
         """
         Decodes a packet, and validates that the buffer position has consumed
@@ -50,10 +50,11 @@ class CBusTestCase(unittest.TestCase):
         if expected_position is None:
             expected_position = len(data)
 
-        packet, position = decode_packet(data, checksum, strict, server_packet)
+        packet, position = decode_packet(data, checksum, strict, from_pci)
         self.assertEqual(
             expected_position, position,
-            'Expected to parse the whole input data: {}'.format(data))
+            f'Expected to parse {expected_position} bytes of input data: '
+            f'{data!r}')
 
         return packet
 
@@ -61,13 +62,13 @@ class CBusTestCase(unittest.TestCase):
             self, data: bytes,
             checksum: bool = True,
             strict: bool = True,
-            server_packet: bool = True,
+            from_pci: bool = True,
             expected_position: Optional[int] = None)\
             -> PointToMultipointPacket:
         """Decodes and asserts a packet is PointToMultipointPacket."""
 
         p = self.decode_packet(
-            data, checksum, strict, server_packet, expected_position)
+            data, checksum, strict, from_pci, expected_position)
         self.assertIsInstance(p, PointToMultipointPacket)
         return p
 
@@ -75,12 +76,12 @@ class CBusTestCase(unittest.TestCase):
             self, data: bytes,
             checksum: bool = True,
             strict: bool = True,
-            server_packet: bool = True,
+            from_pci: bool = True,
             expected_position: Optional[int] = None) \
             -> PointToPointPacket:
         """Decodes and asserts a packet is PointToPointPacket."""
 
         p = self.decode_packet(
-            data, checksum, strict, server_packet, expected_position)
+            data, checksum, strict, from_pci, expected_position)
         self.assertIsInstance(p, PointToPointPacket)
         return p

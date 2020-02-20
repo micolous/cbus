@@ -33,7 +33,7 @@ class ClipsalTemperatureTest(CBusTestCase):
         # Note: The guide states that there is a checksum on the packet,
         # but there is actually no checksum.
         p = self.decode_pm(
-            b'\\051900020564g\r', server_packet=False, checksum=False)
+            b'\\051900020564g\r', from_pci=False, checksum=False)
 
         self.assertEqual(len(p), 1)
 

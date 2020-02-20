@@ -28,7 +28,7 @@ class ClipsalEnableTest(CBusTestCase):
     def test_s8_11(self):
         """Example in enable control application guide, s8.11 (page 7)"""
         # Set the network variable 0x37 to 0x82
-        p = self.decode_pm(b'\\05CB0002378275g\r', server_packet=False)
+        p = self.decode_pm(b'\\05CB0002378275g\r', from_pci=False)
         self.assertEqual(len(p), 1)
 
         self.assertIsInstance(p[0], EnableSetNetworkVariableSAL)

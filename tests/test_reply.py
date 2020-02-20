@@ -27,7 +27,7 @@ from .utils import CBusTestCase
 class ClipsalReplyTest(CBusTestCase):
     def test_s9_2(self):
         """Example in s9.2 (Serial Interface Guide) of decoding a reply CAL"""
-        p = self.decode_pp(b'8604990082300328\r\n', server_packet=True)
+        p = self.decode_pp(b'8604990082300328\r\n', from_pci=True)
         self.assertEqual(p.source_address, 4)
         self.assertEqual(p.unit_address, 0x99)
         self.assertEqual(len(p), 1)

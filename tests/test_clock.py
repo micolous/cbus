@@ -33,7 +33,7 @@ class ClipsalClockTest(CBusTestCase):
         # Set network time to 10:43:23 with no DST offset
         # Slight change from guide:
         p = self.decode_pm(
-            b'\\05DF000D010A2B1700C2g\r', server_packet=False)
+            b'\\05DF000D010A2B1700C2g\r', from_pci=False)
         self.assertEqual(len(p), 1)
 
         self.assertIsInstance(p[0], ClockUpdateSAL)
@@ -57,7 +57,7 @@ class ClipsalClockTest(CBusTestCase):
         """Example in s23.13.2 of decoding a date."""
         # Set network date to 2005-02-25 (Friday)
         p = self.decode_pm(
-            b'\\05DF000E0207D502190411g\r', server_packet=False)
+            b'\\05DF000E0207D502190411g\r', from_pci=False)
         self.assertEqual(len(p), 1)
 
         self.assertIsInstance(p[0], ClockUpdateSAL)
@@ -82,7 +82,7 @@ class ClipsalClockTest(CBusTestCase):
         #  - should be 05DF00110308
 
         p = self.decode_pm(
-            b'\\05DF00110308g\r', server_packet=False)
+            b'\\05DF00110308g\r', from_pci=False)
         self.assertIsInstance(p, PointToMultipointPacket)
         self.assertEqual(len(p), 1)
 

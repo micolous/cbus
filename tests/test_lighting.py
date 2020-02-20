@@ -31,7 +31,7 @@ class ClipsalSerialLightingTest(CBusTestCase):
     def test_s6_4(self):
         """Examples in s6.4"""
         # Switch on light at GA 8
-        p = self.decode_pm(b'\\0538000108BAg\r', server_packet=False)
+        p = self.decode_pm(b'\\0538000108BAg\r', from_pci=False)
 
         self.assertEqual(len(p), 1)
 
@@ -44,7 +44,7 @@ class ClipsalSerialLightingTest(CBusTestCase):
 
         # concatenated packet
         p = self.decode_pm(
-            b'\\05380001087909090A25h\r', server_packet=False)
+            b'\\05380001087909090A25h\r', from_pci=False)
 
         self.assertEqual(len(p), 3)
 
@@ -71,7 +71,7 @@ class ClipsalLightingTest(CBusTestCase):
     def test_s2_11(self):
         """Examples in s2.11"""
         # switch on light at GA 0x93
-        p = self.decode_pm(b'\\0538007993B7j\r', server_packet=False)
+        p = self.decode_pm(b'\\0538007993B7j\r', from_pci=False)
         self.assertEqual(len(p), 1)
 
         self.assertIsInstance(p[0], LightingOnSAL)
@@ -88,7 +88,7 @@ class ClipsalQuickLightingTest(CBusTestCase):
     def test_s9_1(self):
         """Examples in s9.1"""
         # turn on light 0x21
-        p = self.decode_pm(b'\\053800792129i\r', server_packet=False)
+        p = self.decode_pm(b'\\053800792129i\r', from_pci=False)
         self.assertEqual(len(p), 1)
 
         self.assertIsInstance(p[0], LightingOnSAL)
@@ -99,7 +99,7 @@ class ClipsalQuickLightingTest(CBusTestCase):
         self.assertEqual(p.confirmation, b'i')
 
         # turn off light 0x21
-        p = self.decode_pm(b'\\0538000121A1k\r', server_packet=False)
+        p = self.decode_pm(b'\\0538000121A1k\r', from_pci=False)
         self.assertEqual(len(p), 1)
 
         self.assertIsInstance(p[0], LightingOffSAL)
@@ -110,7 +110,7 @@ class ClipsalQuickLightingTest(CBusTestCase):
         self.assertEqual(p.confirmation, b'k')
 
         # ramp light 0x21 to 50% over 4 seconds
-        p = self.decode_pm(b'\\0538000A217F19l\r', server_packet=False)
+        p = self.decode_pm(b'\\0538000A217F19l\r', from_pci=False)
         self.assertEqual(len(p), 1)
 
         self.assertIsInstance(p[0], LightingRampSAL)
@@ -148,7 +148,7 @@ class InternalLightingTest(CBusTestCase):
 
         data = b'\\' + orig.encode_packet() + b'\r'
 
-        d = self.decode_pm(data, server_packet=False)
+        d = self.decode_pm(data, from_pci=False)
         self.assertEqual(len(orig), len(d))
 
         self.assertIsInstance(d[0], LightingOnSAL)

@@ -30,7 +30,7 @@ from .utils import CBusTestCase
 class ClipsalPointToMultipointTest(CBusTestCase):
     def test_s4_2_9_2_1(self):
         """Serial interface guide s4.2.9.2 (page 23) first test."""
-        p = self.decode_pm(b'\\0538000108BAg\r', server_packet=False)
+        p = self.decode_pm(b'\\0538000108BAg\r', from_pci=False)
 
         self.assertEqual(p.application, 0x38)
         self.assertEqual(len(p), 1)
@@ -42,7 +42,7 @@ class ClipsalPointToMultipointTest(CBusTestCase):
 
     def test_s4_2_9_2_2(self):
         """Serial interface guide s4.2.9.2 (page 23) second test."""
-        p = self.decode_pm(b'\\05FF007A38004Ah\r', server_packet=False)
+        p = self.decode_pm(b'\\05FF007A38004Ah\r', from_pci=False)
 
         self.assertEqual(len(p), 1)
 

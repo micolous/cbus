@@ -32,7 +32,7 @@ class BennettIdentifyTest(CBusTestCase):
 
         """
         p = self.decode_pp(
-            b'\\0699002101\r', server_packet=False, checksum=False)
+            b'\\0699002101\r', from_pci=False, checksum=False)
 
         self.assertEqual(p.unit_address, 0x99)
         self.assertEqual(len(p), 1)
