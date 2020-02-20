@@ -27,4 +27,6 @@ class PowerOnPacket(SpecialServerPacket):
         super(PowerOnPacket, self).__init__()
 
     def encode(self):
+        # We send two "Power On" bytes, like C-Bus, because the first one
+        # could be lost because of bit errors.
         return b'++'

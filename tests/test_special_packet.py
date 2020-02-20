@@ -20,6 +20,7 @@ from __future__ import absolute_import
 from typing import Optional
 import unittest
 
+from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.po_packet import PowerOnPacket
 from cbus.protocol.reset_packet import ResetPacket
@@ -48,24 +49,32 @@ class SpecialPacketTest(CBusTestCase):
     # Packets from PCI
     def test_power_on(self):
         self.check_packet_type(b'++', PowerOnPacket, expected_position=1)
+        self.assertEqual(b'++', PowerOnPacket().encode_packet())
 
     def test_error(self):
         self.check_packet_type(b'!', PCIErrorPacket, expected_position=1)
+        self.assertEqual(b'!', PCIErrorPacket().encode_packet())
+
+    def test_confirmation(self):
+        p = self.decode_packet(b'g.')
+        self.assertIsInstance(p, ConfirmationPacket)
+        self.assertEqual(b'g', p.code)
+        self.assertTrue(p.success)
 
     # Packets to PCI
     def test_reset_packet(self):
         self.check_packet_type(b'~~~', ResetPacket, from_pci=False,
                                expected_position=1)
 
-    def test_toolkit_stupid(self):
+    def test_toolkit_null_bug(self):
         self.check_packet_type(b'null\r', None, from_pci=False,
                                expected_position=4)
 
     def test_smart_connect(self):
         self.check_packet_type(b'|\r', SmartConnectShortcutPacket,
-                               from_pci=False, expected_position=2)
+                               from_pci=False)
         self.check_packet_type(b'||\r', SmartConnectShortcutPacket,
-                               from_pci=False, expected_position=2)
+                               from_pci=False)
 
     def test_discard(self):
         self.check_packet_type(b'hello?\\053800792129i\r', None, from_pci=False,

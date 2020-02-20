@@ -114,7 +114,7 @@ def decode_packet(
         elif (data.startswith(b'|' + END_COMMAND)
               or data.startswith(b'||' + END_COMMAND)):
             # SMART + CONNECT shortcut
-            consumed += 1 + len(END_COMMAND)
+            consumed += data.find(END_COMMAND) + 1
             return SmartConnectShortcutPacket(), consumed
         else:
             # Check if we need to discard a message
