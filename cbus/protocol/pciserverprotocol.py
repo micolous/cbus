@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # cbus/protocol/pciserverprotocol.py - Twisted protocol implementation of the
 # CBus PCI as a server.
-# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -60,7 +60,7 @@ class PCIServerProtocol(CBusProtocol):
     """
 
     def __init__(self):
-        super(PCIServerProtocol, self).__init__(server=True)
+        super(PCIServerProtocol, self).__init__(emulate_pci=True)
         self._transport = None
 
         self.basic_mode = True

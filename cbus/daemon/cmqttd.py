@@ -18,11 +18,10 @@
 from asyncio import get_event_loop, run
 from argparse import ArgumentParser, FileType
 import json
-import sys
+import logging
 from typing import Any, Dict, Optional, Text, TextIO
 
 import paho.mqtt.client as mqtt
-from twisted.python import log
 
 try:
     from serial_asyncio import create_serial_connection
@@ -34,6 +33,8 @@ from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga
 from cbus.paho_asyncio import AsyncioHelper
 from cbus.protocol.pciprotocol import PCIProtocol
 
+
+logger = logging.getLogger(__name__)
 
 _BINSENSOR_TOPIC_PREFIX = 'homeassistant/binary_sensor/cbus_'
 _LIGHT_TOPIC_PREFIX = 'homeassistant/light/cbus_'
@@ -113,7 +114,7 @@ class CBusHandler(PCIProtocol):
 class MqttClient(mqtt.Client):
 
     def on_connect(self, client, userdata: CBusHandler, flags, rc):
-        log.msg('Connected to MQTT broker')
+        logger.info('Connected to MQTT broker')
         userdata.mqtt_api = self
         self.subscribe([(set_topic(ga), 2) for ga in ga_range()])
         self.publish_all_lights()
@@ -128,14 +129,14 @@ class MqttClient(mqtt.Client):
             ga = get_topic_group_address(msg.topic)
         except ValueError:
             # Invalid group address
-            log.err(f'Invalid group address in topic {msg.topic}')
+            logging.error(f'Invalid group address in topic {msg.topic}')
             return
 
         # https://www.home-assistant.io/integrations/light.mqtt/#json-schema
         try:
             payload = json.loads(msg.payload)
         except Exception as e:
-            log.err(e, f'JSON parse error in {msg.topic}')
+            logging.error(f'JSON parse error in {msg.topic}', exc_info=e)
             return
         light_on = payload['state'].upper() == 'ON'
         brightness = payload.get('brightness', 255) / 255.
@@ -360,10 +361,9 @@ async def main():
         return parser.error(
             'To use client certificates, both -k and -K must be specified.')
 
-    if option.log:
-        log.startLogging(option.log)
-    else:
-        log.startLogging(sys.stdout)
+    global_logger = logging.getLogger('cbus')
+    global_logger.setLevel(logging.INFO)
+    logging.basicConfig(level=logging.INFO, filename=option.log)
 
     loop = get_event_loop()
     connection_lost_future = loop.create_future()
@@ -393,7 +393,7 @@ async def main():
     if option.broker_auth:
         read_auth(mqtt_client, option.broker_auth)
     if option.broker_disable_tls:
-        log.msg('Transport security has been disabled!')
+        logging.warning('Transport security disabled!')
         port = option.broker_port or 1883
     else:
         tls_args = {}

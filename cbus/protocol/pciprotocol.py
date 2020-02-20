@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/pciprotocol.py - Twisted protocol implementation for CBus PCI
-# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -18,18 +18,23 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from asyncio import (CancelledError, Future, Lock, Protocol, create_task,
-                     get_event_loop, run, sleep)
+from asyncio import (CancelledError, Future, Lock, create_task,
+                     get_running_loop, run, sleep)
 from asyncio.transports import BaseTransport
 from datetime import datetime
+import logging
 from typing import Iterable, Optional, Text, Union
 
 from six import int2byte
-from twisted.python import log  # TODO: remove
+
+try:
+    from serial_asyncio import create_serial_connection
+except ImportError:
+    def create_serial_connection(*_, **__):
+        raise ImportError('Serial device support requires pyserial-asyncio')
 
 from cbus.common import (
-    CONFIRMATION_CODES, END_COMMAND, END_RESPONSE, MIN_MESSAGE_SIZE,
-    MAX_BUFFER_SIZE, add_cbus_checksum)
+    CONFIRMATION_CODES, END_COMMAND, add_cbus_checksum)
 from cbus.protocol.application.clock import (
     ClockSAL, ClockRequestSAL, ClockUpdateSAL)
 from cbus.protocol.application.lighting import (
@@ -38,19 +43,21 @@ from cbus.protocol.application.lighting import (
 from cbus.protocol.base_packet import (
     BasePacket, SpecialServerPacket, SpecialClientPacket)
 from cbus.protocol.cal.identify import IdentifyCAL
+from cbus.protocol.cbus_protocol import CBusProtocol
 from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.protocol.dm_packet import DeviceManagementPacket
 from cbus.protocol.error_packet import PCIErrorPacket
-from cbus.protocol.packet import decode_packet
 # from cbus.protocol.po_packet import PowerOnPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.pp_packet import PointToPointPacket
 from cbus.protocol.reset_packet import ResetPacket
 
+logger = logging.getLogger(__name__)
+
 __all__ = ['PCIProtocol']
 
 
-class PCIProtocol(Protocol):
+class PCIProtocol(CBusProtocol):
     """
     Implements a twisted protocol for communicating with a CBus PCI over serial
     or TCP.
@@ -62,6 +69,8 @@ class PCIProtocol(Protocol):
             timesync_frequency: int = 10,
             handle_clock_requests: bool = True,
             connection_lost_future: Optional[Future] = None):
+        super(PCIProtocol, self).__init__(emulate_pci=False)
+
         self._transport = None  # type: Optional[BaseTransport]
         self._next_confirmation_index = 0
         self._recv_buffer = bytearray()
@@ -86,54 +95,7 @@ class PCIProtocol(Protocol):
         self._transport = None
         self._connection_lost_future.set_result(True)
 
-    def data_received(self, data: bytes) -> None:
-        """
-        Called when there is new data from the PCI. Do not override this.
-
-        :param data: Raw CBus event data
-        """
-        # log.msg("recv: %r" % data)
-        create_task(self._data_received_async(data))
-
-    async def _data_received_async(self, data: bytes) -> None:
-
-        async with self._recv_buffer_lock:
-            if len(self._recv_buffer) >= MAX_BUFFER_SIZE:
-                log.msg(f'Buffer too big ({len(self._recv_buffer)} >= '
-                        f'{MAX_BUFFER_SIZE}, truncating!')
-                # Buffer too big, truncate it.
-                eol = self._recv_buffer.find(END_RESPONSE)
-                if eol == -1:
-                    # reset buffer
-                    self._recv_buffer = bytearray()
-                else:
-                    # shift buffer to where the next eol is
-                    self._recv_buffer = self._recv_buffer[eol:]
-
-            self._recv_buffer += data
-
-            # Decode all waiting packets.
-            while len(self._recv_buffer) >= MIN_MESSAGE_SIZE:
-                p, remainder = decode_packet(
-                    self._recv_buffer, checksum=True, server_packet=True)
-
-                if remainder == 0:
-                    # We don't have enough to do a proper decode yet, break!
-                    return
-                else:
-                    self._recv_buffer = self._recv_buffer[remainder:]
-
-                if p is None:
-                    log.msg('dce: packet == None')
-                    continue
-
-                log.msg('dce: packet:', p)
-
-                # Create a bunch of Tasks for handling these events,
-                # so we don't need to hold the _recv_buffer_lock for too long.
-                create_task(self.on_packet(p))
-
-    async def on_packet(self, p: BasePacket) -> None:
+    def handle_cbus_packet(self, p: BasePacket) -> None:
         """
         Dispatches all packet types into a high level event handler.
         """
@@ -144,7 +106,7 @@ class PCIProtocol(Protocol):
             elif isinstance(p, ConfirmationPacket):
                 self.on_confirmation(p.code, p.success)
             else:
-                log.msg('dce: unhandled SpecialServerPacket')
+                logger.debug(f'hcp: unhandled SpecialServerPacket: {p!r}')
         elif isinstance(p, PointToMultipointPacket):
             for s in p:
                 if isinstance(s, LightingSAL):
@@ -163,16 +125,16 @@ class PCIProtocol(Protocol):
                         self.on_lighting_group_terminate_ramp(
                             p.source_address, s.group_address)
                     else:
-                        log.msg('dce: unhandled lighting SAL type', s)
+                        logger.debug(f'hcp: unhandled lighting SAL type: {s!r}')
                 elif isinstance(s, ClockSAL):
                     if isinstance(s, ClockRequestSAL):
                         self.on_clock_request(p.source_address)
                     elif isinstance(s, ClockUpdateSAL):
                         self.on_clock_update(p.source_address, s.val)
                 else:
-                    log.msg('dce: unhandled SAL type', s)
+                    logger.debug(f'hcp: unhandled SAL type: {s!r}')
         else:
-            log.msg('dce: unhandled other packet', p)
+            logger.debug(f'hcp: unhandled other packet: {p!r}')
 
     # event handlers
     def on_confirmation(self, code: bytes, success: bool):
@@ -181,33 +143,27 @@ class PCIProtocol(Protocol):
 
         :param code: A single byte matching the command that this is a response
                      to.
-        :type code: str
 
         :param success: True if the command was successful, False otherwise.
-        :type success: bool
         """
-        log.msg('recv: confirmation: code = {}, success = {}'.format(
-            code, success))
+        logger.debug(f'recv: confirmation: code = {code}, success = {success}')
 
     def on_reset(self):
         """
         Event called when the PCI has been hard reset.
 
         """
-        log.msg('recv: pci reset in progress!')
+        logger.debug('recv: pci reset in progress!')
 
     def on_mmi(self, application: int, data: bytes):
         """
         Event called when a MMI was received.
 
         :param application: Application that this MMI concerns.
-        :type application: int
-
         :param data: MMI data
-        :type data: str
 
         """
-        log.msg("recv: mmi: application %r, data %r" % (application, data))
+        logger.debug(f'recv: mmi: application {application}, data {data!r}')
 
     def on_lighting_group_ramp(self, source_addr: int, group_addr: int,
                                duration: int, level: float):
@@ -228,9 +184,9 @@ class PCIProtocol(Protocol):
         :param level: Target brightness of the ramp (0.0 - 1.0).
         :type level: float
         """
-        log.msg(
-            'recv: lighting ramp: from {} to {}, duration {} seconds to level '
-            '{:.2f}%'.format(source_addr, group_addr, duration, level * 100))
+        logger.debug(
+            f'recv: light ramp: from {source_addr} to {group_addr}, duration '
+            f'{duration} seconds to level {level*100:.2f}% ')
 
     def on_lighting_group_on(self, source_addr: int, group_addr: int):
         """
@@ -243,8 +199,7 @@ class PCIProtocol(Protocol):
         :param group_addr: Group address being turned on.
         :type group_addr: int
         """
-        log.msg('recv: lighting on: from {} to {}'.format(
-            source_addr, group_addr))
+        logger.debug(f'recv: light on: from {source_addr} to {group_addr}')
 
     def on_lighting_group_off(self, source_addr: int, group_addr: int):
         """
@@ -257,8 +212,7 @@ class PCIProtocol(Protocol):
         :param group_addr: Group address being turned off.
         :type group_addr: int
         """
-        log.msg('recv: lighting off: from {} to {}'.format(
-            source_addr, group_addr))
+        logger.debug(f'recv: light off: from {source_addr} to {group_addr}')
 
     def on_lighting_group_terminate_ramp(
             self, source_addr: int, group_addr: int):
@@ -273,8 +227,8 @@ class PCIProtocol(Protocol):
         :param group_addr: Group address stopping ramping.
         :type group_addr: int
         """
-        log.msg('recv: lighting terminate ramp: from {} to {}'.format(
-            source_addr, group_addr))
+        logger.debug(
+            f'recv: terminate ramp: from {source_addr} to {group_addr}')
 
     def on_lighting_label_text(self, source_addr: int, group_addr: int,
                                flavour: int, language_code: int, label: Text):
@@ -299,10 +253,9 @@ class PCIProtocol(Protocol):
         :type label: str
 
         """
-        log.msg(
-            'recv: lighting label text: from {} to {} flavour {} lang {} '
-            'text {}'.format(
-                source_addr, group_addr, flavour, language_code, label))
+        logger.debug(
+            f'recv: lighting label text: from {source_addr} to {group_addr} '
+            f'flavour {flavour} lang {language_code} text {label!r}')
 
     def on_pci_cannot_accept_data(self):
         """
@@ -322,7 +275,7 @@ class PCIProtocol(Protocol):
         sends, not to data it recieves.
 
         """
-        log.msg("recv: PCI cannot accept data")
+        logger.debug('recv: PCI cannot accept data')
 
     def on_pci_power_up(self):
         """
@@ -333,7 +286,7 @@ class PCIProtocol(Protocol):
         will send the event twice.
 
         """
-        log.msg("recv: PCI power-up notification")
+        logger.debug('recv: PCI power-up notification')
 
     def on_clock_request(self, source_addr):
         """
@@ -342,7 +295,7 @@ class PCIProtocol(Protocol):
         :param source_addr: Source address of the unit requesting time.
         :type source_addr: int
         """
-        log.msg('recv: clock request from %d' % (source_addr,))
+        logger.debug(f'recv: clock request from {source_addr}')
         if self._handle_clock_requests:
             self.clock_datetime()
 
@@ -354,7 +307,7 @@ class PCIProtocol(Protocol):
         :type source_addr: int
 
         """
-        log.msg('recv: clock update from %d of %r' % (source_addr, val))
+        logger.debug(f'recv: clock update from {source_addr} of {val!r}')
 
     # other things.
 
@@ -381,6 +334,7 @@ class PCIProtocol(Protocol):
         """
         if not isinstance(cmd, BasePacket):
             raise TypeError('cmd must be BasePacket')
+        logger.debug(f'send: {cmd!r}')
 
         checksum = False
 
@@ -404,10 +358,10 @@ class PCIProtocol(Protocol):
         else:
             conf_code = None
 
-        log.msg("send: %r" % cmd)
+        cmd += END_COMMAND
+        logger.debug(f'send: {cmd!r}')
 
-        self._transport.write(cmd + END_COMMAND)
-
+        self._transport.write(cmd)
         return conf_code
 
     def pci_reset(self):
@@ -488,8 +442,8 @@ class PCIProtocol(Protocol):
 
         if group_addr_count > 9:
             # maximum 9 group addresses per packet
-            raise ValueError('group_addr iterable length is > 9 ({})'.format(
-                group_addr_count))
+            raise ValueError(
+                f'group_addr iterable length is > 9 ({group_addr_count})')
 
         p = PointToMultipointPacket(
             sals=[LightingOnSAL(ga) for ga in group_addr])
@@ -515,8 +469,8 @@ class PCIProtocol(Protocol):
 
         if group_addr_count > 9:
             # maximum 9 group addresses per packet
-            raise ValueError('group_addr iterable length is > 9 ({})'.format(
-                group_addr_count))
+            raise ValueError(
+                f'group_addr iterable length is > 9 ({group_addr_count})')
 
         p = PointToMultipointPacket(
             sals=[LightingOffSAL(ga) for ga in group_addr])
@@ -568,8 +522,8 @@ class PCIProtocol(Protocol):
 
         if group_addr_count > 9:
             # maximum 9 group addresses per packet
-            raise ValueError('group_addr iterable length is > 9 ({})'.format(
-                group_addr_count))
+            raise ValueError(
+                f'group_addr iterable length is > 9 ({group_addr_count})')
 
         p = PointToMultipointPacket(
             sals=[LightingTerminateRampSAL(ga) for ga in group_addr])
@@ -622,51 +576,43 @@ async def main():
     Imports are included inside of this method in order to avoid loading
     unneeded dependencies.
     """
-    import sys
-
     from argparse import ArgumentParser
-    from serial_asyncio import create_serial_connection
 
     parser = ArgumentParser(description="""\
-        Library for communications with a CBus PCI in Twisted.  Acts as a test
-        program to dump events from a PCI.
+        Test program that displays events from a connected C-Bus PCI (over 
+        serial, USB or TCP) or CNI (TCP).
     """)
-    parser.add_argument(
-        '-s', '--serial-pci',
-        dest='serial_pci', default=None,
-        help='Serial port where the PCI is located. Either this or -t must be '
-             'specified.')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        '-s', '--serial',
+        dest='serial', default=None, metavar='DEVICE',
+        help='Serial port where the PCI is located. USB PCIs appear as a '
+             'cp210x USB-serial adapter. (example: -s /dev/ttyUSB0)'
+    )
 
-    parser.add_argument(
-        '-t', '--tcp-pci',
-        dest='tcp_pci', default=None,
-        help='IP address and TCP port where the PCI is located (CNI). Either '
-             'this or -s must be specified.')
+    group.add_argument(
+        '-t', '--tcp',
+        dest='tcp', default=None, metavar='ADDR:PORT',
+        help='IP address and TCP port where the C-Bus CNI or PCI is located '
+             '(eg: -t 192.0.2.1:10001)')
 
     option = parser.parse_args()
 
-    log.startLogging(sys.stdout)
-    loop = get_event_loop()
+    global_logger = logging.getLogger('cbus')
+    global_logger.setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
+    loop = get_running_loop()
     connection_lost_future = loop.create_future()
 
-    if option.serial_pci and option.tcp_pci:
-        return parser.error(
-            'Both serial and TCP CBus PCI addresses were specified! Use only '
-            'one...')
-    elif option.serial_pci:
+    def factory():
+        return PCIProtocol(connection_lost_future=connection_lost_future)
+
+    if option.serial:
         await create_serial_connection(
-            loop,
-            lambda: PCIProtocol(connection_lost_future=connection_lost_future),
-            option.serial_pci, baudrate=9600)
-    elif option.tcp_pci:
-        # TODO
-        addr = option.tcp_pci.split(':', 2)
-        await loop.create_connection(
-            lambda: PCIProtocol(connection_lost_future=connection_lost_future),
-            addr[0], int(addr[1]))
-    else:
-        return parser.error(
-            'No CBus PCI address was specified!  (See -s or -t option)')
+            loop, factory, option.serial, baudrate=9600)
+    elif option.tcp:
+        addr, port = option.tcp.split(':', 2)
+        await loop.create_connection(factory, addr, int(port))
 
     await connection_lost_future
 

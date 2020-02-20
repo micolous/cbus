@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # cbus/protocol/packet.py - Extensible protocol library for encoding and
 #                           decoding PCI protocol data.
-# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -35,7 +35,7 @@ from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.protocol.cal import AnyCAL
 from cbus.common import (
-    DestinationAddressType, PriorityClass,
+    DestinationAddressType, PriorityClass, MIN_MESSAGE_SIZE,
     HEX_CHARS, CONFIRMATION_CODES, END_COMMAND,
     END_RESPONSE, get_real_cbus_checksum, validate_cbus_checksum)
 
@@ -44,10 +44,10 @@ def decode_packet(
         data: bytes,
         checksum: bool = True,
         strict: bool = True,
-        server_packet: bool = True)\
+        from_pci: bool = True) \
         -> Tuple[Union[BasePacket, AnyCAL, None], int]:
     """
-    Decodes a packet from or send to the PCI.
+    Decodes a single C-Bus Serial Interface packet.
 
     The return value is a tuple:
 
@@ -62,13 +62,18 @@ def decode_packet(
     Note: Direct Command Access causes this method to return AnyCAL instead
     of a BasePacket.
 
-    :param data: The data to parse, in encapsulated serial format
+    :param data: The data to parse, in encapsulated serial format.
     :param checksum: If True, requires a checksum for all packets
     :param strict: If True, raises ValueError whenever checksum is incorrect.
                    Otherwise, only emits a warning.
-    :param server_packet: If True, parses the packet as if it were sent by a
-                          PCI. If False, parses the packet as if it were sent
-                          to a PCI (eg: simulation).
+    :param from_pci: If True, parses the packet as if it were sent from/by a
+        PCI -- if your software was sent packets by a PCI, this is
+        what you want.
+
+        If False, this parses the packet as if it were sent to a PCI; parsing
+        messages that software expecting to communicate with a PCI sends. This
+        could be used to build a fake PCI, or analyse the behaviour of other
+        C-Bus software.
     """
     confirmation = None
     consumed = 0
@@ -78,14 +83,20 @@ def decode_packet(
     if data == b'':
         return None, 0
 
-    # packets from clients have some special flags which we need to handle.
-    if server_packet:
+    # There are some special transport-layer flags that need to be handled
+    # before parsing the rest of the message.
+    if from_pci:
         if data.startswith(b'+'):  # +
             return PowerOnPacket(), consumed + 1
         elif data.startswith(b'!'):  # !
             # buffer is full / invalid checksum, some requests may be dropped.
             # serial interface guide s4.3.3 p28
             return PCIErrorPacket(), consumed + 1
+
+        if len(data) < MIN_MESSAGE_SIZE:
+            # Not enough data in the buffer to process yet.
+            return None, 0
+
         if data[0] in CONFIRMATION_CODES:
             success = indexbytes(data, 1) == 0x2e  # .
             code = data[:1]
@@ -124,7 +135,7 @@ def decode_packet(
     # consume the command up to and including the ending byte(s).
     data = data[:end]
 
-    if server_packet:
+    if from_pci:
         consumed += end + len(END_RESPONSE)
     else:
         consumed += end + len(END_COMMAND)
@@ -133,7 +144,7 @@ def decode_packet(
         # Empty command, break out!
         return None, consumed
 
-    if not server_packet:
+    if not from_pci:
         if data.startswith(b'@'):
             # Once-off BASIC mode command, Serial Interface Guide, s4.2.7
             checksum = False
@@ -200,7 +211,7 @@ def decode_packet(
     data = data[1:]
 
     # handle source address
-    if server_packet:
+    if from_pci:
         source_addr = byte2int(data)
         data = data[1:]
     else:
@@ -233,7 +244,7 @@ def decode_packet(
         raise NotImplementedError(
             f'Destination address type = 0x{address_type:x}')
 
-    if not server_packet:
+    if not from_pci:
         p.confirmation = confirmation
         p.source_address = None
     elif source_addr:
