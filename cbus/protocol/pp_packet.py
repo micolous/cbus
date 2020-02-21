@@ -86,11 +86,12 @@ class PointToPointPacket(BasePacket, Sequence[AnyCAL]):
         cmd = byte2int(data)
         if cmd & 0xE0 == CAL.REPLY:  # flick off the lower bits
             # REPLY
-            reply_len = (cmd & 0x1F) + 1
-
-            reply_data = data[1:reply_len]
-
-            return ReplyCAL.decode_cal(reply_data), reply_len
+            cal_end = (cmd & 0x1F) + 1
+            if len(data) < cal_end:
+                raise ValueError(f'Invalid reply CAL, need {cal_end} bytes '
+                                 f'but got {len(data)}')
+            reply_data = data[1:cal_end]
+            return ReplyCAL.decode_cal(reply_data), cal_end
         elif cmd & 0xE0 == CAL.STANDARD_STATUS:
             # STATUS (standard)
             # Note: these packets never contain addressing information,
@@ -99,13 +100,15 @@ class PointToPointPacket(BasePacket, Sequence[AnyCAL]):
             raise NotImplementedError('standard status cal')
         elif cmd & 0xE0 == CAL.EXTENDED_STATUS:
             # EXSTAT / Extended status
-            # +3 for cmd byte + coding byte + application which aren't counted
-            status_len = (cmd - CAL.EXTENDED_STATUS) + 3
+            # Note: s9.1 examples have incorrect status length, shows 24 but
+            # is actually 25. Actual hardware tests show correct length.
+            cal_end = (cmd & 0x1f) + 1
+            if len(data) < cal_end:
+                raise ValueError(f'Invalid reply CAL, need {cal_end} bytes '
+                                 f'but got {len(data)}')
 
-            # Remove cmd byte
-            reply_data = data[1:status_len]
-
-            return ExtendedCAL.decode_cal(reply_data), status_len
+            reply_data = data[1:cal_end]
+            return ExtendedCAL.decode_cal(reply_data), cal_end
         else:
             handler = REQUESTS[cmd]
             return handler.decode_cal(data)

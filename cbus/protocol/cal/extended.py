@@ -49,7 +49,7 @@ class ExtendedCAL:
         report = self.report.encode()
 
         return bytes([
-            CAL.EXTENDED_STATUS | (len(report) + 1),
+            CAL.EXTENDED_STATUS | (len(report) + 3),
             self.coding_byte,
             self.child_application & 0xff,
             self.block_start & 0xff]) + report

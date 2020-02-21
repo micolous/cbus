@@ -34,12 +34,13 @@ except ImportError:
         raise ImportError('Serial device support requires pyserial-asyncio')
 
 from cbus.common import (
-    CONFIRMATION_CODES, END_COMMAND, add_cbus_checksum)
+    Application, CONFIRMATION_CODES, END_COMMAND, add_cbus_checksum)
 from cbus.protocol.application.clock import (
     ClockSAL, ClockRequestSAL, ClockUpdateSAL)
 from cbus.protocol.application.lighting import (
     LightingSAL, LightingOnSAL, LightingOffSAL, LightingRampSAL,
     LightingTerminateRampSAL)
+from cbus.protocol.application.status_request import StatusRequestSAL
 from cbus.protocol.base_packet import (
     BasePacket, SpecialServerPacket, SpecialClientPacket)
 from cbus.protocol.cal.identify import IdentifyCAL
@@ -558,6 +559,11 @@ class PCIProtocol(CBusProtocol):
             try:
                 self.clock_datetime()
                 await sleep(frequency)
+                self._send(PointToMultipointPacket(sals=StatusRequestSAL(
+                    child_application=Application.LIGHTING,
+                    level_request=True,
+                    group_address=0,
+                )))
             except CancelledError:
                 break
 

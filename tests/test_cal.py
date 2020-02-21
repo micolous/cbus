@@ -49,24 +49,36 @@ class ClipsalExtendedStatusTest(CBusTestCase):
     def test_s9_1_exstat(self):
         """Examples in serial interface user guide s9.1"""
         # Status reply, SMART mode, EXSTAT on
-        p = self.decode_pp(
-            b'86999900F8003800A8AA0200000000000000000000000000000000000000C4'
-            b'\r\n')
+        #
+        # Note: Documentation for **all** values here has off-by-one status
+        # length (F8 instead of F9). Fixing this _also_ changes all checksums.
+        #
+        # Verified against actual C-Bus hardware.
 
+        p = self.decode_pp(
+            b'86999900F9003800A8AA0200000000000000000000000000000000000000C3'
+            b'\r\n')
         self._check_s9_1_result(p, 0, 88)
+        self.assertEqual(
+            p.encode_packet(),
+            b'86999900F9003800A8AA0200000000000000000000000000000000000000C3')
 
         p = self.decode_pp(
-            b'86999900F800385800000000000000000000000000000000000000000000C0'
+            b'86999900F900385800000000000000000000000000000000000000000000BF'
             b'\r\n')
-
         self._check_s9_1_result(p, 88, 88)
+        self.assertEqual(
+            p.encode_packet(),
+            b'86999900F900385800000000000000000000000000000000000000000000BF')
 
-        # Note: documentation has wrong checksum (8F != 6A)
+        # Note: documentation has wrong checksum for original length (8F != 6A)
         p = self.decode_pp(
-            b'86999900F60038B000000000000000000000000000000000000000006A'
+            b'86999900F70038B0000000000000000000000000000000000000000069'
             b'\r\n')
-
         self._check_s9_1_result(p, 176, 80)
+        self.assertEqual(
+            p.encode_packet(),
+            b'86999900F70038B0000000000000000000000000000000000000000069')
 
     def test_p49_manchester_coding(self):
         self.assertEqual(manchester_decode(b'\xaa\xaa'), 0x00)
@@ -104,15 +116,24 @@ class InternalStatusTest(CBusTestCase):
             b'86FFFF00F90738000000AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA00000000A4'
             b'\r\n')
         self._check_level_response(p, 0, 11)
+        self.assertEqual(
+            p.encode_packet(),
+            b'86FFFF00F90738000000AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA00000000A4')
 
         p = self.decode_pp(
             b'86FFFF00F907380B0000000000000000000000000000000000000000000039'
             b'\r\n')
         self._check_level_response(p, 11, 11)
+        self.assertEqual(
+            p.encode_packet(),
+            b'86FFFF00F907380B0000000000000000000000000000000000000000000039')
 
         p = self.decode_pp(
             b'86FFFF00F7073816000000000000000000000000000000000000000030\r\n')
         self._check_level_response(p, 22, 10)
+        self.assertEqual(
+            p.encode_packet(),
+            b'86FFFF00F7073816000000000000000000000000000000000000000030')
 
     def test_manchester_api(self):
         b = bytearray(4)
