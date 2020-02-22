@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-cbus/discovery_test.py - experiments with CNI discovery
+cbus/cni_discovery_experiment.py - experiments with CNI discovery
 Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 
 This library is free software: you can redistribute it and/or modify

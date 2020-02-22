@@ -2,7 +2,7 @@
 source = cbus/
 omit =
     # experiments
-    *test*.py
+    *experiment*.py
 
     # wrapper only used by MQTT library code
     cbus/paho_asyncio.py

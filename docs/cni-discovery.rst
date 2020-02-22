@@ -4,7 +4,8 @@ CNI Discovery
 
 At the moment this is a rather unorganised set of notes while I'm still figuring out the protocol.
 
-I've started working on a test program for dissecting the protcol in ``cbus/discovery_test.py``.
+I've started working on a test program for dissecting the protocol in
+``cbus/cni_discovery_experiment.py``.
 
 Discovery Query
 ===============
