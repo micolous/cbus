@@ -75,3 +75,8 @@ class DeviceManagementPacket(BasePacket):
             p = add_cbus_checksum(p)
 
         return p
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}(parameter=0x{self.parameter:x}, '
+                f'value=0x{self.value:x}, checksum={self.checksum}, '
+                f'priority_class={self.priority_class})')

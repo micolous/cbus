@@ -89,7 +89,9 @@ class SpecialClientPacket(_SpecialPacket, abc.ABC):
 
     These have non-standard methods for serialisation.
     """
-    pass
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}()'
 
 
 class SpecialServerPacket(_SpecialPacket, abc.ABC):
