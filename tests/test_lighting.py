@@ -167,6 +167,12 @@ class InternalLightingTest(CBusTestCase):
             sals=LightingRampSAL(1, 17*60, 255)).encode_packet()
         self.assertEqual(p1, p2)
 
+    def test_brightness_bounds(self):
+        with self.assertRaisesRegex(ValueError, r'Ramp level .+ bounds'):
+            LightingRampSAL(1, 10, -1).encode()
+        with self.assertRaisesRegex(ValueError, r'Ramp level .+ bounds'):
+            LightingRampSAL(1, 10, 256).encode()
+
 
 class LightingRegressionTest(CBusTestCase):
     def test_issue2(self):
