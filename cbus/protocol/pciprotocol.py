@@ -30,7 +30,7 @@ from six import int2byte
 try:
     from serial_asyncio import create_serial_connection
 except ImportError:
-    def create_serial_connection(*_, **__):
+    async def create_serial_connection(*_, **__):
         raise ImportError('Serial device support requires pyserial-asyncio')
 
 from cbus.common import (

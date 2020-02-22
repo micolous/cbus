@@ -26,7 +26,7 @@ import paho.mqtt.client as mqtt
 try:
     from serial_asyncio import create_serial_connection
 except ImportError:
-    def create_serial_connection(*_, **__):
+    async def create_serial_connection(*_, **__):
         raise ImportError('Serial device support requires pyserial-asyncio')
 
 from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga
@@ -263,7 +263,7 @@ def read_auth(client: mqtt.Client, auth_file: TextIO):
     client.username_pw_set(username, password)
 
 
-async def main():
+async def _main():
     parser = ArgumentParser()
 
     group = parser.add_argument_group('Daemon options')
@@ -411,5 +411,10 @@ async def main():
     await connection_lost_future
 
 
+def main():
+    # work-around asyncio vs. setuptools console_scripts
+    run(_main())
+
+
 if __name__ == '__main__':
-    run(main())
+    main()

@@ -12,15 +12,17 @@ FROM alpine:3.11 as base
 
 # Install most Python deps here, because that way we don't need to include build tools in the
 # final image.
-RUN apk add --no-cache python3 py3-cffi py3-paho-mqtt py3-six py3-twisted tzdata && \
-    pip3 install 'pyserial==3.4'
+RUN apk add --no-cache python3 py3-cffi py3-paho-mqtt py3-six tzdata && \
+    pip3 install 'pyserial==3.4' 'pyserial_asyncio==0.4'
 
 # Runs tests and builds a distribution tarball
 FROM base as builder
 # See also .dockerignore
 ADD . /cbus
 WORKDIR /cbus
-RUN python3 -m unittest && python3 setup.py bdist -p generic --format=gztar
+RUN pip3 install 'parameterized' && \
+    python3 -m unittest && \
+    python3 setup.py bdist -p generic --format=gztar
 
 # cmqttd runner image
 FROM base as cmqttd
