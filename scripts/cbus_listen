@@ -1,0 +1,17 @@
+#!/bin/sh
+# cbus_listen: example script for listening to light state
+#
+# Usage: cbus_listen <group_address>
+#
+# NOTE: mosquitto_sub presumes that you have an MQTT server running on localhost, without
+# authentication. You will need to create `~/.config/mosquitto_sub` for additional options.
+# See the mosquitto_sub man page for details.
+
+if [[ -z "$1" ]]; then
+    echo "Usage: $0 <group_address>"
+    echo "To get the state of C-Bus group address 1, run:"
+    echo "   $0 1"
+    exit 1
+fi
+
+mosquitto_sub -q 1 -t "homeassistant/light/cbus_${1}/state"

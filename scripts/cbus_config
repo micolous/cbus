@@ -1,0 +1,20 @@
+#!/bin/sh
+# cbus_config: example script for getting light config topic
+#
+# Usage: cbus_config <group_address>
+#
+# NOTE: mosquitto_sub presumes that you have an MQTT server running on localhost, without
+# authentication. You will need to create `~/.config/mosquitto_sub` for additional options.
+# See the mosquitto_sub man page for details.
+
+if [[ -z "$1" ]]; then
+    echo "Usage: $0 <group_address>"
+    echo "To get the configuration for C-Bus group address 1, run:"
+    echo "   $0 1"
+    exit 1
+fi
+
+CONF_TOPIC="homeassistant/light/cbus_${1}/config"
+
+echo "Topic: ${CONF_TOPIC}"
+mosquitto_sub -q 1 -W 2 -t "${CONF_TOPIC}" | jq
