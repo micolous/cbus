@@ -26,6 +26,7 @@ import unittest
 from cbus.common import check_ga
 from cbus.daemon import cmqttd
 
+
 @dataclass
 class MockMqttClientAuth:
     username: Optional[Text] = None
