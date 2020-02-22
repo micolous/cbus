@@ -124,34 +124,40 @@ On a system with Docker installed, clone the ``libcbus`` repository and then run
 
 This will download about 120 MiB of dependencies, and result in about 100 MiB image.
 
-The default setup supports a serial or USB PCI, and can connect to an unauthenticated MQTT Broker
-in the clear. The image uses the following environment variables:
+The __default__ start-up script supports a serial or USB PCI, and will connect to unauthenticated
+MQTT Brokers without transport security.
+
+The image uses the following environment variables:
+
+* ``TZ``: The timezone to use when sending a time signal to the C-Bus network.
+
+  This must be a `tz database timezone name`__ (eg: ``Australia/Adelaide``).
+
+  This environment variable is __always__ used. The default timezone is `UTC`__.
 
 * ``SERIAL_PORT``: The serial port that the PCI is connected to. USB PCIs appear as a serial device
   (``/dev/ttyUSB0``). Also requires the ``--device`` option so Docker forwards the device into the
   container.
 
-  This environment variable is only used by the default start-up script.
+  This environment variable is __only__ used by the default start-up script.
 
 * ``MQTT_SERVER``: IP address where the MQTT Broker is running.
 
-  This environment variable is only used by the default start-up script.
+  This environment variable is __only__ used by the default start-up script.
 
-* ``TZ``: The timezone to use when sending a time signal to the C-Bus network.
+__ https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+__ https://en.wikipedia.org/wiki/Coordinated_Universal_Time
 
-  This environment variable is _always_ used. If you don't set it, your C-Bus network will be sent
-  a time signal in UTC.
-
-For example, to use a PCI on ``/dev/ttyUSB0``, with an MQTT Broker at ``192.2.0.1`` and the time
+For example, to use a PCI on ``/dev/ttyUSB0``, with an MQTT Broker at ``192.0.2.1`` and the time
 zone set to ``Australia/Adelaide``::
 
     # docker run --device /dev/ttyUSB0 -e "SERIAL_PORT=/dev/ttyUSB0" \
-        -e "MQTT_SERVER=192.2.0.1" -e "TZ=Australia/Adelaide" cmqttd
+        -e "MQTT_SERVER=192.0.2.1" -e "TZ=Australia/Adelaide" cmqttd
 
-If you want to run the daemon manually with other settings (eg: a CNI at 192.2.0.2), you can do so
-with::
+If you want to run the daemon manually with other settings (eg: a CNI at ``192.0.2.2:10001``), you
+can do so with::
 
     # docker run -e "TZ=Australia/Adelaide" cmqttd cmqttd \
-      -b 192.2.0.1 -t 192.2.0.2 --broker-disable-tls
+      -b 192.0.2.1 -t 192.0.2.2:10001 --broker-disable-tls
 
 More information about options is available from :doc:`the cmqttd doc page <daemons.cmqttd>`.

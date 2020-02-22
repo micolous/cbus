@@ -249,11 +249,11 @@ class MqttClient(mqtt.Client):
         """Relays a lighting-ramp event from CBus to MQTT."""
         self.publish(state_topic(group_addr), {
             'state': 'ON',
-            'brightness': int(level),
+            'brightness': level,
             'transition': duration,
             'cbus_source_addr': source_addr,
         })
-        self.publish_binary_sensor(group_addr, True)
+        self.publish_binary_sensor(group_addr, level > 0)
 
 
 def read_auth(client: mqtt.Client, auth_file: TextIO):
@@ -328,15 +328,16 @@ async def _main():
     group = group.add_mutually_exclusive_group(required=True)
 
     group.add_argument(
-        '-s', '--serial-pci',
-        dest='serial_pci', default=None, metavar='DEVICE',
+        '-s', '--serial',
+        dest='serial', default=None, metavar='DEVICE',
         help='Device node that the PCI is connected to. USB PCIs act as a '
-             'USB-Serial adapter (eg: /dev/ttyUSB0).')
+             'cp210x USB-serial adapter. (example: -s /dev/ttyUSB0)')
 
     group.add_argument(
-        '-t', '--tcp-pci',
-        dest='tcp_pci', default=None, metavar='HOST_PORT',
-        help='IP address and TCP port of the CNI or PCI.')
+        '-t', '--tcp',
+        dest='tcp', default=None, metavar='ADDR:PORT',
+        help='IP address and TCP port where the C-Bus CNI or PCI is located '
+             '(eg: -t 192.0.2.1:10001)')
 
     group = parser.add_argument_group('Time settings')
     group.add_argument(
@@ -375,19 +376,13 @@ async def _main():
             connection_lost_future=connection_lost_future,
         )
 
-    if option.serial_pci and option.tcp_pci:
-        return parser.error('Both serial and TCP CBus PCI addresses were '
-                            'specified!')
-    elif option.serial_pci:
+    if option.serial:
         _, protocol = await create_serial_connection(
-            loop, factory, option.serial_pci, baudrate=9600)
-    elif option.tcp_pci:
-        addr = option.tcp_pci.split(':', 2)
+            loop, factory, option.serial, baudrate=9600)
+    elif option.tcp:
+        addr = option.tcp.split(':', 2)
         _, protocol = await loop.create_connection(
             factory, addr[0], int(addr[1]))
-    else:
-        return parser.error('No CBus PCI address was specified! (-s or -t '
-                            'option)')
 
     mqtt_client = MqttClient(userdata=protocol)
     if option.broker_auth:

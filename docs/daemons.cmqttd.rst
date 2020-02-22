@@ -28,38 +28,95 @@ It should also work with other software that supports MQTT.
 Running
 =======
 
-:program:`cmqttd` requires a MQTT Broker (server) to act as a message bus.  We'll assume you have
-one running on ``192.0.2.1``, and USB or serial PCI connected on ``/dev/ttyUSB0`` for this example::
+:program:`cmqttd` requires a MQTT Broker (server) to act as a message bus.
 
-    $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 -s /dev/ttyUSB0
+... note::
 
-.. note::
+    For these examples, we'll assume your MQTT server:
 
-    :program:`cmqttd` uses TLS to connect to your MQTT Broker by default.  If you want to disable
-    TLS, add the ``--broker-disable-tls`` option.
+    - is accessible via ``192.0.2.1`` on the default port (1883).
+    - does not use transport security (TLS)
+    - does not require authentication
+
+    This setup is not secure -- but securing your MQTT server is out of the scope of this document.
+
+    Run :program:`cmqttd` with the ``--help`` option to get a full list of options, which describe
+    how to set up authentication, certificate validation and transport security.
+
+To connect to a serial or USB PCI connected on ``/dev/ttyUSB0``, run::
+
+    $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 --broker-disable-tls -s /dev/ttyUSB0
+
+To connect to a CNI (or PCI over TCP) listening at ``192.0.2.2:10001``, run::
+
+    $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 --broker-disable-tls -s /dev/ttyUSB0
+
+.. warning::
+
+    The ``--broker-disable-tls`` __disables all transport security__ (TLS).
+
+    By default, :program:`cmqttd` will connect to your MQTT broker using TLS.
 
 Time synchronisation
 --------------------
 
 By default, :program:`cmqttd` will periodic provide a time signal to the C-Bus network, and respond
-to time requests.  For systems that do not have a reliable time source, or if you already have some
-other device providing a time signal, this can be _disabled_ with::
-
-    $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 -s /dev/ttyUSB0 --timesync 0 --no-clock
+to all time requests.
 
 Local time is always used for time synchronisation.  You can specify a different timezone with
-`the TZ environment variable`__.
+`the TZ environment variable`__. Due to C-Bus protocol limitations, no attempt is made to allow
+units on the C-Bus network to configure the timezone provided by :program:`cmqttd`.
 
 __ https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
+
+For systems that do not have a reliable time source, or if you already have some other device
+providing a time signal, this can be _disabled_ with::
+
+    $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 -s /dev/ttyUSB0 --timesync 0 --no-clock
 
 Using with Home Assistant
 -------------------------
 
-Add a new MQTT integration with the same Broker as what you used for :program:`cmqttd`, and
-`enable discovery`__.  Lights will appear as ``light.cbus_`` followed by their group address (eg:
-``light.cbus_1``).
+:program:`cmqttd` supports `Home Assistant's MQTT discovery protocol`__.
 
 __ https://www.home-assistant.io/docs/mqtt/discovery/
 
-By default, these will have names like ``CBus Light 001`` -- but this can be renamed from within
-Home Assistant.
+To use it, just add a MQTT integration using the same MQTT Broker as :program:`cmqttd` with
+`discovery enabled`__ (this is __disabled__ by default).  See `Home Assistant's documentation`__
+for more information and example configurations.
+
+__ https://www.home-assistant.io/docs/mqtt/discovery/
+__ https://www.home-assistant.io/docs/mqtt/broker
+
+Once the integration and :program:`cmqttd` are running, each group addresses (regardless of whether
+it is in use) will automatically appear in Home Assistant's UI as __two__ components:
+
+* `lights`__: ``light.cbus_{{GROUP_ADDRESS}}`` (eg: GA 1 = ``light.cbus_1``)
+
+  This implements read / write access to lighting controls on the default lighting application.
+  "Lighting Ramp" commands can be sent via the standard ``brightness`` and ``transition``
+  extensions.
+
+  By default, these will have names like ``C-Bus Light 001``.
+
+* `binary sensors`__: ``binary_sensor.cbus_{{GROUP_ADDRESS}}`` (eg: GA 1 =
+  ``binary_sensor.cbus_1``).
+
+  This is a binary, read-only interface for all group addresses.
+
+  An example use case is a PIR (occupancy/motion) sensor that has been configured (in C-Bus
+  Toolkit) to actuate two group addresses -- one for the light in the room (shared with an
+  ordinary wall switch), and which only reports recent movement.
+
+  :program:`cmqttd` doesn't assign any `class`__ to this component, so this can be used however you
+  like. Any brightness value is ignored.
+
+  By default, these will have names like ``C-Bus Light 001 (as binary sensor)``.
+
+__ https://www.home-assistant.io/integrations/light.mqtt/
+__ https://www.home-assistant.io/integrations/binary_sensor.mqtt/
+__ https://www.home-assistant.io/integrations/binary_sensor/#device-class
+
+All elements can be `renamed and customized`__ from within Home Assistant.
+
+__ https://www.home-assistant.io/docs/configuration/customizing-devices/
