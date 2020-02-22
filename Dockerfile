@@ -31,4 +31,6 @@ COPY --from=builder /cbus/dist/cbus-0.2.generic.tar.gz /
 RUN tar zxf /cbus-0.2.generic.tar.gz && rm /cbus-0.2.generic.tar.gz
 
 # Runs cmqttd itself
-CMD cmqttd -b ${MQTT_SERVER:?unset} -s ${SERIAL_PORT:?unset} --broker-disable-tls
+CMD echo "Local time zone: ${TZ:-UTC}" && \
+    echo -n "Current time: " && date -R && \
+    cmqttd -b ${MQTT_SERVER:?unset} -s ${SERIAL_PORT:?unset} --broker-disable-tls
