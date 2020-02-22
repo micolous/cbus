@@ -20,7 +20,7 @@ from __future__ import print_function
 
 from asyncio import (CancelledError, Future, Lock, create_task,
                      get_running_loop, run, sleep)
-from asyncio.transports import BaseTransport
+from asyncio.transports import WriteTransport
 from datetime import datetime
 import logging
 from typing import Iterable, Optional, Text, Union
@@ -72,7 +72,7 @@ class PCIProtocol(CBusProtocol):
             connection_lost_future: Optional[Future] = None):
         super(PCIProtocol, self).__init__(emulate_pci=False)
 
-        self._transport = None  # type: Optional[BaseTransport]
+        self._transport = None  # type: Optional[WriteTransport]
         self._next_confirmation_index = 0
         self._recv_buffer = bytearray()
         self._recv_buffer_lock = Lock()
@@ -80,9 +80,9 @@ class PCIProtocol(CBusProtocol):
         self._connection_lost_future = connection_lost_future
         self._handle_clock_requests = bool(handle_clock_requests)
 
-    def connection_made(self, transport: BaseTransport) -> None:
+    def connection_made(self, transport: WriteTransport) -> None:
         """
-        Called by twisted when a connection is made to the PCI.  This will
+        Called by asyncio when a connection is made to the PCI.  This will
         perform a reset of the PCI to establish the correct communications
         protocol, and start time synchronisation.
 
@@ -333,6 +333,9 @@ class PCIProtocol(CBusProtocol):
         Sends a packet of CBus data.
 
         """
+        transport = self._transport
+        if transport is None:
+            raise IOError('transport not connected')
         if not isinstance(cmd, BasePacket):
             raise TypeError('cmd must be BasePacket')
         logger.debug(f'send: {cmd!r}')
@@ -362,7 +365,7 @@ class PCIProtocol(CBusProtocol):
         cmd += END_COMMAND
         logger.debug(f'send: {cmd!r}')
 
-        self._transport.write(cmd)
+        transport.write(cmd)
         return conf_code
 
     def pci_reset(self):
