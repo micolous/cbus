@@ -266,11 +266,17 @@ def read_auth(client: mqtt.Client, auth_file: TextIO):
 async def _main():
     parser = ArgumentParser()
 
-    group = parser.add_argument_group('Daemon options')
+    group = parser.add_argument_group('Logging options')
     group.add_argument(
         '-l', '--log-file',
         dest='log', default=None,
         help='Destination to write logs [default: stdout]')
+
+    group.add_argument(
+        '-v', '--verbosity',
+        dest='verbosity', default='INFO', choices=(
+            'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'),
+        help='Verbosity of logging to emit [default: %(default)s]')
 
     group = parser.add_argument_group('MQTT options')
     group.add_argument(
@@ -363,8 +369,8 @@ async def _main():
             'To use client certificates, both -k and -K must be specified.')
 
     global_logger = logging.getLogger('cbus')
-    global_logger.setLevel(logging.INFO)
-    logging.basicConfig(level=logging.INFO, filename=option.log)
+    global_logger.setLevel(option.verbosity)
+    logging.basicConfig(level=option.verbosity, filename=option.log)
 
     loop = get_event_loop()
     connection_lost_future = loop.create_future()
