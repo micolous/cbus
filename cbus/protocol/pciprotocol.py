@@ -36,7 +36,7 @@ except ImportError:
 from cbus.common import (
     Application, CONFIRMATION_CODES, END_COMMAND, add_cbus_checksum)
 from cbus.protocol.application.clock import (
-    ClockSAL, ClockRequestSAL, ClockUpdateSAL)
+    ClockSAL, ClockRequestSAL, ClockUpdateSAL, clock_update_sal)
 from cbus.protocol.application.lighting import (
     LightingSAL, LightingOnSAL, LightingOffSAL, LightingRampSAL,
     LightingTerminateRampSAL)
@@ -545,9 +545,7 @@ class PCIProtocol(CBusProtocol):
         if when is None:
             when = datetime.now()
 
-        sals = [ClockUpdateSAL(when.date()), ClockUpdateSAL(when.time())]
-
-        p = PointToMultipointPacket(sals=sals)
+        p = PointToMultipointPacket(sals=clock_update_sal(when))
         return self._send(p)
 
     async def timesync(self):
