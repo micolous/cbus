@@ -1,0 +1,4 @@
+pyserial==3.4
+pyserial_asyncio (==0.4)
+six
+paho-mqtt==1.5.0

@@ -1,2 +1,18 @@
 #!/bin/sh
-mdbus2 -s au.id.micolous.cbus.CBusService / au.id.micolous.cbus.CBusInterface.lighting_group_ramp "${1}" "${2}" "${3}"
+# cbus_ramp: example script for publishing a "light ramp" message for cmqttd
+#
+# Usage: cbus_ramp <group_address> <duration> <level>
+#
+# NOTE: mosquitto_pub presumes that you have an MQTT server running on localhost, without
+# authentication. You will need to create `~/.config/mosquitto_pub` for additional options.
+# See the mosquitto_pub man page for details.
+
+if [[ -z "$1" || -z "$2" || -z "$3" ]]; then
+    echo "Usage: $0 <group_address> <duration> <level>"
+    echo "To turn ramp group address 1 over 20 seconds to half brightness, run:"
+    echo "   $0 1 20 127"
+    exit 1
+fi
+
+mosquitto_pub -q 1 -t "homeassistant/light/cbus_${1}/set" -m \
+    "{ \"state\": \"ON\", \"transition\": $2, \"brightness\": $3 }"

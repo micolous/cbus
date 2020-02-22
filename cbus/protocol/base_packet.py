@@ -1,97 +1,112 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # cbus/protocol/base_packet.py - Skeleton class for basic packets
-# Copyright 2012 Michael Farrell <micolous+git@gmail.com>
-# 
+# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+#
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import abc
+from base64 import b16encode
+from dataclasses import dataclass
+from typing import Optional
+
+from cbus.common import DestinationAddressType, PriorityClass
+
 __all__ = [
-	'BasePacket',
-	'SpecialPacket',
-	'SpecialClientPacket',
-	'SpecialServerPacket'
+    'BasePacket',
+    'InvalidPacket',
+    'SpecialClientPacket',
+    'SpecialServerPacket',
 ]
 
-class BasePacket(object):
-	confirmation = None
-	source_address = None
-	
-	def __init__(self, checksum=True, flags=None, destination_address_type=None, rc=None, dp=None, priority_class=None):
-		# base packet implementation.
-		self.checksum = checksum
-		
-		#self.flags = flags
-		self.destination_address_type = destination_address_type
-		self.rc = rc
-		self.dp = dp
-		self.priority_class = priority_class
 
-	def _encode(self):
-		# do checks to make sure the maths will work out.
-		assert self.destination_address_type == self.destination_address_type & 0x07, 'destination_address_type > 0x07'
-		assert self.rc == self.rc & 0x03, 'rc > 0x03'
-		assert self.priority_class == self.priority_class & 0x03, 'priority_class > 0x03'
-		
-		flags = \
-			self.destination_address_type + \
-			(self.rc << 3) + \
-			(0x20 if self.dp else 0x00) + \
-			(self.priority_class << 6)
-		
-		#print self.destination_address_type, self.rc << 3, 0x20 if self.dp else 0x00, self.priority_class << 6
-		assert 0 <= flags <= 0xFF, 'flags not between 0 and 255 (%r)!' % flags
-		
-		if self.source_address:
-			source_address = int(self.source_address)
-			assert 0 <= flags <= 0xFF, 'source_address set, and not between 0 and 255 (%r)!' % source_address
-			
-			return [flags, source_address]
-		else:
-			return [flags]
+class BasePacket(abc.ABC):
+    def __init__(
+            self,
+            checksum: bool = True,
+            destination_address_type:
+            DestinationAddressType = DestinationAddressType.UNSET,
+            rc: int = 0,
+            dp: bool = False,
+            priority_class: PriorityClass = PriorityClass.CLASS_4):
+        # base packet implementation.
+        self.checksum = checksum
 
+        self.destination_address_type = destination_address_type
+        self.rc = rc
+        self.dp = dp
+        self.priority_class = priority_class
+        self.confirmation = None
+        self.source_address = None
 
-class SpecialPacket(BasePacket):
-	"""
+    @property
+    def flags(self) -> int:
+        return ((self.destination_address_type & 0x07) |
+                ((self.rc & 0x02) << 3) |
+                (0x20 if self.dp else 0) |
+                ((self.priority_class & 0x03) << 6))
 
-	"""
-	checksum = False
-	destination_address_type = None
-	rc = None
-	dp = None
-	priority_class = None
-	
-	def __init__(self):
-		pass
-	
-	def _encode(self):
-		return ''
+    @abc.abstractmethod
+    def encode(self) -> bytes:
+        if self.source_address is None:
+            return bytes([self.flags])
+        else:
+            source_address = self.source_address & 0xff
+            return bytes([self.flags, source_address])
+
+    def encode_packet(self) -> bytes:
+        return b16encode(self.encode())
 
 
-class SpecialClientPacket(SpecialPacket):
-	"""
-	Client -> PCI communications have some special packets, which we make subclasses of SpecialClientPacket to make them entirely seperate from normal packets.
-	
-	These have non-standard methods for serialisation.
-	"""
-	
-	pass
-	
-class SpecialServerPacket(SpecialPacket):
-	"""
-	PCI -> Client has some special packets that we make subclasses of this, because they're different to regular packets.
-	
-	These have non-standard serialisation methods.
-	"""
-	
-	pass
+class _SpecialPacket(BasePacket, abc.ABC):
+    def __init__(self):
+        super(_SpecialPacket, self).__init__(
+            checksum=False)
 
+    @abc.abstractmethod
+    def encode(self) -> bytes:
+        raise NotImplementedError('encode')
+
+    def encode_packet(self):
+        return self.encode()
+
+
+class SpecialClientPacket(_SpecialPacket, abc.ABC):
+    """
+    Client -> PCI communications have some special packets, which we make
+    subclasses of SpecialClientPacket to make them entirely separate from
+    normal packets.
+
+    These have non-standard methods for serialisation.
+    """
+    pass
+
+
+class SpecialServerPacket(_SpecialPacket, abc.ABC):
+    """
+    PCI -> Client has some special packets that we make subclasses of this,
+    because they're different to regular packets.
+
+    These have non-standard serialisation methods.
+    """
+    pass
+
+
+@dataclass(init=True)
+class InvalidPacket(_SpecialPacket):
+    """Invalid packet data."""
+    payload: bytes
+    exception: Optional[Exception] = None
+
+    def encode(self):
+        return self.payload

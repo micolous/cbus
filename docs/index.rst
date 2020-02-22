@@ -11,13 +11,12 @@ Contents:
    :maxdepth: 2
    
    introduction
-   status
+   installing
    hacking
    cni-discovery
    wiser-swf-protocol
    daemons
    dump_labels
-   dbus_client
    modules
 
 

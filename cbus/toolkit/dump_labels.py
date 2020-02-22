@@ -1,7 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-toolkit/dump_labels.py - Dumps group address and unit metadata from a Toolkit CBZ.
-Copyright 2012 Michael Farrell <micolous+git@gmail.com>
+toolkit/dump_labels.py
+Dumps group address and unit metadata from a Toolkit CBZ.
+
+Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
 
 This library is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -17,94 +19,103 @@ You should have received a copy of the GNU Lesser General Public License
 along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import absolute_import
+
+from argparse import ArgumentParser
+import json
+import sys
+
 from cbus.toolkit.cbz import CBZ
-from optparse import OptionParser
-try:
-	import json
-except ImportError:
-	# python <2.6
-	import simplejson as json
+
 
 def main():
-	parser = OptionParser(usage='%prog -i input.cbz -o output.json', version='%prog 1.0')
-	parser.add_option('-o', '--output', dest='output', metavar='FILE', help='write output to FILE')
-	parser.add_option('-i', '--input', dest='input', metavar='FILE', help='read Toolkit backup from FILE')
-	parser.add_option('-p', '--pretty', dest='pretty', metavar='SPACES', help='pretty-prints the output with the specified number of spaces between indent levels')
-	options, args = parser.parse_args()
+    parser = ArgumentParser()
+    parser.add_argument(
+        '-o', '--output', metavar='FILE',
+        help='write output to FILE')
+    parser.add_argument(
+        'input', nargs=1, metavar='FILE',
+        help='read Toolkit backup from FILE')
+    parser.add_argument(
+        '-p', '--pretty',
+        type=int, required=False, metavar='SPACES',
+        help='pretty-prints the output with the specified number of spaces '
+             'between indent levels'
+    )
+    options = parser.parse_args()
 
-	if options.input == None:
-		parser.error('Input filename not given.')
+    pretty = None
+    if options.pretty:
+        try:
+            pretty = int(options.pretty)
+        except ValueError:
+            parser.error('Pretty-printing spaces value is not a number.')
+            return
 
-	if options.output == None:
-		parser.error('Output filename not given.')
+        if pretty < 0:
+            parser.error('Pretty-printing spaces value must not be negative.')
+            return
 
-	if options.pretty:
-		try:
-			pretty = int(options.pretty)
-		except ValueError:
-			parser.error('Pretty-printing spaces value is not a number.')
+    cbz = CBZ(options.input[0])
+    if options.output is None:
+        of = sys.stdout
+    else:
+        of = open(options.output, 'w')
 
-		if pretty < 0:
-			parser.error('Pretty-printing spaces value must not be negative.')
-	else:
-		pretty = None
+    # read in the labels we need into a structure.
+    o = {}
 
-	cbz = CBZ(options.input)
-	of = open(options.output, 'wb')
+    # iterate through networks
+    for network in cbz.installation.project.network:
+        no = {
+            'name': network.tag_name,
+            'address': network.address,
+            'networknumber': network.network_number,
+            # don't worry about converting CNI/PCI parameters.
+            'applications': {},
+            'units': {},
+        }
+        for application in network.applications:
+            ao = {
+                'name': application.tag_name,
+                'address': application.address,
+                'description': application.description,
+                'groups': {},
+            }
 
-	# read in the labels we need into a structure.
-	o = {}
+            for group in application.groups:
+                ao['groups'][group.address] = group.tag_name
 
-	# iterate through networks
-	for network in cbz.root.Project.Network:
-		no = {
-			'name': unicode(network.TagName),
-			'address': int(network.Address),
-			'networknumber': int(network.NetworkNumber),
-			# don't worry about converting CNI/PCI parameters.
-			'applications': {},
-			'units': {}
-		}
-		for application in network.Application:
-			ao = {
-				'name': unicode(application.TagName),
-				'address': int(application.Address),
-				'description': unicode(application.Description),
-				'groups': {}
-			}
+            no['applications'][application.address] = ao
 
-			for group in application.Group:
-				ao['groups'][int(group.Address)] = unicode(group.TagName)
+        for unit in network.units:
+            # find the channel configuration
+            channels = []
+            for parameter in unit.pp:
+                if parameter.name == 'GroupAddress':
+                    channels += [int(c[2:], 16) for c in
+                                 parameter.value.split(' ')]
 
-			no['applications'][int(application.Address)] = ao
+                    # print channels
+                    # print(parameter.attrib['Name'], '=',
+                    #       parameter.attrib['Value'])
+            no['units'][unit.address] = {
+                'name': unit.tag_name,
+                'address': unit.address,
+                'unittype': unit.unit_type,
+                'unitname': unit.unit_name,
+                'serial': unit.serial_number,
+                'catalog': unit.catalog_number,
+                'groups': channels,
+            }
 
-		for unit in network.Unit:
-			# find the channel configuration
-			channels = []
-			for parameter in unit.PP:
-				if parameter.attrib['Name'] == 'GroupAddress':
-					ch = parameter.attrib['Value'].split(' ')
-					[channels.append(int('0%s' % (c[2:]) if len(c) == 3 else (c[2:]), 16)) for c in ch]
+        o[network.address] = no
 
-					#print channels
-					#print parameter.attrib['Name'], '=', parameter.attrib['Value']
-			no['units'][int(unit.Address)] = {
-				'name': unicode(unit.TagName),
-				'address': int(unit.Address),
-				'unittype': unicode(unit.UnitType),
-				'unitname': unicode(unit.UnitName),
-				'serial': unicode(unit.SerialNumber),
-				'catalog': unicode(unit.CatalogNumber),
-				'groups': channels
-			}
+    # dump structure as json.
+    json.dump(o, of, indent=pretty)
+    of.flush()
+    of.close()
 
-		o[int(network.Address)] = no
-
-	# dump structure as json.
-	json.dump(o, of, indent=pretty)
-	of.flush()
-	of.close()
 
 if __name__ == '__main__':
-	main()
-
+    main()
