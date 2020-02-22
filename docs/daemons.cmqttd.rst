@@ -23,14 +23,14 @@ It should also work with other software that supports MQTT.
 - Integrates with other Home Assistant supported devices
 - No hard coded back-doors (like Wiser)
 
-.. note:: Only the lighting application is supported by :program:`cmqttd`. Patches welcome!
+.. note:: Only the default lighting application is supported by :program:`cmqttd`. Patches welcome!
 
 Running
 =======
 
 :program:`cmqttd` requires a MQTT Broker (server) to act as a message bus.
 
-... note::
+.. note::
 
     For these examples, we'll assume your MQTT server:
 
@@ -53,7 +53,7 @@ To connect to a CNI (or PCI over TCP) listening at ``192.0.2.2:10001``, run::
 
 .. warning::
 
-    The ``--broker-disable-tls`` __disables all transport security__ (TLS).
+    The ``--broker-disable-tls`` *disables all transport security* (TLS).
 
     By default, :program:`cmqttd` will connect to your MQTT broker using TLS.
 
@@ -70,7 +70,7 @@ units on the C-Bus network to configure the timezone provided by :program:`cmqtt
 __ https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
 
 For systems that do not have a reliable time source, or if you already have some other device
-providing a time signal, this can be _disabled_ with::
+providing a time signal, this can be *disabled* with::
 
     $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 -s /dev/ttyUSB0 --timesync 0 --no-clock
 
@@ -82,14 +82,14 @@ Using with Home Assistant
 __ https://www.home-assistant.io/docs/mqtt/discovery/
 
 To use it, just add a MQTT integration using the same MQTT Broker as :program:`cmqttd` with
-`discovery enabled`__ (this is __disabled__ by default).  See `Home Assistant's documentation`__
+`discovery enabled`__ (this is *disabled* by default).  See `Home Assistant's documentation`__
 for more information and example configurations.
 
 __ https://www.home-assistant.io/docs/mqtt/discovery/
 __ https://www.home-assistant.io/docs/mqtt/broker
 
 Once the integration and :program:`cmqttd` are running, each group addresses (regardless of whether
-it is in use) will automatically appear in Home Assistant's UI as __two__ components:
+it is in use) will automatically appear in Home Assistant's UI as _two_ components:
 
 * `lights`__: ``light.cbus_{{GROUP_ADDRESS}}`` (eg: GA 1 = ``light.cbus_1``)
 

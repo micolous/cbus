@@ -11,7 +11,7 @@ Contents:
    :maxdepth: 2
    
    introduction
-   status
+   installing
    hacking
    cni-discovery
    wiser-swf-protocol
