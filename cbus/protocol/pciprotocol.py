@@ -560,11 +560,11 @@ class PCIProtocol(CBusProtocol):
             try:
                 self.clock_datetime()
                 await sleep(frequency)
-                self._send(PointToMultipointPacket(sals=StatusRequestSAL(
-                    child_application=Application.LIGHTING,
-                    level_request=True,
-                    group_address=0,
-                )))
+                # self._send(PointToMultipointPacket(sals=StatusRequestSAL(
+                #     child_application=Application.LIGHTING,
+                #     level_request=True,
+                #     group_address=0,
+                # )))
             except CancelledError:
                 break
 
