@@ -8,9 +8,9 @@ Talks to Clipsal C-Bus using Python 3.7+.
 Copyright 2012-2020 Michael Farrell. Licensed under the GNU LGPL3+. For more
 details see `COPYING` and `COPYING.LESSER`.
 
-**Note:** This software is not certified or endorsed by Clipsal or Schneider
-Electric. Clipsal claim that use of C-Bus with non-Clipsal hardware or
-software may void your warranty.
+> **Note:** This software is not certified or endorsed by Clipsal or Schneider
+> Electric. Clipsal claim that use of C-Bus with non-Clipsal hardware or
+> software may void your warranty.
 
 More information about the project is available on
 [the libcbus ReadTheDocs site][rtd], and in the `docs` directory of the source
@@ -57,6 +57,37 @@ This should work with the following C-Bus PC Interfaces (PCIs):
   This software _does not_ support configuring the Ethernet PCI for the first
   time. It must already have an IP address on your network.
 
+## Recent updates (2020-02-22)
+
+This project has recently completed a migration to Python 3.7.
+
+Most things should work, but I'm still going through updating all the documentation properly.
+
+There are many backward-incompatible changes:
+
+* This _only_ supports Python 3.7 and later.
+
+* Python 2.x support _has been entirely removed_, [as Python 2 has been sunset as of 2020][py2].
+
+  Python 3.6 and earlier support is not a goal. We want to use new language features!
+
+* D-Bus is no longer used by this project:
+
+  * `cmqttd` (C-Bus to MQTT bridge) replaces `cdbusd` (C-Bus to D-Bus bridge).
+
+  * `dbuspcid` (virtual PCI to D-Bus bridge) has been removed. It has no replacement.
+
+* `sage` (libcbus' web interface) and `staged` (scene management system) have been removed.
+  `cmqttd` supports [Home Assistant's MQTT Discovery schema][ha-auto].
+
+  This allows `libcbus` to reduce its scope significantly -- Home Assistant can interface with much
+  more hardware than C-Bus, and has a large community around it.
+
+* This no longer uses Twisted -- `asyncio` (in the standard library) is used instead.
+
+Many APIs have changed due to refactoring, and is subject to further change without notice. The
+most stable API is via MQTT (`cmqttd`).
+
 [rtd]: https://cbus.rtfd.org/
 [coveralls]: https://coveralls.io/github/micolous/cbus
 [travis]: https://travis-ci.org/micolous/cbus
@@ -67,3 +98,4 @@ This should work with the following C-Bus PC Interfaces (PCIs):
 [ha-auto]: https://www.home-assistant.io/docs/mqtt/discovery/
 [ha-mqtt]: https://www.home-assistant.io/integrations/light.mqtt/#json-schema
 [clipsal-docs]: https://updates.clipsal.com/ClipsalSoftwareDownload/DL/downloads/OpenCBus/OpenCBusProtocolDownloads.html
+[py2]: https://www.python.org/doc/sunset-python-2/
