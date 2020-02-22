@@ -597,8 +597,7 @@ async def main():
         '-s', '--serial',
         dest='serial', default=None, metavar='DEVICE',
         help='Serial port where the PCI is located. USB PCIs appear as a '
-             'cp210x USB-serial adapter. (example: -s /dev/ttyUSB0)'
-    )
+             'cp210x USB-serial adapter. (example: -s /dev/ttyUSB0)')
 
     group.add_argument(
         '-t', '--tcp',
