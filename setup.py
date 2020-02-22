@@ -6,7 +6,6 @@ deps = [
 	'pyserial (==3.4)',
 	'pyserial_asyncio (==0.4)',
 	'lxml (>=2.3.2)',
-	'Twisted (>=12.0.0)',
 	'six',
 	'pydot',
 	'paho_mqtt (==1.5.0)'

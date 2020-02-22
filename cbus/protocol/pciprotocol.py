@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# cbus/protocol/pciprotocol.py - Twisted protocol implementation for CBus PCI
+# cbus/protocol/pciprotocol.py - asyncio Protocol for C-Bus PCI/CNI
 # Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
@@ -60,8 +60,8 @@ __all__ = ['PCIProtocol']
 
 class PCIProtocol(CBusProtocol):
     """
-    Implements a twisted protocol for communicating with a CBus PCI over serial
-    or TCP.
+    Implements an asyncio Protocol for communicating with a C-Bus PCI/CNI over
+    TCP or serial.
 
     """
 

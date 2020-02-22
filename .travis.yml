@@ -13,3 +13,7 @@ jobs:
   include:
     - script: coverage run setup.py test
     - script: pytype
+
+cache:
+  directories:
+    - $HOME/.cache/pip/

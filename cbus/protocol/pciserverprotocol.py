@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# cbus/protocol/pciserverprotocol.py - Twisted protocol implementation of the
-# CBus PCI as a server.
+# cbus/protocol/pciserverprotocol.py - asyncio Protocol to simulate a C-Bus PCI
 # Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
@@ -51,7 +50,7 @@ logger.setLevel(logging.DEBUG)
 
 class PCIServerProtocol(CBusProtocol):
     """
-    Implements a twisted protocol listening to CBus PCI commands over TCP or
+    Implements an asyncio Protocol for simulating a C-Bus PCI/CNI over TCP or
     serial.
 
     This presently only implements a subset of the protocol used by
@@ -75,7 +74,7 @@ class PCIServerProtocol(CBusProtocol):
 
     def connection_made(self, transport):
         """
-        Called by twisted a connection is made to the PCI.
+        Called by asyncio a connection is made to the simulated PCI.
 
         This doesn't get fired in normal serial connections, however we'll send
         a power up notification (PUN).
