@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/application/clock.py - Clock and Timekeeping Application
-# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import abc
 import warnings
-from datetime import date, time
+from datetime import date, time, datetime
 from struct import unpack, pack
 from typing import Union, Set, Sequence, Tuple, Optional
 
@@ -34,6 +34,7 @@ __all__ = [
     'ClockSAL',
     'ClockUpdateSAL',
     'ClockRequestSAL',
+    'clock_update_sal',
 ]
 
 _SUPPORTED_APPLICATIONS = frozenset({int(Application.CLOCK)})
@@ -114,14 +115,14 @@ class ClockUpdateSAL(ClockSAL):
         """
         Creates a new SAL Clock update message.
 
-        :param variable: The variable being updated.
-        :type variable: int
+        Use ``clock_update_sal(val)`` instead of this constructor, as that
+        method handles ``datetime.datetime`` objects (in addition to
+        ``datetime.date`` and ``datetime.time``, always returns
+        ``Sequence[ClockUpdateSAL]``.
 
         :param val: The value of that variable. Dates are represented in
                     native date format, and times are represented in native
                     time format.
-        :type val: datetime.date or datetime.time
-
         """
         super(ClockUpdateSAL, self).__init__()
         self.val = val
@@ -134,7 +135,7 @@ class ClockUpdateSAL(ClockSAL):
         """
 
         variable = data[0]
-        data_length = command_code & 0x07
+        data_length = command_code & 0x07  # len(variable name + value)
         val = data[1:data_length]
         data = data[data_length:]
 
@@ -143,8 +144,8 @@ class ClockUpdateSAL(ClockSAL):
             # length must be 0x06
             if data_length != 0x06:
                 warnings.warn(
-                    'Date variable being sent with length != 5 '
-                    '(got {} instead)'.format(data_length), UserWarning)
+                    f'Ignoring date variable with length {data_length} '
+                    f'(expected 6)', UserWarning)
                 return None, data
 
             # now decode the date
@@ -158,8 +159,8 @@ class ClockUpdateSAL(ClockSAL):
             # length must be 0x05
             if data_length != 0x05:
                 warnings.warn(
-                    'Time variable being sent with length != 4 '
-                    '(got {} instead)'.format(data_length), UserWarning)
+                    f'Ignoring date variable with length {data_length} '
+                    f'(expected 5)', UserWarning)
                 return None, data
 
             # now decode the time
@@ -169,8 +170,9 @@ class ClockUpdateSAL(ClockSAL):
             return cls(time(hour, minute, second)), data
         else:
             warnings.warn(
-                'Tried to decode unknown clock update variable '
-                '{:x}'.format(variable), UserWarning)
+                f'Tried to decode unknown clock update variable {variable:x}',
+                UserWarning)
+
             # attempt to skip the bad data and recover
             return None, data[data_length:]
 
@@ -189,8 +191,7 @@ class ClockUpdateSAL(ClockSAL):
             attr = ClockAttribute.DATE
         else:
             # unknown
-            raise ValueError("Don't know how to pack clock variable %r" %
-                             self.val)
+            raise TypeError(f"Don't know how to pack clock variable {self.val}")
 
         return super().encode() + bytes([
             0x08 | (len(val) + 1),
@@ -253,3 +254,24 @@ class ClockApplication(BaseApplication):
         SAL(s).
         """
         return ClockSAL.decode_sals(data)
+
+
+def clock_update_sal(
+        val: Union[date, time, datetime]) -> Sequence[ClockUpdateSAL]:
+    """Creates Clock Update SAL(s) based on Python datetime objects.
+
+    :param val: The value to set in the ``ClockUpdateSAL``. If this is a
+        ``datetime.datetime``, this will create multiple ``ClockUpdateSAL``
+        objects. If this is a ``datetime.date`` or ``datetime.time``,
+        this will only create only a single ``ClockUpdateSAL``.
+
+    :returns: Sequence of ``ClockUpdateSAL``, regardless of input value type.
+    :raises TypeError: On invalid input type.
+    """
+    if isinstance(val, datetime):
+        return ClockUpdateSAL(val.date()), ClockUpdateSAL(val.time())
+    elif isinstance(val, (date, time)):
+        return ClockUpdateSAL(val),
+    else:
+        raise TypeError(
+            f'val must be date, time, or datetime, instead got {type(val)!r}')
