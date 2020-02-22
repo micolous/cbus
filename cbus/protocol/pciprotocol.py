@@ -167,7 +167,7 @@ class PCIProtocol(CBusProtocol):
         logger.debug(f'recv: mmi: application {application}, data {data!r}')
 
     def on_lighting_group_ramp(self, source_addr: int, group_addr: int,
-                               duration: int, level: float):
+                               duration: int, level: int):
         """
         Event called when a lighting application ramp (fade) request is
         received.
@@ -182,12 +182,12 @@ class PCIProtocol(CBusProtocol):
         :param duration: Duration, in seconds, that the ramp is occurring over.
         :type duration: int
 
-        :param level: Target brightness of the ramp (0.0 - 1.0).
-        :type level: float
+        :param level: Target brightness of the ramp (0 - 255).
+        :type level: int
         """
         logger.debug(
             f'recv: light ramp: from {source_addr} to {group_addr}, duration '
-            f'{duration} seconds to level {level*100:.2f}% ')
+            f'{duration} seconds to level {level} ')
 
     def on_lighting_group_on(self, source_addr: int, group_addr: int):
         """
@@ -481,7 +481,7 @@ class PCIProtocol(CBusProtocol):
         return self._send(p)
 
     def lighting_group_ramp(
-            self, group_addr: int, duration: int, level: float = 1.0):
+            self, group_addr: int, duration: int, level: int = 255):
         """
         Ramps (fades) a group address to a specified lighting level.
 
@@ -495,8 +495,8 @@ class PCIProtocol(CBusProtocol):
         :type group_addr: int
         :param duration: Duration, in seconds, that the ramp should occur over.
         :type duration: int
-        :param level: A value between 0.0 and 1.0 indicating the brightness.
-        :type level: float
+        :param level: A value between 0 and 255 indicating the brightness.
+        :type level: int
 
         :returns: Single-byte string with code for the confirmation event.
         :rtype: string

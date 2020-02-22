@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # cbus/protocol/application/lighting.py - Lighting Application
-# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -128,7 +128,7 @@ class LightingRampSAL(LightingSAL):
 
     """
 
-    def __init__(self, group_address: int, duration: int, level: float):
+    def __init__(self, group_address: int, duration: int, level: int):
         """
         Creates a new SAL Lighting Ramp message.
 
@@ -138,9 +138,9 @@ class LightingRampSAL(LightingSAL):
         :param duration: The duration to ramp over, in seconds.
         :type duration: int
 
-        :param level: The level to ramp to, with 0.0 indicating off, and 1.0
+        :param level: The level to ramp to, with 0 indicating off, and 255
                       indicating full brightness.
-        :type level: float
+        :type level: int
         """
         super().__init__(group_address=group_address)
 
@@ -161,20 +161,20 @@ class LightingRampSAL(LightingSAL):
                 UserWarning)
             return None, data
 
-        level = data[0] / 255.
-
+        level = data[0]
         data = data[1:]
+
         return LightingRampSAL(
             group_address=group_address, duration=duration, level=level), data
 
     def encode(self) -> bytes:
-        if self.level < 0.0 or self.level > 1.0:
-            raise ValueError('Ramp level is out of bounds 0.0..1.0 '
-                             '(got {}).' % self.level)
+        if self.level < 0 or self.level > 255:
+            raise ValueError(
+                f'Ramp level is out of bounds 0..255 (got {self.level})')
 
         return super().encode() + bytes([
             duration_to_ramp_rate(self.duration), self.group_address,
-            int(self.level * 255)
+            self.level
         ])
 
     def __repr__(self):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # test_lighting.py - Lighting Application unit tests
-# Copyright 2012-2019 Michael Farrell <micolous+git@gmail.com>
+# Copyright 2012-2020 Michael Farrell <micolous+git@gmail.com>
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -116,9 +116,7 @@ class ClipsalQuickLightingTest(CBusTestCase):
         self.assertIsInstance(p[0], LightingRampSAL)
         self.assertEqual(p[0].group_address, 0x21)
         self.assertEqual(p[0].duration, 4)
-        # rounding must be done to 2 decimal places, as the value isn't
-        # actually 50%, but 49.8039%.  next value is 50.1%.
-        self.assertEqual(round(p[0].level, 2), 0.5)
+        self.assertEqual(p[0].level, 127)
 
         # check that it encodes properly again
         self.assertEqual(p.encode_packet(), b'0538000A217F19')
@@ -164,9 +162,9 @@ class InternalLightingTest(CBusTestCase):
     def test_slow_ramp(self):
         """test very slow ramps"""
         p1 = PointToMultipointPacket(
-            sals=LightingRampSAL(1, 18*60, 1.0)).encode_packet()
+            sals=LightingRampSAL(1, 18*60, 255)).encode_packet()
         p2 = PointToMultipointPacket(
-            sals=LightingRampSAL(1, 17*60, 1.0)).encode_packet()
+            sals=LightingRampSAL(1, 17*60, 255)).encode_packet()
         self.assertEqual(p1, p2)
 
 

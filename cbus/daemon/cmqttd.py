@@ -139,18 +139,18 @@ class MqttClient(mqtt.Client):
             logging.error(f'JSON parse error in {msg.topic}', exc_info=e)
             return
         light_on = payload['state'].upper() == 'ON'
-        brightness = payload.get('brightness', 255) / 255.
-        if brightness < 0.:
+        brightness = int(payload.get('brightness', 255))
+        if brightness < 0:
             brightness = 0.
-        if brightness > 1.:
-            brightness = 1.
+        if brightness > 255:
+            brightness = 255
         transition_time = int(payload.get('transition', 0))
         if transition_time < 0:
             transition_time = 0
 
         # push state to CBus and republish on MQTT
         if light_on:
-            if brightness == 1. and transition_time == 0:
+            if brightness == 255 and transition_time == 0:
                 # lighting on
                 userdata.lighting_group_on(ga)
                 self.lighting_group_on(None, ga)
@@ -245,11 +245,11 @@ class MqttClient(mqtt.Client):
         self.publish_binary_sensor(group_addr, False)
 
     def lighting_group_ramp(self, source_addr: Optional[int], group_addr: int,
-                            duration: int, level: float):
+                            duration: int, level: int):
         """Relays a lighting-ramp event from CBus to MQTT."""
         self.publish(state_topic(group_addr), {
             'state': 'ON',
-            'brightness': int(level * 255.),
+            'brightness': int(level),
             'transition': duration,
             'cbus_source_addr': source_addr,
         })
