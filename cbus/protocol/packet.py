@@ -64,8 +64,8 @@ def decode_packet(
 
     :param data: The data to parse, in encapsulated serial format.
     :param checksum: If True, requires a checksum for all packets
-    :param strict: If True, raises ValueError whenever checksum is incorrect.
-                   Otherwise, only emits a warning.
+    :param strict: If True, returns InvalidPacket whenever checksum is
+        incorrect. Otherwise, only emits a warning.
     :param from_pci: If True, parses the packet as if it were sent from/by a
         PCI -- if your software was sent packets by a PCI, this is
         what you want.
@@ -200,55 +200,58 @@ def decode_packet(
     # flags (serial interface guide s3.4)
     flags = byte2int(data)
 
-    address_type = DestinationAddressType(flags & 0x07)
-    # "reserved", "must be set to 0"
-    # rc = (flags >> 3) & 0x03
-    dp = (flags & 0x20) == 0x20
-    # priority class
-    priority_class = PriorityClass((flags >> 6) & 0x03)
+    try:
+        address_type = DestinationAddressType(flags & 0x07)
+        # "reserved", "must be set to 0"
+        # rc = (flags >> 3) & 0x03
+        dp = (flags & 0x20) == 0x20
+        # priority class
+        priority_class = PriorityClass((flags >> 6) & 0x03)
 
-    # increment ourselves along
-    data = data[1:]
-
-    # handle source address
-    if from_pci:
-        source_addr = byte2int(data)
+        # increment ourselves along
         data = data[1:]
-    else:
-        source_addr = None
 
-    if dp:
-        # device management flag set!
-        # this is used to set parameters of the PCI
-        p = DeviceManagementPacket.decode_packet(
-            data=data, checksum=checksum, priority_class=priority_class)
-    elif device_managment_cal:
-        cal, cal_len = PointToPointPacket.decode_cal(data)
-        return cal, consumed + cal_len
+        # handle source address
+        if from_pci:
+            source_addr = byte2int(data)
+            data = data[1:]
+        else:
+            source_addr = None
 
-    elif address_type == DestinationAddressType.POINT_TO_POINT:
-        # decode as point-to-point packet
-        p = PointToPointPacket.decode_packet(
-            data=data, checksum=checksum, priority_class=priority_class)
-    elif address_type == DestinationAddressType.POINT_TO_MULTIPOINT:
-        # decode as point-to-multipoint packet
-        p = PointToMultipointPacket.decode_packet(
-            data=data, checksum=checksum, priority_class=priority_class)
-    elif (address_type ==
-          DestinationAddressType.POINT_TO_POINT_TO_MULTIPOINT):
-        # decode as point-to-point-to-multipoint packet
-        # return PointToPointToMultipointPacket.decode_packet(data, checksum,
-        # flags, destination_address_type, rc, dp, priority_class)
-        raise NotImplementedError('Point-to-point-to-multipoint')
-    else:
-        raise NotImplementedError(
-            f'Destination address type = 0x{address_type:x}')
+        if dp:
+            # device management flag set!
+            # this is used to set parameters of the PCI
+            p = DeviceManagementPacket.decode_packet(
+                data=data, checksum=checksum, priority_class=priority_class)
+        elif device_managment_cal:
+            cal, cal_len = PointToPointPacket.decode_cal(data)
+            return cal, consumed + cal_len
 
-    if not from_pci:
-        p.confirmation = confirmation
-        p.source_address = None
-    elif source_addr:
-        p.source_address = source_addr
-        p.confirmation = None
+        elif address_type == DestinationAddressType.POINT_TO_POINT:
+            # decode as point-to-point packet
+            p = PointToPointPacket.decode_packet(
+                data=data, checksum=checksum, priority_class=priority_class)
+        elif address_type == DestinationAddressType.POINT_TO_MULTIPOINT:
+            # decode as point-to-multipoint packet
+            p = PointToMultipointPacket.decode_packet(
+                data=data, checksum=checksum, priority_class=priority_class)
+        elif (address_type ==
+              DestinationAddressType.POINT_TO_POINT_TO_MULTIPOINT):
+            # decode as point-to-point-to-multipoint packet
+            # return PointToPointToMultipointPacket.decode_packet(data, checksum,
+            # flags, destination_address_type, rc, dp, priority_class)
+            raise NotImplementedError('Point-to-point-to-multipoint')
+        else:
+            raise NotImplementedError(
+                f'Destination address type = 0x{address_type:x}')
+
+        if not from_pci:
+            p.confirmation = confirmation
+            p.source_address = None
+        elif source_addr:
+            p.source_address = source_addr
+            p.confirmation = None
+    except Exception as e:
+        p = InvalidPacket(payload=data, exception=e)
 
     return p, consumed
