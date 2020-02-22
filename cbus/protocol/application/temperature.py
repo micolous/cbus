@@ -119,6 +119,7 @@ class TemperatureBroadcastSAL(TemperatureSAL):
     def __init__(self, group_address: int, temperature: float):
         """
         Creates a new SAL Temperature Broadcast message.
+
         :param group_address: The group address that is reporting the
                               temperature.
         :type group_address: int
