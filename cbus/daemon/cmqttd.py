@@ -306,10 +306,10 @@ async def _main():
         '-A', '--broker-auth',
         type=FileType('rt'),
         help='File containing the username and password to authenticate to the '
-             'MQTT broker with. The first line in the filename is the '
-             'username, and the second line is the password. The file must '
-             'be UTF-8 encoded. If not specified, authentication will be '
-             'disabled (insecure!)')
+             'MQTT broker with. The first line in the file is the username, '
+             'and the second line is the password. The file must be UTF-8 '
+             'encoded. If not specified, authentication will be disabled '
+             '(insecure!)')
 
     group.add_argument(
         '-c', '--broker-ca',

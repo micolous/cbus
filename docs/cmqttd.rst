@@ -32,30 +32,94 @@ Running
 
 .. note::
 
-    For these examples, we'll assume your MQTT server:
+    For these examples, we'll assume your MQTT Broker:
 
     - is accessible via ``192.0.2.1`` on the default port (1883).
     - does not use transport security (TLS)
     - does not require authentication
 
-    This setup is not secure -- but securing your MQTT server is out of the scope of this document.
+    This setup is *not* secure; but securing your MQTT Broker is out of the scope of this document.
 
-    Run :program:`cmqttd` with the ``--help`` option to get a full list of options, which describe
-    how to set up authentication, certificate validation and transport security.
+    For more information, see :ref:`mqtt-options`.
 
 To connect to a serial or USB PCI connected on ``/dev/ttyUSB0``, run::
 
-    $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 --broker-disable-tls -s /dev/ttyUSB0
+    $ cmqttd -b 192.0.2.1 --broker-disable-tls -s /dev/ttyUSB0
 
 To connect to a CNI (or PCI over TCP) listening at ``192.0.2.2:10001``, run::
 
-    $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 --broker-disable-tls -s /dev/ttyUSB0
+    $ cmqttd -b 192.0.2.1 --broker-disable-tls -s /dev/ttyUSB0
 
-.. warning::
+.. tip::
 
-    The ``--broker-disable-tls`` *disables all transport security* (TLS).
+    If you haven't :doc:`installed the library <installing>`, you can run from a ``git clone`` of
+    ``libcbus`` source repository with::
 
-    By default, :program:`cmqttd` will connect to your MQTT broker using TLS.
+        $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 [...]
+
+Configuration
+=============
+
+:program:`cmqttd` has many command-line configuration options.
+
+A complete list can be found by running ``cmqttd --help``.
+
+C-Bus PCI options
+-----------------
+
+One of these *must* be specified:
+
+``--serial [device]``
+    Serial device that the PCI is connected to, eg: ``/dev/ttyUSB0``.
+
+    USB PCIs (5500PCU) act as a SiLabs ``cp210x`` USB-Serial adapter, its serial device must be
+    specified here.
+
+``--tcp [addr]:[port]``
+    IP address and TCP port where the PCI or CNI is located, eg: ``192.0.2.1:10001``.
+
+    Both the address and the port are required. CNIs listen on port ``10001`` by default.
+
+
+.. _mqtt-options:
+
+MQTT options
+------------
+
+``--broker-address [addr]``
+    Address of the MQTT broker. This option is required.
+
+``--broker-port [port]``
+    Port of the MQTT broker.
+
+    By default, this is 8883 if TLS is enabled, otherwise 1883.
+
+``--broker-disable-tls``
+    Disables all transport security (TLS). This option is insecure!
+
+    By default, transport security is enabled.
+
+``--broker-auth [file]``
+    File containing the username and password to authenticate to the MQTT broker with.
+
+    This is a plain text file with two lines: the username, followed by the password.
+
+    If not specified, password authentication will not be used.
+
+``--broker-ca [dir]``
+    Path to a directory of CA certificates to trust, used for validating certificates presented in
+    the TLS handshake.
+
+    If not specified, the default (Python) CA store is used instead.
+
+``--broker-client-cert [pem]``
+
+``--broker-client-key [pem]``
+    Path to a PEM-encoded client (public) certificate and (private) key for TLS authentication.
+
+    If not specified, certificate-based client authentication will not be used.
+
+    If the file is encrypted, Python will prompt for the password at the command-line.
 
 Time synchronisation
 --------------------
@@ -63,19 +127,27 @@ Time synchronisation
 By default, :program:`cmqttd` will periodic provide a time signal to the C-Bus network, and respond
 to all time requests.
 
-Local time is always used for time synchronisation.  You can specify a different timezone with
-`the TZ environment variable`__. Due to C-Bus protocol limitations, no attempt is made to allow
-units on the C-Bus network to configure the timezone provided by :program:`cmqttd`.
+``--timesync [seconds]``
+    Sends an unsolicited time signal to the C-Bus network.
+
+    By default, this is every 300 seconds (5 minutes).
+
+``--timesync 0``
+    Disables sending unsolicited time signals to the C-Bus network.
+
+``--no-clock``
+    Disables responding to time requests from the C-Bus network.
+
+Local time is always used for time synchronisation. You can specify a different timezone with
+`the TZ environment variable`__.
 
 __ https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
 
-For systems that do not have a reliable time source, or if you already have some other device
-providing a time signal, this can be *disabled* with::
-
-    $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 -s /dev/ttyUSB0 --timesync 0 --no-clock
+Due to C-Bus protocol limitations, no attempt is made to allow units on the C-Bus network to
+configure the timezone provided by :program:`cmqttd`.
 
 Using with Home Assistant
--------------------------
+=========================
 
 :program:`cmqttd` supports `Home Assistant's MQTT discovery protocol`__.
 
@@ -89,7 +161,7 @@ __ https://www.home-assistant.io/docs/mqtt/discovery/
 __ https://www.home-assistant.io/docs/mqtt/broker
 
 Once the integration and :program:`cmqttd` are running, each group addresses (regardless of whether
-it is in use) will automatically appear in Home Assistant's UI as _two_ components:
+it is in use) will automatically appear in Home Assistant's UI as two components:
 
 * `lights`__: ``light.cbus_{{GROUP_ADDRESS}}`` (eg: GA 1 = ``light.cbus_1``)
 

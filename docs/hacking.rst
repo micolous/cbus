@@ -52,7 +52,7 @@ If you want to see how Toolkit interacts with a Serial PCI, use the
 
 For example::
 
-    $ python tcp_serial_redirect.py -p /dev/ttyUSB0 -P 22222
+    $ python tcp_serial_redirect.py -p /dev/ttyUSB0 -P 10001
 	
 Congratulations, you now have turned your computer and a `5500PC`_ into a
 `5500CN`_ without writing a single line of custom code, and saved about 200$.
