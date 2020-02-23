@@ -7,6 +7,14 @@ This is reflected in the PC Interface protocol.
 
 This package contains classes needed in order to operate with the protocol.
 
+.. note::
+
+    The only "stable" API for this project is the :doc:`C-Bus to MQTT bridge <cmqttd>`, when
+    accessed via an MQTT broker.
+
+    The lower level APIs are subject to change without notice, as we learn new information about the
+    C-Bus control protocol, and functionality from other applications is brought into the
+    :doc:`C-Bus to MQTT bridge <cmqttd>`.
 
 .. toctree::
 	:maxdepth: 2

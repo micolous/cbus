@@ -21,7 +21,7 @@ It should also work with other software that supports MQTT.
 - No requirement for an Ethernet-based PCI (serial or USB are sufficient)
 - Touch-friendly UI based on Material components
 - Integrates with other Home Assistant supported devices
-- No hard coded back-doors (like Wiser)
+- No :ref:`hard coded back-doors <wiser-backdoor>`
 
 .. note:: Only the default lighting application is supported by :program:`cmqttd`. Patches welcome!
 

@@ -10,11 +10,11 @@ Wiser
     hardware.
 
     This library **is not** capable of running on Wiser -- and this project's
-    :doc:`C-Bus to MQTT bridge <daemons.cmqttd>` can be used with `Home Assistant`__ and entirely
-    replaces the need for Wiser.
+    :doc:`C-Bus to MQTT bridge <cmqttd>` can be used with `Home Assistant`__ and entirely replaces
+    the need for Wiser.
 
     It is provided in the hope it could be useful to others, and to serve as a warning against
-    using Wiser hardware.
+    using Wiser hardware. :)
 
 __ https://www.home-assistant.io/docs/mqtt/discovery/
 
@@ -220,6 +220,8 @@ Unauthenticated state
 Connecting to the service yields a welcome message::
 
 	200 Welcome
+
+.. _wiser-backdoor:
 
 PASS
 ^^^^

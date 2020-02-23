@@ -12,14 +12,12 @@ Contents:
    
    introduction
    installing
+   cmqttd
    hacking
    cni-discovery
    wiser-swf-protocol
-   daemons
    dump_labels
    modules
-
-
 
 Indices and tables
 ==================

@@ -21,8 +21,8 @@ This will install everything, including :program:`cmqttd`.
 C-Bus MQTT bridge only (Docker image)
 =====================================
 
-If you *only* want to use :doc:`the C-Bus MQTT bridge (cmqttd) <daemons.cmqttd>`, then you should
-use the ``Dockerfile`` included in this repository.
+If you *only* want to use :doc:`the C-Bus MQTT bridge (cmqttd) <cmqttd>`, then you should use the
+``Dockerfile`` included in this repository.
 
 This uses a minimal `Alpine Linux`__ image as a base, and contains the *bare minimum* needed to
 make :program:`cmqttd` work.
@@ -80,4 +80,4 @@ can run ``cmqttd`` manually within the container (ie: skipping the start-up scri
     When running without the start-up script, you must write ``cmqttd`` twice: first as the name of
     the image, and second as the name of the program inside the image to run.
 
-More information about options is available from :doc:`the cmqttd doc page <daemons.cmqttd>`.
+More information about options is available from :doc:`the cmqttd doc page <cmqttd>`.
