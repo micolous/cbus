@@ -79,5 +79,17 @@ can run ``cmqttd`` manually within the container (ie: skipping the start-up scri
 
     When running without the start-up script, you must write ``cmqttd`` twice: first as the name of
     the image, and second as the name of the program inside the image to run.
+	
+If you want to run the ``cmqttd`` daemon on the same device as the Home Assistant server with the
+MQTT broker add-on you can::
+
+    # docker run --device /dev/ttyUSB0 --network hassio \
+        -e "TZ=Australia/Adelaide" cmqttd cmqttd \
+        -s /dev/ttyUSB0 -b 172.30.33.0 --broker-disable-tls
+
+.. note::
+
+    The IP address for the MQTT broker on the hassio docker network may be discovered with:
+        # docker network inspect hassio
 
 More information about options is available from :doc:`the cmqttd doc page <cmqttd>`.
