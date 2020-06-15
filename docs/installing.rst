@@ -83,7 +83,7 @@ can run ``cmqttd`` manually within the container (ie: skipping the start-up scri
 If you want to run the ``cmqttd`` daemon on the same device as the Home Assistant server with the
 MQTT broker add-on you can::
 
-    # docker run --device /dev/ttyUSB0 --network hassio \
+    # docker run -d --device /dev/ttyUSB0 --network hassio \
         -e "TZ=Australia/Adelaide" cmqttd cmqttd \
         -s /dev/ttyUSB0 -b 172.30.33.0 --broker-disable-tls
 
