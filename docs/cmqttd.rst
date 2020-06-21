@@ -146,6 +146,17 @@ __ https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
 Due to C-Bus protocol limitations, no attempt is made to allow units on the C-Bus network to
 configure the timezone provided by :program:`cmqttd`.
 
+Logging
+-------
+
+``--log-file``
+    Destination to write logs [default: stdout].
+
+``--verbosity``
+    Verbosity of logging to emit [default: INFO].
+    Options: CRITICAL|ERROR|WARNING|INFO|DEBUG
+
+
 Using with Home Assistant
 =========================
 
