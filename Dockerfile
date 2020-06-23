@@ -27,10 +27,12 @@ RUN pip3 install 'parameterized' && \
 # cmqttd runner image
 FROM base as cmqttd
 COPY COPYING COPYING.LESSER Dockerfile README.md /
+COPY MQTTcredentials /
 COPY --from=builder /cbus/dist/cbus-0.2.generic.tar.gz /
 RUN tar zxf /cbus-0.2.generic.tar.gz && rm /cbus-0.2.generic.tar.gz
 
 # Runs cmqttd itself
 CMD echo "Local time zone: ${TZ:-UTC}" && \
     echo -n "Current time: " && date -R && \
-    cmqttd -b ${MQTT_SERVER:?unset} -s ${SERIAL_PORT:?unset} --broker-disable-tls
+    cmqttd -b ${MQTT_SERVER:?unset} -s ${SERIAL_PORT:?unset} \
+    --broker-auth MQTTcredentials --broker-disable-tls
