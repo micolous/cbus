@@ -50,7 +50,7 @@ __ https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 __ https://en.wikipedia.org/wiki/Coordinated_Universal_Time
 
 The *default* start-up script supports a serial or USB PCI, and will connect (*without* transport
-security) to an *unauthenticated* MQTT Broker of your choice. Configure it with these environment
+security) to an authenticated MQTT Broker of your choice. Configure it with these environment
 variables:
 
 * ``SERIAL_PORT``: The serial port that the PCI is connected to. USB PCIs appear as a serial device
@@ -62,6 +62,9 @@ variables:
 * ``MQTT_SERVER``: IP address where the MQTT Broker is running.
 
   This is equivalent to the ``-b`` (or ``--broker-address``) option to :program:`cmqttd`.
+  
+ * ``MQTTcredentials``: edit the ``MQTTcredentials`` file with a ``mqtt-username`` and ``mqtt-password`` to
+   match those configured for the Home Assistant Mosquitto broker.
 
 For example, to use a PCI on ``/dev/ttyUSB0``, with an MQTT Broker at ``192.0.2.1`` and the time
 zone set to ``Australia/Adelaide``::
