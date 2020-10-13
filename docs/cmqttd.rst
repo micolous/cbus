@@ -358,11 +358,12 @@ __ https://docs.docker.com/engine/reference/commandline/run/#mount-volume--v---r
 Docker usage examples
 ---------------------
 
-To use a PCI on :file:`/dev/ttyUSB0`, with an MQTT Broker at ``192.0.2.1`` and the time
-zone set to ``Australia/Adelaide``::
+To use a PCI on :file:`/dev/ttyUSB0`, with an unauthenticated and unencrypted MQTT Broker at
+``192.0.2.1``, and the time zone set to ``Australia/Adelaide``::
 
     # docker run --device /dev/ttyUSB0 -e "SERIAL_PORT=/dev/ttyUSB0" \
-        -e "MQTT_SERVER=192.0.2.1" -e "TZ=Australia/Adelaide" cmqttd
+        -e "MQTT_SERVER=192.0.2.1" -e "MQTT_USE_TLS=0" \
+        -e "TZ=Australia/Adelaide" cmqttd
 
 To supply MQTT broker authentication details, create an :file:`/etc/cmqttd/auth` file to be
 shared with the container as a `Docker volume`__::
@@ -375,11 +376,11 @@ shared with the container as a `Docker volume`__::
 
 __ https://docs.docker.com/engine/reference/commandline/run/#mount-volume--v---read-only
 
-Then to use these authentication details, with TLS disabled::
+Then to use these authentication details, with TLS enabled::
 
     # docker run --device /dev/ttyUSB0 -e "SERIAL_PORT=/dev/ttyUSB0" \
         -e "MQTT_SERVER=192.0.2.1" -e "TZ=Australia/Adelaide" \
-        -e "MQTT_USE_TLS=0" -v /etc/cmqttd:/etc/cmqttd cmqttd
+        -v /etc/cmqttd:/etc/cmqttd cmqttd
 
 If you want to run the daemon manually with other settings, you can run ``cmqttd`` manually within
 the container (ie: skipping the start-up script) with::
