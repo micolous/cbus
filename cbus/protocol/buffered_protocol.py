@@ -19,9 +19,14 @@
 import abc
 import asyncio
 import threading
+import warnings
 
 
-__all__ = ['BufferedProtocol']
+__all__ = ['BufferedProtocol', 'BufferedProtocolWarning']
+
+
+class BufferedProtocolWarning(RuntimeWarning):
+    pass
 
 
 class BufferedProtocol(asyncio.Protocol, abc.ABC):
@@ -64,21 +69,33 @@ class BufferedProtocol(asyncio.Protocol, abc.ABC):
         """
         Adds new data to the buffer, and then starts processing it.
 
+        If the data is larger than the buffer size limit, the data will be
+        dropped and a BufferedProtocolWarning raised.
+
+        If the data would cause the buffer to exceed the size limit, the data
+        and existing buffer will be dropped, and a BufferedProtocolWarning
+        raised.
+
         :param data: new data to add to the buffer
         :return: None
         """
         data_size = len(data)
         if data_size > self._size_limit:
-            raise ValueError('Received data exceeds size limit '
-                             '({} bytes)'.format(self._size_limit))
+            warnings.warn(f'Received {data_size} bytes > size limit of '
+                          f'{self._size_limit} bytes, data dropped!',
+                          BufferedProtocolWarning)
+            return
 
         # Add the data to the buffer
         with self._buf_lock:
-            if len(self._buf) + data_size > self._size_limit:
+            buf_size = len(self._buf)
+            if buf_size + data_size > self._size_limit:
                 self._buf = bytearray()
-                raise ValueError(
-                    'Received data would make the buffer exceed the maximum '
-                    'limit, buffer dropped!')
+                warnings.warn(
+                    f'Received {data_size} bytes + {buf_size} bytes already '
+                    f'in buffer > size limit of {self._size_limit} bytes, '
+                    f'buffer dropped!', BufferedProtocolWarning)
+                return
 
             self._buf.extend(data)
 
@@ -102,7 +119,7 @@ class BufferedProtocol(asyncio.Protocol, abc.ABC):
                         # Only "correct" way to clear buffer is with -1.
                         # But we clear anyway to avoid loops.
                         raise ValueError(
-                            'Invalid return from frame_received: {}'.format(r))
+                            f'Invalid return from frame_received: {r}')
 
                 if r > 0:
                     self._buf = self._buf[r:]
