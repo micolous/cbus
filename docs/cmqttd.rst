@@ -139,8 +139,38 @@ MQTT options
 Time synchronisation
 --------------------
 
-By default, :program:`cmqttd` will periodic provide a time signal to the C-Bus network, and respond
-to all time requests.
+By default, :program:`cmqttd` will periodically provide a time signal to the C-Bus network, and
+respond to all time requests.
+
+Local time is always used for time synchronisation. You can specify a different timezone with
+`the TZ environment variable`__.
+
+__ https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
+
+C-Bus' time implementation has many limitations:
+
+* C-Bus date values and time values are two separate network variables – there is no analog to
+  Python's ``datetime.datetime`` type.  This can trigger race conditions around midnight if the
+  messages are not handled atomically by receivers.
+
+  :program:`cmqttd` will always send the date and time as a single message, in an attempt to
+  mitigate this issue.
+
+* C-Bus time values have an optional "daylight saving time" flag, with three states: "no daylight
+  saving offset applied", "time advanced by 1 hour for daylight saving", and "unknown".
+
+  Because this is cannot be used to present daylight saving time properly (eg: Lord Howe Island
+  turns their clocks forward 30 minutes for DST), and there are far too many edge cases with
+  time zone handling, :program:`cmqttd` will always report "unknown", in an attempt to make sure
+  C-Bus units do not attempt any time conversions.
+
+* C-Bus does not support leap seconds. You can mitigate this by synchronising your clock using an
+  NTP server with `leap second smearing`__.
+
+__ https://developers.google.com/time/smear
+
+To schedule scenes in C-Bus, you should use something like Home Assistant, rather than embedded
+controllers directly attached to the C-Bus network.
 
 .. option:: --timesync SECONDS
 
@@ -153,17 +183,6 @@ to all time requests.
 .. option:: --no-clock
 
     Disables responding to time requests from the C-Bus network.
-
-Local time is always used for time synchronisation. You can specify a different timezone with
-`the TZ environment variable`__.
-
-__ https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
-
-Due to C-Bus protocol limitations, devices on the C-Bus network cannot configure the date, time or
-timezone reported by :program:`cmqttd`. Instead, make sure to keep your distribution's ``tzinfo``
-package up-to-date, and use an NTP server with `leap second smearing`__.
-
-__ https://developers.google.com/time/smear
 
 Logging
 -------
