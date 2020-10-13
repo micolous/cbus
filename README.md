@@ -25,16 +25,21 @@ and reverse engineering (to fill in the gaps).
 Unlike some contemporary alternatives, it does **not** use the `libcbm`
 library/DLL from Clipsal, or C-Gate, which have serious problems:
 
-* The `libcbm` module only runs on `x86_32` systems, and is only available
-  as a static library (closed source).
+* The `libcbm` module is written in C, and does not support `x86_64` or
+  comparatively-modern ARM architectures (such as that used in the Raspberry
+  Pi).
+
+  `libcbm` was previously only available as a static library for `x86_32` Linux
+  and Windows systems. [Source is available][libcbm-src] under the Boost
+  license, but this was last updated in 2009.
 
 * C-Gate requires an OS and architecture specific closed source serial
   library (SerialIO), the Java runtime, and itself has various licensing
   restrictions.
 
-As such, it should run on any Python supported platform. The software itself
-has been primarily developed on Linux with on armhf, x86_32 and x86_64
-systems.
+Because this is a pure-Python implementation, it should run on any Python
+supported platform. It has been primarily developed on Linux on `armhf`,
+`x86_32` and `x86_64` and macOS on `x86_64`.
 
 At a high level, this project includes `cmqttd`, a daemon to bridge a C-Bus PCI
 to an MQTT Broker. `cmqttd` supports Home Assistant's
@@ -98,4 +103,5 @@ most stable API is via MQTT (`cmqttd`).
 [ha-auto]: https://www.home-assistant.io/docs/mqtt/discovery/
 [ha-mqtt]: https://www.home-assistant.io/integrations/light.mqtt/#json-schema
 [clipsal-docs]: https://updates.clipsal.com/ClipsalSoftwareDownload/DL/downloads/OpenCBus/OpenCBusProtocolDownloads.html
+[libcbm-src]: https://sourceforge.net/projects/cbusmodule/files/source/
 [py2]: https://www.python.org/doc/sunset-python-2/

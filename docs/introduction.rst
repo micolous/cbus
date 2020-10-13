@@ -26,7 +26,7 @@ engineering.
 
 __ https://updates.clipsal.com/ClipsalSoftwareDownload/DL/downloads/OpenCBus/OpenCBusProtocolDownloads.html
 
-Unlike a number of other similar projects, it _does_ _not_ depend on
+Unlike a number of other similar projects, it *does not* depend on
 :ref:`C-Gate or libcbm <clipsal-other-interfaces>`. This makes the code much more portable between
 platforms, as well as avoiding the hazards of closed-source software. :)
 
@@ -74,8 +74,15 @@ interact with C-Bus networks over serial and IPv4.
 ``libcbm`` supports to C-Bus protocol completely, including conforming to the various "protocol
 certification levels".
 
-It is closed source and written in C, and only will work with ia32 Windows and Linux systems. It is
-distributed for Linux as a static library in an RPM.
+It is written in C, and distributed as a static library for ``x86_32`` Linux and Windows systems.
+`Clipsal has released its source code`__ under the Boost license, which also includes Delphi
+bindings and support for ARMv3/4/4T, Hitachi/Renesas H8, PowerPC 405 (on Linux) and TI MSP430
+processors.
+
+__ https://sourceforge.net/projects/cbusmodule/files/source/
+
+This hasn't been updated since 2009, and doesn't support ``x86_64`` or comparatively-modern ARM
+CPUs (such as that used in the Raspberry Pi).
 
 C-Gate
 ------
@@ -87,5 +94,5 @@ the Serial Interface Guide seems to suggest it is using a bunch of commands that
 deprecated.
 
 It depends on the (closed source) SerialIO library for serial communication, which requires a
-:abbr:`JNI (Java Native Interface)` library that is only available on ``ia32`` Windows and old
+:abbr:`JNI (Java Native Interface)` library that is only available on ``x86_32`` Windows and old
 versions of Linux.
