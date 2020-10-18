@@ -2,6 +2,7 @@
 
 [![Build Status](https://secure.travis-ci.org/micolous/cbus.png?branch=master)][travis]
 [![Coverage Status](https://coveralls.io/repos/github/micolous/cbus/badge.svg)][coveralls]
+[![Documentation Status](https://readthedocs.org/projects/cbus/badge/?version=latest)][rtd]
 
 Talks to Clipsal C-Bus using Python 3.7+.
 
@@ -93,7 +94,7 @@ There are many backward-incompatible changes:
 Many APIs have changed due to refactoring, and is subject to further change without notice. The
 most stable API is via MQTT (`cmqttd`).
 
-[rtd]: https://cbus.rtfd.org/
+[rtd]: https://cbus.readthedocs.io/en/latest/
 [coveralls]: https://coveralls.io/github/micolous/cbus
 [travis]: https://travis-ci.org/micolous/cbus
 [5500PC]: https://www.clipsal.com/Trade/Products/ProductDetail?catno=5500PC
