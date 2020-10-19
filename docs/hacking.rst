@@ -112,10 +112,15 @@ known about at this time.
 macOS driver
 ------------
 
-`SiLabs' macOS drivers`__ (v5.2.3) do not list any Clipsal devices, so it may not be possible to
-use this.
+`SiLabs' macOS drivers`__ (v5.2.3) do not list any Clipsal devices in :file:`Info.plist`.
 
 __ https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers
+
+Modifying this file will cause the kext to fail signature verification.
+
+You may be able to use a modified version of this driver if you disable System Integrity Protection
+from the Recovery OS, but this could have serious repercussions for the security and reliability of
+your device.
 
 Unit Tests
 ==========
