@@ -239,4 +239,5 @@ class CBZ:
 
         # now open the inner file and objectify.
         self._tree = ElementTree.parse(xml_fh).getroot()
-        self.installation = Installation.from_element(self._tree)
+        self.installation = Installation.from_element(
+            self._tree)  # type: Installation

@@ -19,7 +19,7 @@ from asyncio import get_event_loop, run
 from argparse import ArgumentParser, FileType
 import json
 import logging
-from typing import Any, Dict, Optional, Text, TextIO
+from typing import Any, BinaryIO, Dict, Optional, Text, TextIO
 
 import paho.mqtt.client as mqtt
 
@@ -29,9 +29,10 @@ except ImportError:
     async def create_serial_connection(*_, **__):
         raise ImportError('Serial device support requires pyserial-asyncio')
 
-from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga
+from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga, Application
 from cbus.paho_asyncio import AsyncioHelper
 from cbus.protocol.pciprotocol import PCIProtocol
+from cbus.toolkit.cbz import CBZ
 
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,12 @@ class CBusHandler(PCIProtocol):
     """
     mqtt_api = None
 
+    def __init__(self, labels: Optional[Dict[int, Text]], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.labels = (
+            labels if labels is not None else {})  # type: Dict[int, Text]
+
+
     def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
         if not self.mqtt_api:
             return
@@ -117,7 +124,7 @@ class MqttClient(mqtt.Client):
         logger.info('Connected to MQTT broker')
         userdata.mqtt_api = self
         self.subscribe([(set_topic(ga), 2) for ga in ga_range()])
-        self.publish_all_lights()
+        self.publish_all_lights(userdata.labels)
 
     def on_message(self, client, userdata: CBusHandler, msg: mqtt.MQTTMessage):
         """Handle a message from an MQTT subscription."""
@@ -168,7 +175,7 @@ class MqttClient(mqtt.Client):
         payload = json.dumps(payload)
         return super().publish(topic, payload, 1, True)
 
-    def publish_all_lights(self):
+    def publish_all_lights(self, labels: Dict[int, Text]):
         """Publishes a configuration topic for all lights."""
         # Meta-device which holds all the C-Bus group addresses
         self.publish(_META_TOPIC + _TOPIC_CONF_SUFFIX, {
@@ -186,8 +193,9 @@ class MqttClient(mqtt.Client):
         })
 
         for ga in ga_range():
+            name = labels.get(ga,  f'C-Bus Light {ga:03d}')
             self.publish(conf_topic(ga), {
-                'name': f'C-Bus Light {ga:03d}',
+                'name': name,
                 'unique_id': f'cbus_light_{ga}',
                 'cmd_t': set_topic(ga),
                 'stat_t': state_topic(ga),
@@ -205,7 +213,7 @@ class MqttClient(mqtt.Client):
             })
 
             self.publish(bin_sensor_conf_topic(ga), {
-                'name': f'C-Bus Light {ga:03d} (as binary sensor)',
+                'name': f'{name} (as binary sensor)',
                 'unique_id': f'cbus_bin_sensor_{ga}',
                 'stat_t': bin_sensor_state_topic(ga),
                 'device': {
@@ -261,6 +269,42 @@ def read_auth(client: mqtt.Client, auth_file: TextIO):
     username = auth_file.readline().strip()
     password = auth_file.readline().strip()
     client.username_pw_set(username, password)
+
+
+def read_cbz_labels(cbz_file: BinaryIO) -> Dict[int, Text]:
+    """Reads group address names from a given Toolkit CBZ file."""
+    labels = {}  # type: Dict[int, Text]
+    cbz = CBZ(cbz_file)
+
+    # TODO: support multiple networks/applications
+    # Look for 1 direct network
+    networks = [n for n in cbz.installation.project.network
+                if n.interface.interface_type != 'bridge']
+    if len(networks) != 1:
+        logger.warning('Expected exactly 1 non-bridge network in project file, '
+                       'got %d instead! Labels will be unavailable.',
+                       len(networks))
+        return labels
+
+    # Look for
+    applications = [a for a in networks[0].applications
+                    if a.address == Application.LIGHTING]
+    if len(applications) != 1:
+        logger.warning('Could not find lighting application %x in project '
+                       'file. Labels will be unavailable.',
+                       Application.LIGHTING)
+        return labels
+
+    for group in applications[0].groups:
+        name = group.tag_name.strip()
+
+        # Ignore default names
+        if not name or name in ('<Unused>', f'Group {group.address}'):
+            continue
+
+        labels[group.address] = name
+
+    return labels
 
 
 async def _main():
@@ -362,6 +406,16 @@ async def _main():
              'time source, or you have another device on the CBus network '
              'providing time services. [default: %(default)s]')
 
+    group = parser.add_argument_group('Label options')
+
+    group.add_argument(
+        '-P', '--project-file',
+        type=FileType('rb'),
+        help='Path to a C-Bus Toolkit project backup file (CBZ or XML) '
+             'containing labels for group addresses to use. If not supplied, '
+             'generated names like "C-Bus Light 001" will be used instead.'
+    )
+
     option = parser.parse_args()
 
     if bool(option.broker_client_cert) != bool(option.broker_client_key):
@@ -374,12 +428,15 @@ async def _main():
 
     loop = get_event_loop()
     connection_lost_future = loop.create_future()
+    labels = (read_cbz_labels(option.project_file)
+              if option.project_file else None)
 
     def factory():
         return CBusHandler(
             timesync_frequency=option.timesync,
             handle_clock_requests=not option.no_clock,
             connection_lost_future=connection_lost_future,
+            labels=labels,
         )
 
     if option.serial:

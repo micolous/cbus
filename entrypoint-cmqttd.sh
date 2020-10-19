@@ -16,6 +16,9 @@ CMQTTD_CLIENT_CERT_PATH="/etc/cmqttd/client.pem"
 # Client certificate, private part, must NOT be encrypted
 CMQTTD_CLIENT_KEY_PATH="/etc/cmqttd/client.key"
 
+# C-Bus Toolkit project backup file
+CMQTTD_PROJECT_FILE="/etc/cmqttd/project.cbz"
+
 # Arguments that are always required.
 CMQTTD_ARGS="--broker-address ${MQTT_SERVER:?unset} --timesync ${CBUS_TIMESYNC:-300}"
 
@@ -70,6 +73,13 @@ if [ -e "${CMQTTD_AUTH_FILE}" ]; then
     CMQTTD_ARGS="${CMQTTD_ARGS} --broker-auth ${CMQTTD_AUTH_FILE}"
 else
     echo "${CMQTTD_AUTH_FILE} not found; skipping MQTT authentication."
+fi
+
+if [ -e "${CMQTTD_PROJECT_FILE}" ]; then
+    echo "Using C-Bus Toolkit project backup file ${CMQTTD_PROJECT_FILE}"
+    CMQTTD_ARGS="${CMQTTD_ARGS} --project-file ${CMQTTD_PROJECT_FILE}"
+else
+    echo "${CMQTTD_PROJECT_FILE} not found; using generated labels."
 fi
 
 echo ""

@@ -136,6 +136,29 @@ MQTT options
 
     If the file is encrypted, Python will prompt for the password at the command-line.
 
+Labels
+------
+
+.. option:: --project-file CBZ
+
+    Path to a C-Bus Toolkit project backup file (CBZ) to use for labelling group addresses.
+
+    This doesn't affect the entity paths or unique IDs published in MQTT.
+
+    Only single-network projects using the lighting application are supported. DLT labels are not
+    supported.
+
+    For group addresses with unknown names, or if no project file is supplied, generated names like
+    ``C-Bus Light 001`` will be used instead.
+
+.. tip::
+
+    If you don't have a project file backup from your installer, you can always rename entities
+    from within Home Assistant itself.
+
+    This labels are not stored on C-Bus units, so Toolkit cannot download this information from the
+    network.
+
 Time synchronisation
 --------------------
 
@@ -354,6 +377,15 @@ __ https://docs.docker.com/engine/reference/commandline/run/#mount-volume--v---r
 
     This is equivalent to :option:`cmqttd --broker-client-cert` and
     :option:`cmqttd --broker-client-key`.
+
+:file:`/etc/cmqttd/project.cbz`
+    C-Bus Toolkit project backup file to use as a source for labelling group addresses.
+
+    This is is equivalent to :option:`cmqttd --project-file`.
+
+.. note::
+
+    All file and directory names are case-sensitive, and must be lower case.
 
 Docker usage examples
 ---------------------
