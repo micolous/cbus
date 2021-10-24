@@ -30,6 +30,8 @@ This replaces :program:`sage` (our custom web interface which replaced
 - No :ref:`hard coded back-doors <wiser-backdoor>` or outdated software from
   2006
 
+See also: :ref:`Instructions for Wiser users <cmqttd-wiser>`.
+
 .. note:: Only the default lighting application is supported by :program:`cmqttd`. Patches welcome!
 
 Running
@@ -71,33 +73,55 @@ If you're using Docker, the container also needs a route to the CNI's IP address
 For Wiser users
 ---------------
 
-This software is **not** compatible with Wiser. Wiser and :program:`cmqttd`
-both take full control the CNI, and will interfere with one another.
+This software is **not** compatible with Wiser Home Control (Clipsal's web
+interface for C-Bus). Wiser and :program:`cmqttd` both take full control the
+CNI, and will interfere with one another.
 
-If you have a Wiser, you must follow these steps before using
-:program:`cmqttd`:
+Additionally, using both on the same C-Bus network (with different PCI/CNIs)
+may cause issues, as both presume they are the sole source of network services
+such as time synchronisation.
 
-1. Switch off and completely disconnect the Wiser, and connect the CNI to the
-   network directly.
+Wiser Home Control Mk1 (5200PG)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2. Configure the CNI with an IP address which can be accessed from the host
-   you're running :program:`cmqttd` on.
+The Wiser Home Control Mk1 has an external CNI which should be usable with
+:program:`cmqttd`.
 
-3. Switch off the CNI.
+1. Switch off and completely disconnect the Wiser.
 
-4. Wait 30 seconds.
+2. Disconnect the "busbar" between the Wiser and the CNI.
 
-5. Switch on the CNI.
+3. Connect the CNI to power and network directly.
 
-6. Continue setting up :program:`cmqttd`.
+   You may need to use Toolkit to configure the CNI with an IP address which
+   can be accessed from the host you're running :program:`cmqttd` on. The
+   default IP address for the CNI is ``192.168.2.2``.
 
-7. Once you've verified :program:`cmqttd` is working correctly, responsibly
-   dispose of the Wiser at your nearest e-waste facility.
+4. Continue setting up :program:`cmqttd`.
+
+5. Once you've verified :program:`cmqttd` is working correctly, responsibly
+   dispose of the Wiser 1 at your nearest e-waste facility.
 
 .. warning::
 
-    The Wiser has very outdated and insecure software (from 2006). *You should
-    not use it under any circumstances, or for any purpose.*
+    The Wiser 1 has very outdated and insecure software (from 2006). *You
+    should not use it under any circumstances, or for any purpose.*
+
+Wiser Home Control Mk2 (5200WHC2)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The Wiser Home Control Mk2 has an internal CNI which cannot be used,
+because the Wiser's software conflicts with :program:`cmqttd`.
+
+*You will need to get a real, standalone PCI or CNI.*
+
+.. tip::
+
+    The author of this software does not have access to any Wiser hardware
+    anymore, and the Wiser 2's list price of 2000 AUD is far beyond the budget
+    for this project.
+
+    *Hint hint, Schneider Electric... we should talk :)*
 
 .. _cmqttd-options:
 
