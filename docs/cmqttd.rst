@@ -59,24 +59,45 @@ To connect to a CNI (or PCI over TCP) listening at ``192.0.2.2:10001``, run::
 
 If you're using Docker, the container also needs a route to the CNI's IP address.
 
-.. warning::
-
-    If you have a :doc:`Wiser <wiser-swf-protocol>`, you must switch off and
-    completely disconnect Wiser, and power-cycle your CNI before using
-    :program:`cmqttd`.
-
-    You can *only* connect to your CNI's IP address. The CNI only supports one
-    connection at a time, and Wiser will interfere with :program:`cmqttd`.
-
-    The Wiser has very outdated and insecure software (from 2006). *You should
-    not use it under any circumstances.*
-
 .. tip::
 
     If you haven't :doc:`installed the library <installing>`, you can run from a ``git clone`` of
     ``libcbus`` source repository with::
 
         $ python3 -m cbus.daemons.cmqttd -b 192.0.2.1 [...]
+
+.. _cmqttd-wiser:
+
+For Wiser users
+---------------
+
+This software is **not** compatible with Wiser. Wiser and :program:`cmqttd`
+both take full control the CNI, and will interfere with one another.
+
+If you have a Wiser, you must follow these steps before using
+:program:`cmqttd`:
+
+1. Switch off and completely disconnect the Wiser, and connect the PCI to the
+   network directly.
+
+2. Configure the CNI with an IP address which can be accessed from the host
+   you're running :program:`cmqttd` on.
+
+3. Switch off the CNI.
+
+4. Wait 30 seconds.
+
+5. Switch on the CNI.
+
+6. Continue setting up :program:`cmqttd`.
+
+7. Once you've verified :program:`cmqttd` is working correctly, responsibly
+   dispose of the Wiser at your nearest e-waste facility.
+
+.. warning::
+
+    The Wiser has very outdated and insecure software (from 2006). *You should
+    not use it under any circumstances, or for any purpose.*
 
 .. _cmqttd-options:
 
@@ -104,6 +125,8 @@ One of these *must* be specified:
     IP address and TCP port where the PCI or CNI is located, eg: ``192.0.2.1:10001``.
 
     Both the address and the port are required. CNIs listen on port ``10001`` by default.
+
+    See also: :ref:`Instructions for Wiser users <cmqttd-wiser>`.
 
 .. _mqtt-options:
 
@@ -328,6 +351,8 @@ __ https://en.wikipedia.org/wiki/Coordinated_Universal_Time
     A TCP ``host:port`` where a CNI is located.
 
     This is equivalent to :option:`cmqttd --tcp`. Either this or :envvar:`SERIAL_PORT` is required.
+
+    See also: :ref:`Instructions for Wiser users <cmqttd-wiser>`.
 
 .. envvar:: MQTT_SERVER
 
