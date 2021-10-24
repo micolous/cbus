@@ -27,7 +27,8 @@ This replaces :program:`sage` (our custom web interface which replaced
 - No requirement for an Ethernet-based PCI (serial or USB are sufficient)
 - Touch-friendly UI based on Material components
 - Integrates with other Home Assistant supported devices
-- No :ref:`hard coded back-doors <wiser-backdoor>`
+- No :ref:`hard coded back-doors <wiser-backdoor>` or outdated software from
+  2006
 
 .. note:: Only the default lighting application is supported by :program:`cmqttd`. Patches welcome!
 
@@ -55,6 +56,20 @@ To connect to a serial or USB PCI connected on :file:`/dev/ttyUSB0`, run::
 To connect to a CNI (or PCI over TCP) listening at ``192.0.2.2:10001``, run::
 
     $ cmqttd --broker-address 192.0.2.1 --broker-disable-tls --tcp 192.0.2.2:10001
+
+If you're using Docker, the container also needs a route to the CNI's IP address.
+
+.. warning::
+
+    If you have a :doc:`Wiser <wiser-swf-protocol>`, you must switch off and
+    completely disconnect Wiser, and power-cycle your CNI before using
+    :program:`cmqttd`.
+
+    You can *only* connect to your CNI's IP address. The CNI only supports one
+    connection at a time, and Wiser will interfere with :program:`cmqttd`.
+
+    The Wiser has very outdated and insecure software (from 2006). *You should
+    not use it under any circumstances.*
 
 .. tip::
 
@@ -413,6 +428,21 @@ Then to use these authentication details, with TLS enabled::
     # docker run --device /dev/ttyUSB0 -e "SERIAL_PORT=/dev/ttyUSB0" \
         -e "MQTT_SERVER=192.0.2.1" -e "TZ=Australia/Adelaide" \
         -v /etc/cmqttd:/etc/cmqttd cmqttd
+
+If you want to run the ``cmqttd`` daemon in the background, on the same device
+as a Home Assistant server with the MQTT broker add-on::
+
+    # docker run -dit --name cbus --restart=always \
+        --device /dev/ttyUSB0 --network hassio \
+        -e "TZ=Australia/Adelaide" -e "BROKER_USE_TLS=0" \
+        -e "SERIAL_PORT=/dev/ttyUSB0" \
+        -e "MQTT_SERVER=core-mosquitto" \
+        cmqttd
+
+.. note::
+
+    You can verify the hostname of hassio's MQTT broker with:
+    ``# docker inspect addon_core_mosquitto``
 
 If you want to run the daemon manually with other settings, you can run ``cmqttd`` manually within
 the container (ie: skipping the start-up script) with::
