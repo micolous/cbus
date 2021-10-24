@@ -77,7 +77,7 @@ both take full control the CNI, and will interfere with one another.
 If you have a Wiser, you must follow these steps before using
 :program:`cmqttd`:
 
-1. Switch off and completely disconnect the Wiser, and connect the PCI to the
+1. Switch off and completely disconnect the Wiser, and connect the CNI to the
    network directly.
 
 2. Configure the CNI with an IP address which can be accessed from the host
