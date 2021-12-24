@@ -44,6 +44,7 @@ from cbus.protocol.application.status_request import StatusRequestSAL
 from cbus.protocol.base_packet import (
     BasePacket, SpecialServerPacket, SpecialClientPacket)
 from cbus.protocol.cal.identify import IdentifyCAL
+from cbus.protocol.cal.extended import ExtendedCAL
 from cbus.protocol.cbus_protocol import CBusProtocol
 from cbus.protocol.confirm_packet import ConfirmationPacket
 from cbus.protocol.dm_packet import DeviceManagementPacket
@@ -88,11 +89,13 @@ class PCIProtocol(CBusProtocol):
 
         """
         self._transport = transport
-        self.pci_reset()
+        self.pci_reset()        
+        create_task(self.req_status())
         if self._timesync_frequency:
             create_task(self.timesync())
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
+        logger.debug("Connection lost")
         self._transport = None
         self._connection_lost_future.set_result(True)
 
@@ -134,6 +137,12 @@ class PCIProtocol(CBusProtocol):
                         self.on_clock_update(p.source_address, s.val)
                 else:
                     logger.debug(f'hcp: unhandled SAL type: {s!r}')
+        elif isinstance(p, PointToPointPacket):
+            for s in p:
+                if isinstance(s, ExtendedCAL):
+                    self.on_extended_cal(p.source_address, s)
+                else:
+                    logger.debug(f'hcp: unhandled P2P type: {s!r}')
         else:
             logger.debug(f'hcp: unhandled other packet: {p!r}')
 
@@ -309,6 +318,18 @@ class PCIProtocol(CBusProtocol):
 
         """
         logger.debug(f'recv: clock update from {source_addr} of {val!r}')
+        
+    def on_extended_cal(self, source_addr, extended_cal):
+        """
+        Event called when a unit sends a binary status report to the PCI.
+
+        :param source_addr: Source address of the unit requesting time.
+        :type source_addr: int
+        :param extended_cal: Extended CAL Object
+        :type extended_cal: ExtendedCAL
+
+        """
+        logger.debug(f'recv: extended CAL from {source_addr} of {extended_cal}')
 
     # other things.
 
@@ -411,6 +432,7 @@ class PCIProtocol(CBusProtocol):
         self._send(DeviceManagementPacket(
             checksum=False, parameter=0x30, value=0x59),
             basic_mode=True)
+        
 
     def identify(self, unit_address, attribute):
         """
@@ -550,6 +572,16 @@ class PCIProtocol(CBusProtocol):
 
         p = PointToMultipointPacket(sals=clock_update_sal(when))
         return self._send(p)
+
+    async def req_status(self):
+        
+        await sleep(5)
+    
+        self._send(PointToMultipointPacket(sals=StatusRequestSAL(
+            child_application=Application.LIGHTING,
+            level_request=False,
+            group_address=0,
+        )))
 
     async def timesync(self):
         frequency = self._timesync_frequency
