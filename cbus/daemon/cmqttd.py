@@ -29,9 +29,10 @@ except ImportError:
     async def create_serial_connection(*_, **__):
         raise ImportError('Serial device support requires pyserial-asyncio')
 
-from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga, Application
+from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga, Application, GroupState
 from cbus.paho_asyncio import AsyncioHelper
 from cbus.protocol.pciprotocol import PCIProtocol
+from cbus.protocol.cal.report import BinaryStatusReport
 from cbus.toolkit.cbz import CBZ
 
 
@@ -111,7 +112,22 @@ class CBusHandler(PCIProtocol):
         if not self.mqtt_api:
             return
         self.mqtt_api.lighting_group_off(source_addr, group_addr)
-
+        
+    def on_extended_cal(self, source_addr, extended_cal):
+        if not self.mqtt_api:
+            return
+        logger.debug(f'Block start: {extended_cal.block_start!r}')
+        if isinstance(extended_cal.report, BinaryStatusReport):
+            group_addr = extended_cal.block_start
+            for s in extended_cal.report:
+                if s == GroupState.ON:
+                    logger.debug(f'group_addr {group_addr!r} is ON')
+                    self.mqtt_api.lighting_group_on(source_addr, group_addr)
+                elif s == GroupState.OFF:
+                    logger.debug(f'group_addr {group_addr!r} is OFF')
+                    self.mqtt_api.lighting_group_off(source_addr, group_addr)
+                group_addr += 1
+            
     # TODO: on_lighting_group_terminate_ramp
 
     def on_clock_request(self, source_addr):
