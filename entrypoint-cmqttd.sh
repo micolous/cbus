@@ -82,13 +82,6 @@ else
     echo "${CMQTTD_PROJECT_FILE} not found; using generated labels."
 fi
 
-if [ -n "${CBUS_NETWORK}" ]; then
-    echo "Using first project in network file if it exists"
-else 
-    echo "Using project ${CBUS_NETWORK} if it exists"
-    CMQTTD_ARGS="${CMQTTD_ARGS} --cbus-network '${CBUS_NETWORK}'"
-fi
-
 echo ""
 
 # Announce what we think local time is on start-up. This will be sent to the C-Bus network.
