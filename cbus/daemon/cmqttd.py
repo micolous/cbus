@@ -22,6 +22,11 @@ import logging
 from typing import Any, BinaryIO, Dict, Optional, Text, TextIO
 
 import paho.mqtt.client as mqtt
+import sys
+
+if sys.platform == 'win32':
+    from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
+    set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 try:
     from serial_asyncio import create_serial_connection
