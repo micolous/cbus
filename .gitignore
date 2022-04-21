@@ -21,3 +21,5 @@ img
 *.key
 auth
 certificates
+.vscode
+project.xml

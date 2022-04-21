@@ -219,7 +219,7 @@ class CBZ:
             zip_h = ZipFile(fh, 'r')
         except BadZipFile:
             # Try to load as XML instead.
-            xml_fh = fh
+            xml_fh = fh.name
 
         if zip_h:
             files = zip_h.namelist()
