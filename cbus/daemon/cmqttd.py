@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from asyncio import get_event_loop, run, set_event_loop_policy, WindowsSelectorEventLoopPolicy
+from asyncio import get_event_loop, run
 import sys
 from argparse import ArgumentParser, FileType
 import json
@@ -25,6 +25,7 @@ from typing import Any, BinaryIO, Dict, Optional, Text, TextIO
 import paho.mqtt.client as mqtt
 
 if sys.platform == 'win32':
+    from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
     set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 try:
