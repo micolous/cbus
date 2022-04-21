@@ -16,3 +16,8 @@ example.*
 home.*
 img
 .coverage
+*.cbz
+*.pem
+*.key
+auth
+certificates

@@ -30,6 +30,7 @@ COPY COPYING COPYING.LESSER Dockerfile README.md entrypoint-cmqttd.sh /
 RUN sed -i 's/\r$//' entrypoint-cmqttd.sh 
 COPY --from=builder /cbus/dist/cbus-0.2.generic.tar.gz /
 RUN tar zxf /cbus-0.2.generic.tar.gz && rm /cbus-0.2.generic.tar.gz
+COPY cmqttd_config/ /etc/cmqttd/ 
 
 # Runs cmqttd itself
 CMD /entrypoint-cmqttd.sh
