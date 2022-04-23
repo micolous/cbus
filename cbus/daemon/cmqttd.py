@@ -276,7 +276,7 @@ def read_auth(client: mqtt.Client, auth_file: TextIO):
     client.username_pw_set(username, password)
 
 
-def read_cbz_labels(cbz_file: BinaryIO) -> Dict[int, Text]:
+def read_cbz_labels(cbz_file: BinaryIO, network_name = None) -> Dict[int, Text]:
     """Reads group address names from a given Toolkit CBZ file."""
     labels = {}  # type: Dict[int, Text]
     cbz = CBZ(cbz_file)
@@ -285,6 +285,10 @@ def read_cbz_labels(cbz_file: BinaryIO) -> Dict[int, Text]:
     # Look for 1 direct network
     networks = [n for n in cbz.installation.project.network
                 if n.interface.interface_type != 'bridge']
+                
+    if network_name:
+        networks = [n for n in networks if n.tag_name == network_name]
+
     if len(networks) != 1:
         logger.warning('Expected exactly 1 non-bridge network in project file, '
                        'got %d instead! Labels will be unavailable.',
@@ -421,7 +425,16 @@ async def _main():
              'generated names like "C-Bus Light 001" will be used instead.'
     )
 
+    group.add_argument(
+        '-N', '--cbus-network',
+        nargs='*',
+        help='Name of the C-Bus network to be used in case a project file is provided'
+             'and the project contains multiple networks.'
+    )
+
     option = parser.parse_args()
+
+    option.cbus_network = " ".join(option.cbus_network) 
 
     if bool(option.broker_client_cert) != bool(option.broker_client_key):
         return parser.error(
@@ -433,7 +446,7 @@ async def _main():
 
     loop = get_event_loop()
     connection_lost_future = loop.create_future()
-    labels = (read_cbz_labels(option.project_file)
+    labels = (read_cbz_labels(option.project_file,option.cbus_network)
               if option.project_file else None)
 
     def factory():
