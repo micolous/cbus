@@ -384,10 +384,17 @@ class PCIProtocol(CBusProtocol):
             self._send(ResetPacket())
 
         # serial user interface guide sect 10.2
-        # Set application address 1 to 38 (lighting)
-        # self._send('A3210038', encode=False, checksum=False)
+        # Set application address 1 to ALL applications
+        # self._send('A32100FF', encode=False, checksum=False)
         self._send(DeviceManagementPacket(
-            checksum=False, parameter=0x21, value=0x38),
+            checksum=False, parameter=0x21, value=0xFF),
+            basic_mode=True)
+        
+        # serial user interface guide sect 10.2
+        # Set application address 2 to USED applications
+        # self._send('A32200FF', encode=False, checksum=False)
+        self._send(DeviceManagementPacket(
+            checksum=False, parameter=0x22, value=0xFF),
             basic_mode=True)
 
         # Interface options #3
