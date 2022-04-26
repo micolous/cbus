@@ -1,5 +1,5 @@
-pyserial==3.4
-pyserial_asyncio==0.4
+pyserial==3.5
+pyserial_asyncio==0.6
 six
 
 # official protocol documentation downloading
@@ -9,7 +9,7 @@ requests
 pydot
 
 # required for cmqttd
-paho-mqtt==1.5.0
+paho-mqtt==1.6.1
 
 # required for cbz
 lxml

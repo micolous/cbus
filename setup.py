@@ -3,12 +3,12 @@
 from setuptools import setup, find_packages
 
 deps = [
-	'pyserial (==3.4)',
-	'pyserial_asyncio (==0.4)',
+	'pyserial (==3.5)',
+	'pyserial_asyncio (==0.6)',
 	'lxml (>=2.3.2)',
 	'six',
 	'pydot',
-	'paho_mqtt (==1.5.0)'
+	'paho_mqtt (==1.6.1)'
 ]
 
 tests_require = [
