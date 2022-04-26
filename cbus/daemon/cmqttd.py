@@ -319,11 +319,13 @@ def read_auth(client: mqtt.Client, auth_file: TextIO):
 
 def read_cbz_labels(cbz_file: BinaryIO, network_name = None) -> Dict[int, Text]:
     """Reads group address names from a given Toolkit CBZ file."""
-    labels = {}  # type: Dict[int, Text]
+    class obj():
+        pass
+
+    labels = {56:{}}  # type: Dict[int,Dict[int, Text]]
+
     cbz = CBZ(cbz_file)
 
-    # TODO: support multiple networks/applications
-    # Look for 1 direct network
     networks = [n for n in cbz.installation.project.network
                 if n.interface.interface_type != 'bridge']
                 
@@ -331,29 +333,43 @@ def read_cbz_labels(cbz_file: BinaryIO, network_name = None) -> Dict[int, Text]:
         networks = [n for n in networks if n.tag_name == network_name]
 
     if len(networks) != 1:
-        logger.warning('Expected exactly 1 non-bridge network in project file, '
-                       'got %d instead! Labels will be unavailable.',
-                       len(networks))
-        return labels
+        if network_name:
+            logger.warning('Could not find a non-bridge network with name "%s" in project file.',network_name)
+        else:
+            logger.warning('Expected one non-bridge network in project file, found %d instead',len(networks))
+        app = obj()
+        app.address = 56
+        app.tag_name = "Lighting"
+        app.groups = []    
+        net = obj()
+        net.applications  = [app]
+        networks = [net]
 
-    # Look for
-    applications = [a for a in networks[0].applications
-                    if a.address == Application.LIGHTING]
-    if len(applications) != 1:
-        logger.warning('Could not find lighting application %x in project '
-                       'file. Labels will be unavailable.',
-                       Application.LIGHTING)
-        return labels
 
-    for group in applications[0].groups:
-        name = group.tag_name.strip()
+    applications = [a for a in networks[0].applications if Application.isLighting(a.address)]
+    
+    if len(applications) == 0:
+        logger.warning('Could not find any lighting application in project file.')
+        app = obj()
+        app.address = 56
+        app.tag_name = "Lighting"
+        app.groups = []   
+        applications =  [app]
 
-        # Ignore default names
-        if not name or name in ('<Unused>', f'Group {group.address}'):
-            continue
-
-        labels[group.address] = name
-
+    for a in applications:
+        l = {}
+        if  a.groups:
+            for group in a.groups:
+                name = group.tag_name.strip()
+                if not name or name in ('<Unused>', f'Group {group.address}'):
+                    name = default_light_name(group.address,a.address)
+                l[group.address] = name
+        else:
+            logger.warning('No label available in project file for application %d.',a.address)
+            logger.warning('Will use default labels.')
+            for ga in ga_range():
+                l[ga] = default_light_name(ga,a.address)
+        labels[a.address]=(a.tag_name,l)
     return labels
 
 
