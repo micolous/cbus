@@ -23,7 +23,7 @@ import io
 from typing import Optional, Text, cast
 import unittest
 
-from cbus.common import check_ga
+from cbus.common import Application, check_ga
 from cbus.daemon import cmqttd
 
 
@@ -59,22 +59,22 @@ class CmqttdUtilityTest(unittest.TestCase):
         bin_topic_len = len(bin_topic)
 
         # base topic path -> ga
-        self.assertEqual(ga, cmqttd.get_topic_group_address(light_topic))
+        self.assertEqual((ga,Application.LIGHTING), cmqttd.get_topic_group_address(light_topic))
 
         # Generating a set topic
-        set_topic = cmqttd.set_topic(ga)
+        set_topic = cmqttd.set_topic(ga,Application.LIGHTING)
         self.assertEqual(light_topic, set_topic[:light_topic_len])
-        self.assertEqual(ga, cmqttd.get_topic_group_address(set_topic))
+        self.assertEqual((ga,Application.LIGHTING), cmqttd.get_topic_group_address(set_topic))
 
         # Generating a state topic
-        state_topic = cmqttd.state_topic(ga)
+        state_topic = cmqttd.state_topic(ga,Application.LIGHTING)
         self.assertEqual(light_topic, state_topic[:light_topic_len])
-        self.assertEqual(ga, cmqttd.get_topic_group_address(state_topic))
+        self.assertEqual((ga,Application.LIGHTING), cmqttd.get_topic_group_address(state_topic))
 
         # Generating a conf topic
-        conf_topic = cmqttd.conf_topic(ga)
+        conf_topic = cmqttd.conf_topic(ga,Application.LIGHTING)
         self.assertEqual(light_topic, conf_topic[:light_topic_len])
-        self.assertEqual(ga, cmqttd.get_topic_group_address(conf_topic))
+        self.assertEqual((ga,Application.LIGHTING), cmqttd.get_topic_group_address(conf_topic))
 
         # Ensure all the topics are unique
         self.assertNotEqual(set_topic, state_topic)
@@ -83,10 +83,10 @@ class CmqttdUtilityTest(unittest.TestCase):
 
         # Binary sensors are read only, so get_topic_group_address doesn't
         # support them.
-        bin_state_topic = cmqttd.bin_sensor_state_topic(ga)
+        bin_state_topic = cmqttd.bin_sensor_state_topic(ga,Application.LIGHTING)
         self.assertTrue(bin_topic, bin_state_topic[:bin_topic_len])
 
-        bin_conf_topic = cmqttd.bin_sensor_conf_topic(ga)
+        bin_conf_topic = cmqttd.bin_sensor_conf_topic(ga,Application.LIGHTING)
         self.assertTrue(bin_topic, bin_conf_topic[:bin_topic_len])
 
         # Uniqueness check
