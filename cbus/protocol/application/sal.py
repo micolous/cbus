@@ -57,7 +57,7 @@ class BaseApplication(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def decode_sals(data: bytes) -> Sequence[SAL]:
+    def decode_sals(data: bytes,application: int| Application=None) -> Sequence[SAL]:
         """
         Decodes a SAL message
 

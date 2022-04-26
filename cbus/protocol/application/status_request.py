@@ -36,7 +36,7 @@ class StatusRequestApplication(BaseApplication):
         return _SUPPORTED_APPLICATIONS
 
     @staticmethod
-    def decode_sals(data: bytes) -> Sequence[SAL]:
+    def decode_sals(data: bytes,_=None) -> Sequence[SAL]:
         return StatusRequestSAL.decode_sals(data)
 
 
@@ -47,7 +47,7 @@ class StatusRequestSAL(SAL):
     child_application: int
 
     @classmethod
-    def decode_sals(cls, data: bytes) -> Sequence[StatusRequestSAL]:
+    def decode_sals(cls, data: bytes,_=None) -> Sequence[StatusRequestSAL]:
         output = []
 
         while data:

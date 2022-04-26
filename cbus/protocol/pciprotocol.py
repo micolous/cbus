@@ -114,17 +114,17 @@ class PCIProtocol(CBusProtocol):
                     # lighting application
                     if isinstance(s, LightingRampSAL):
                         self.on_lighting_group_ramp(p.source_address,
-                                                    s.group_address,
+                                                    s.group_address,s.application_address,
                                                     s.duration, s.level)
                     elif isinstance(s, LightingOnSAL):
                         self.on_lighting_group_on(p.source_address,
-                                                  s.group_address)
+                                                  s.group_address,s.application_address)
                     elif isinstance(s, LightingOffSAL):
                         self.on_lighting_group_off(p.source_address,
-                                                   s.group_address)
+                                                   s.group_address,s.application_address)
                     elif isinstance(s, LightingTerminateRampSAL):
                         self.on_lighting_group_terminate_ramp(
-                            p.source_address, s.group_address)
+                            p.source_address, s.group_address,s.application_address)
                     else:
                         logger.debug(f'hcp: unhandled lighting SAL type: {s!r}')
                 elif isinstance(s, ClockSAL):
@@ -430,7 +430,7 @@ class PCIProtocol(CBusProtocol):
             unit_address=unit_address, cals=[IdentifyCAL(attribute)])
         return self._send(p)
 
-    def lighting_group_on(self, group_addr: Union[int, Iterable[int]]):
+    def lighting_group_on(self, group_addr: Union[int, Iterable[int]],application_addr: Union[int,Application] ):
         """
         Turns on the lights for the given group_id.
 
@@ -453,10 +453,10 @@ class PCIProtocol(CBusProtocol):
                 f'group_addr iterable length is > 9 ({group_addr_count})')
 
         p = PointToMultipointPacket(
-            sals=[LightingOnSAL(ga) for ga in group_addr])
+            sals=[LightingOnSAL(ga,application_addr) for ga in group_addr])
         return self._send(p)
 
-    def lighting_group_off(self, group_addr: Union[int, Iterable[int]]):
+    def lighting_group_off(self, group_addr: Union[int, Iterable[int]],application_addr: Union[int,Application] ):
         """
         Turns off the lights for the given group_id.
 
@@ -480,11 +480,11 @@ class PCIProtocol(CBusProtocol):
                 f'group_addr iterable length is > 9 ({group_addr_count})')
 
         p = PointToMultipointPacket(
-            sals=[LightingOffSAL(ga) for ga in group_addr])
+            sals=[LightingOffSAL(ga,application_addr) for ga in group_addr])
         return self._send(p)
 
     def lighting_group_ramp(
-            self, group_addr: int, duration: int, level: int = 255):
+            self, group_addr: int, application_addr: Union[int,Application], duration: int, level: int = 255 ):
         """
         Ramps (fades) a group address to a specified lighting level.
 
@@ -506,11 +506,11 @@ class PCIProtocol(CBusProtocol):
 
         """
         p = PointToMultipointPacket(
-            sals=LightingRampSAL(group_addr, duration, level))
+            sals=LightingRampSAL(group_addr, application_addr, duration, level))
         return self._send(p)
 
     def lighting_group_terminate_ramp(
-            self, group_addr: Union[int, Iterable[int]]):
+            self, group_addr: Union[int, Iterable[int]], application_addr: Union[int,Application]):
         """
         Stops ramping a group address at the current point.
 
@@ -533,7 +533,7 @@ class PCIProtocol(CBusProtocol):
                 f'group_addr iterable length is > 9 ({group_addr_count})')
 
         p = PointToMultipointPacket(
-            sals=[LightingTerminateRampSAL(ga) for ga in group_addr])
+            sals=[LightingTerminateRampSAL(ga,application_addr) for ga in group_addr])
         return self._send(p)
 
     def clock_datetime(self, when: Optional[datetime] = None):
