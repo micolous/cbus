@@ -16,10 +16,11 @@ example.*
 home.*
 img
 .coverage
-*.cbz
-*.pem
-*.key
-auth
+cmqttd_config/*.cbz
+cmqttd_config/*.pem
+cmqttd_config/*.key¸
+cmqttd_config/*.xml
+cmqttd_config/auth
 certificates
 .vscode
 project.xml
