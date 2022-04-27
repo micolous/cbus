@@ -120,16 +120,13 @@ class CBusHandler(PCIProtocol):
             return
         self.mqtt_api.lighting_group_ramp(
             source_addr, group_addr, app_addr,duration, level)
-        #need to address application
 
     def on_lighting_group_on(self, source_addr, group_addr,app_addr):
-        #need to address application
         if not self.mqtt_api:
             return
         self.mqtt_api.lighting_group_on(source_addr, group_addr,app_addr)
 
     def on_lighting_group_off(self, source_addr, group_addr,app_addr):
-        #need to address application
         if not self.mqtt_api:
             return
         self.mqtt_api.lighting_group_off(source_addr, group_addr,app_addr)
