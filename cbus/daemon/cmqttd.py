@@ -36,10 +36,11 @@ except ImportError:
     async def create_serial_connection(*_, **__):
         raise ImportError('Serial device support requires pyserial-asyncio')
 
-from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_aa_lighting, check_ga, Application
+from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga, Application
 from cbus.paho_asyncio import AsyncioHelper
 from cbus.protocol.pciprotocol import PCIProtocol
 from cbus.toolkit.cbz import CBZ
+from cbus.protocol.application import LightingApplication
 
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,12 @@ _TOPIC_CONF_SUFFIX = '/config'
 _TOPIC_STATE_SUFFIX = '/state'
 _META_TOPIC = 'homeassistant/binary_sensor/cbus_cmqttd'
 _APPLICATION_GROUP_SEPARATOR = "_"
+
+def check_aa_lighting(aa):
+    if not aa in LightingApplication.supported_applications():
+        raise ValueError(
+            'Application ${aa} is not a valid lighting application'.format(
+                aa))
 
 def ga_range():
     return range(MIN_GROUP_ADDR, MAX_GROUP_ADDR + 1)
@@ -74,7 +81,7 @@ def get_topic_group_address(topic: Text) -> tuple[int,int | Application]:
     aa,ga = (a1,a2[0]) if a2 else (Application.LIGHTING,a1)
     aa,ga = (int(aa),int(ga))
     check_ga(ga)
-    check_aa_lighting(aa)
+    
     return ga,aa
 
 def set_topic(group_addr: int, app_addr: int | Application) -> Text:
@@ -342,8 +349,7 @@ def read_cbz_labels(cbz_file: BinaryIO, network_name = None) -> Dict[int, Text]:
         net.applications  = [app]
         networks = [net]
 
-
-    applications = [a for a in networks[0].applications if Application.isLighting(a.address)]
+    applications = [a for a in networks[0].applications if a.address in LightingApplication.supported_applications()]
     
     if len(applications) == 0:
         logger.warning('Could not find any lighting application in project file.')

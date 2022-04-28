@@ -326,7 +326,7 @@ class PCIProtocol(CBusProtocol):
         return int2byte(o)
 
     def _send(self,
-              cmd: Union[BasePacket],
+              cmd: BasePacket,
               confirmation: bool = True,
               basic_mode: bool = False):
         """

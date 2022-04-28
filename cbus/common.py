@@ -124,19 +124,6 @@ class Application(IntEnum):
     ENABLE = 0xCB
     MASTER_APPLICATION = STATUS_REQUEST = 0xff
 
-    def isLighting(val):
-        if isinstance(val,Application):
-          val = int(val)
-        if isinstance(val,int):
-          return int(Application.LIGHTING_FIRST)<=val<=int(Application.LIGHTING_LAST)
-        return False
-
-    def isHvacActuator(val):
-        if isinstance(val,Application):
-          val = int(val)
-        if isinstance(val,int):
-          return int(Application.HVACACTUATOR_73)==val or int(Application.HVACACTUATOR_74)==val
-        return False
 
 
 class CAL(IntEnum):
@@ -448,8 +435,3 @@ def check_ga(group_addr: int) -> None:
             'Group Address out of range ({}..{}), got {}'.format(
                 MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr))
 
-
-def check_aa_lighting(app_addr: int | Application) -> None:
-     if not Application.isLighting(app_addr):
-        raise ValueError(
-            'Expected lighting application address, got {}'.format(app_addr))

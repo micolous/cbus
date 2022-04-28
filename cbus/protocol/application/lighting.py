@@ -57,7 +57,7 @@ class LightingSAL(SAL, abc.ABC):
         instead.
         """
         #TODO: modify to avoid redundancy
-        if not Application.isLighting(application_address):
+        if not application_address in _SUPPORTED_APPLICATIONS:
             raise ValueError('Expected light Application address, got {}'.format(application_address))
         check_ga(group_address)
         self.application_address = application_address
