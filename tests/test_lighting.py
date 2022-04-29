@@ -16,8 +16,10 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from email.mime import application
 
 import unittest
+from cbus.common import Application
 
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.application.lighting import (
@@ -127,7 +129,7 @@ class InternalLightingTest(CBusTestCase):
     def test_lighting_encode_decode(self):
         """test of encode then decode"""
 
-        orig = PointToMultipointPacket(sals=LightingOnSAL(27))
+        orig = PointToMultipointPacket(sals=LightingOnSAL(27,Application.LIGHTING))
         orig.source_address = 5
 
         data = orig.encode_packet() + b'\r\n'
@@ -142,7 +144,7 @@ class InternalLightingTest(CBusTestCase):
     def test_lighting_encode_decode_client(self):
         """test of encode then decode, with packets from a client"""
 
-        orig = PointToMultipointPacket(sals=LightingOnSAL(27))
+        orig = PointToMultipointPacket(sals=LightingOnSAL(27,Application.LIGHTING))
 
         data = b'\\' + orig.encode_packet() + b'\r'
 
@@ -155,23 +157,23 @@ class InternalLightingTest(CBusTestCase):
     def test_invalid_ga(self):
         """test argument validation"""
         with self.assertRaises(ValueError):
-            PointToMultipointPacket(sals=LightingOnSAL(999))
+            PointToMultipointPacket(sals=LightingOnSAL(999,Application.LIGHTING))
         with self.assertRaises(ValueError):
-            PointToMultipointPacket(sals=LightingOffSAL(-1))
+            PointToMultipointPacket(sals=LightingOffSAL(-1,Application.LIGHTING))
 
     def test_slow_ramp(self):
         """test very slow ramps"""
         p1 = PointToMultipointPacket(
-            sals=LightingRampSAL(1, 18*60, 255)).encode_packet()
+            sals=LightingRampSAL(1,Application.LIGHTING, 18*60, 255)).encode_packet()
         p2 = PointToMultipointPacket(
-            sals=LightingRampSAL(1, 17*60, 255)).encode_packet()
+            sals=LightingRampSAL(1,Application.LIGHTING, 17*60, 255)).encode_packet()
         self.assertEqual(p1, p2)
 
     def test_brightness_bounds(self):
         with self.assertRaisesRegex(ValueError, r'Ramp level .+ bounds'):
-            LightingRampSAL(1, 10, -1).encode()
+            LightingRampSAL(1,Application.LIGHTING, 10, -1).encode()
         with self.assertRaisesRegex(ValueError, r'Ramp level .+ bounds'):
-            LightingRampSAL(1, 10, 256).encode()
+            LightingRampSAL(1,Application.LIGHTING, 10, 256).encode()
 
 
 class LightingRegressionTest(CBusTestCase):

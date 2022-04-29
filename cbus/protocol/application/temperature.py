@@ -53,7 +53,7 @@ class TemperatureSAL(SAL, abc.ABC):
         return Application.TEMPERATURE
 
     @staticmethod
-    def decode_sals(data: bytes) -> Sequence[TemperatureSAL]:
+    def decode_sals(data: bytes, _ = None) -> Sequence[TemperatureSAL]:
         """
         Decodes a temperature broadcast application packet and returns its
         SAL(s).
@@ -169,7 +169,7 @@ class TemperatureApplication(BaseApplication):
         return {Application.TEMPERATURE}
 
     @staticmethod
-    def decode_sals(data: bytes) -> Sequence[TemperatureSAL]:
+    def decode_sals(data: bytes, _ = None) -> Sequence[TemperatureSAL]:
         """
         Decodes a temperature broadcast application packet and returns it's
         SAL(s).

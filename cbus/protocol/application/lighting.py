@@ -49,23 +49,26 @@ class LightingSAL(SAL, abc.ABC):
     Base type for lighting application SALs.
     """
 
-    def __init__(self, group_address: int):
+    def __init__(self, group_address: int, application_address: Union[Application,int]):
         """
         This should not be called directly by your code!
 
         Use one of the subclasses of cbus.protocol.lighting.LightingSAL
         instead.
         """
+        #TODO: modify to avoid redundancy
+        if not application_address in _SUPPORTED_APPLICATIONS:
+            raise ValueError('Expected light Application address, got {}'.format(application_address))
         check_ga(group_address)
+        self.application_address = application_address
         self.group_address = group_address
 
     @property
     def application(self) -> Union[int, Application]:
-        # TODO: Support other application IDs
-        return Application.LIGHTING
+        return self.application_address 
 
     @staticmethod
-    def decode_sals(data: bytes) -> List[LightingSAL]:
+    def decode_sals(data: bytes, application: int | Application ) -> List[LightingSAL]:
         """
         Decodes a lighting application packet and returns it's SAL(s).
 
@@ -98,7 +101,7 @@ class LightingSAL(SAL, abc.ABC):
                 break
 
             sal, data = _SAL_HANDLERS[command_code].decode(
-                data, command_code, group_address)
+                data, command_code, group_address,application)
 
             if sal:
                 output.append(sal)
@@ -128,7 +131,7 @@ class LightingRampSAL(LightingSAL):
 
     """
 
-    def __init__(self, group_address: int, duration: int, level: int):
+    def __init__(self, group_address: int,application_address: Union[int,Application] , duration: int, level: int ):
         """
         Creates a new SAL Lighting Ramp message.
 
@@ -142,14 +145,14 @@ class LightingRampSAL(LightingSAL):
                       indicating full brightness.
         :type level: int
         """
-        super().__init__(group_address=group_address)
+        super().__init__(group_address,application_address )
 
         self.duration = duration
         self.level = level
 
     @staticmethod
     def decode(data: bytes, command_code: int,
-               group_address: int) -> Tuple[Optional[LightingSAL], bytes]:
+               group_address: int, application_address: int | Application) -> Tuple[Optional[LightingSAL], bytes]:
         """
         Do not call this method directly -- use LightingSAL.decode
         """
@@ -165,7 +168,7 @@ class LightingRampSAL(LightingSAL):
         data = data[1:]
 
         return LightingRampSAL(
-            group_address=group_address, duration=duration, level=level), data
+            group_address=group_address, application_address=application_address,duration=duration, level=level), data
 
     def encode(self) -> bytes:
         if self.level < 0 or self.level > 255:
@@ -192,11 +195,11 @@ class LightingOnSAL(LightingSAL):
 
     @staticmethod
     def decode(data: bytes, command_code: int,
-               group_address: int) -> Tuple[LightingOnSAL, bytes]:
+               group_address: int, application_address: int | Application) -> Tuple[LightingOnSAL, bytes]:
         """
         Do not call this method directly -- use LightingSAL.decode
         """
-        return LightingOnSAL(group_address), data
+        return LightingOnSAL(group_address,application_address), data
 
     def encode(self):
         return super().encode() + bytes([LightCommand.ON, self.group_address])
@@ -214,11 +217,11 @@ class LightingOffSAL(LightingSAL):
 
     @staticmethod
     def decode(data: bytes, command_code: int,
-               group_address: int) -> Tuple[LightingOffSAL, bytes]:
+               group_address: int, application_address: int | Application) -> Tuple[LightingOffSAL, bytes]:
         """
         Do not call this method directly -- use LightingSAL.decode
         """
-        return LightingOffSAL(group_address), data
+        return LightingOffSAL(group_address,application_address), data
 
     def encode(self):
         return super().encode() + bytes([LightCommand.OFF, self.group_address])
@@ -237,11 +240,11 @@ class LightingTerminateRampSAL(LightingSAL):
 
     @staticmethod
     def decode(data: bytes, command_code: int,
-               group_address: int) -> Tuple[LightingTerminateRampSAL, bytes]:
+               group_address: int, application_address: int | Application)  -> Tuple[LightingTerminateRampSAL, bytes]:
         """
         Do not call this method directly -- use LightingSAL.decode
         """
-        return LightingTerminateRampSAL(group_address), data
+        return LightingTerminateRampSAL(group_address,application_address), data
 
     def encode(self):
         return super().encode() + bytes([
@@ -276,8 +279,8 @@ class LightingApplication(BaseApplication):
     """
 
     @staticmethod
-    def decode_sals(data: bytes) -> List[SAL]:
-        return LightingSAL.decode_sals(data)
+    def decode_sals(data: bytes, application: int | Application ) -> List[SAL]:
+        return LightingSAL.decode_sals(data,application)
 
     @staticmethod
     def supported_applications() -> FrozenSet[int]:

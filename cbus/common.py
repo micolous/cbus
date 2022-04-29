@@ -116,9 +116,14 @@ class Application(IntEnum):
     LIGHTING_5d = 0x5d
     LIGHTING_5e = 0x5e
     LIGHTING_LAST = LIGHTING_5f = 0x5f
+    HVACACTUATOR_73 = 0x73
+    HVACACTUATOR_74 = 0x74
+    HVAC = 0xCA
     CLOCK = 0xDF
+    TRIGGER = 0xCA
     ENABLE = 0xCB
     MASTER_APPLICATION = STATUS_REQUEST = 0xff
+
 
 
 class CAL(IntEnum):
@@ -429,3 +434,4 @@ def check_ga(group_addr: int) -> None:
         raise ValueError(
             'Group Address out of range ({}..{}), got {}'.format(
                 MIN_GROUP_ADDR, MAX_GROUP_ADDR, group_addr))
+

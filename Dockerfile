@@ -8,12 +8,13 @@
 # $ docker build -t cmqttd .
 # $ docker run --device /dev/ttyUSB0 -e "SERIAL_PORT=/dev/ttyUSB0" \
 #     -e "MQTT_SERVER=192.2.0.1" -e "TZ=Australia/Adelaide" -it cmqttd
-FROM alpine:3.11 as base
+FROM alpine:edge as base
+# python 3.10 required, at date this file is created only available in alpine:edge
 
 # Install most Python deps here, because that way we don't need to include build tools in the
 # final image.
-RUN apk add --no-cache python3 py3-cffi py3-paho-mqtt py3-six tzdata && \
-    pip3 install 'pyserial==3.4' 'pyserial_asyncio==0.4'
+RUN apk add --no-cache python3 py-pip py3-cffi py3-paho-mqtt py3-six tzdata && \
+    pip3 install 'pyserial==3.5' 'pyserial_asyncio==0.6'
 
 # Runs tests and builds a distribution tarball
 FROM base as builder
@@ -27,8 +28,10 @@ RUN pip3 install 'parameterized' && \
 # cmqttd runner image
 FROM base as cmqttd
 COPY COPYING COPYING.LESSER Dockerfile README.md entrypoint-cmqttd.sh /
+RUN sed -i 's/\r$//' entrypoint-cmqttd.sh 
 COPY --from=builder /cbus/dist/cbus-0.2.generic.tar.gz /
 RUN tar zxf /cbus-0.2.generic.tar.gz && rm /cbus-0.2.generic.tar.gz
+COPY cmqttd_config/ /etc/cmqttd/ 
 
 # Runs cmqttd itself
 CMD /entrypoint-cmqttd.sh

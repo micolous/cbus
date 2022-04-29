@@ -107,7 +107,7 @@ class PointToMultipointPacket(BasePacket, Sequence[SAL]):
         # find an application handler
         handler = get_application(application)
         data = data[2:]
-        sals = handler.decode_sals(data)
+        sals = handler.decode_sals(data,application)
 
         return cls(
             checksum=checksum, priority_class=priority_class,

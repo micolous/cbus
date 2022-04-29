@@ -64,14 +64,14 @@ class InternalPointToMultipointTest(CBusTestCase):
         with self.assertRaisesRegex(
                 ValueError, r'SAL .+ of application ff, .+ has application 38'):
             PointToMultipointPacket(sals=[
-                LightingOffSAL(1),
+                LightingOffSAL(1,Application.LIGHTING),
                 StatusRequestSAL(level_request=True, group_address=1,
                                  child_application=Application.LIGHTING),
             ])
 
     def test_remove_sals(self):
         # create a packet
-        p = PointToMultipointPacket(sals=LightingOffSAL(1))
+        p = PointToMultipointPacket(sals=LightingOffSAL(1,Application.LIGHTING))
         self.assertEqual(1, len(p))
 
         p.clear_sal()
@@ -84,7 +84,7 @@ class InternalPointToMultipointTest(CBusTestCase):
 
         # Adding another lighting SAL should fail
         with self.assertRaisesRegex(ValueError, r'has application ff$'):
-            p.append_sal(LightingOffSAL(1))
+            p.append_sal(LightingOffSAL(1,Application.LIGHTING))
         self.assertEqual(1, len(p))
 
     def test_invalid_sal(self):

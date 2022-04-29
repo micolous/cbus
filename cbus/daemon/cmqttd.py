@@ -15,13 +15,21 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from asyncio import get_event_loop, run
+from asyncio import get_event_loop, run, sleep
 from argparse import ArgumentParser, FileType
 import json
 import logging
+from marshal import load
 from typing import Any, BinaryIO, Dict, Optional, Text, TextIO
 
 import paho.mqtt.client as mqtt
+import sys
+
+from cbus.protocol import application
+
+if sys.platform == 'win32':
+    from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
+    set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 try:
     from serial_asyncio import create_serial_connection
@@ -33,6 +41,9 @@ from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga, Application
 from cbus.paho_asyncio import AsyncioHelper
 from cbus.protocol.pciprotocol import PCIProtocol
 from cbus.toolkit.cbz import CBZ
+from cbus.toolkit.periodic import Periodic
+from cbus.protocol.application import LightingApplication
+from cbus.protocol.cal.report import LevelStatusReport,BinaryStatusReport
 
 
 logger = logging.getLogger(__name__)
@@ -43,45 +54,63 @@ _TOPIC_SET_SUFFIX = '/set'
 _TOPIC_CONF_SUFFIX = '/config'
 _TOPIC_STATE_SUFFIX = '/state'
 _META_TOPIC = 'homeassistant/binary_sensor/cbus_cmqttd'
+_APPLICATION_GROUP_SEPARATOR = "_"
 
+def check_aa_lighting(app):
+    if not app in LightingApplication.supported_applications():
+        raise ValueError(
+            'Application ${aa} is not a valid lighting application'.format(
+                app))
 
 def ga_range():
     return range(MIN_GROUP_ADDR, MAX_GROUP_ADDR + 1)
 
+def ga_string(group_addr: int, app_addr: int | Application, zeros=True) -> Text:
+    #note: the logic is necessary to ensure backward compatibility with previous version
+        if(app_addr==Application.LIGHTING):
+            return   f'{group_addr:03d}' if zeros else f'{group_addr}'
+        else:
+            return f'{app_addr:03d}{_APPLICATION_GROUP_SEPARATOR}{group_addr:03d}'
 
-def get_topic_group_address(topic: Text) -> int:
+def default_light_name(group_addr,app_addr):
+     return f'C-Bus Light {ga_string(group_addr,app_addr,True)}'
+
+def get_topic_group_address(topic: Text) -> tuple[int,int | Application]:
     """Gets the group address for the given topic."""
     if not topic.startswith(_LIGHT_TOPIC_PREFIX):
         raise ValueError(
             f'Invalid topic {topic}, must start with {_LIGHT_TOPIC_PREFIX}')
-    ga = int(topic[len(_LIGHT_TOPIC_PREFIX):].split('/', maxsplit=1)[0])
+    a1,*a2 = topic[len(_LIGHT_TOPIC_PREFIX):].split('/', maxsplit=1)[0].split(_APPLICATION_GROUP_SEPARATOR)
+    aa,ga = (a1,a2[0]) if a2 else (Application.LIGHTING,a1)
+    aa,ga = (int(aa),int(ga))
     check_ga(ga)
-    return ga
+    
+    return ga,aa
 
-
-def set_topic(group_addr: int) -> Text:
+def set_topic(group_addr: int, app_addr: int | Application) -> Text:
     """Gets the Set topic for a group address."""
-    return _LIGHT_TOPIC_PREFIX + str(group_addr) + _TOPIC_SET_SUFFIX
+    return (_LIGHT_TOPIC_PREFIX + ga_string(group_addr,app_addr,False) + _TOPIC_SET_SUFFIX )
 
 
-def state_topic(group_addr: int) -> Text:
+def state_topic(group_addr: int, app_addr: int | Application) -> Text:
     """Gets the State topic for a group address."""
-    return _LIGHT_TOPIC_PREFIX + str(group_addr) + _TOPIC_STATE_SUFFIX
+    return _LIGHT_TOPIC_PREFIX + ga_string(group_addr,app_addr,False) + _TOPIC_STATE_SUFFIX
 
 
-def conf_topic(group_addr: int) -> Text:
+def conf_topic(group_addr: int, app_addr: int | Application) -> Text:
     """Gets the Config topic for a group address."""
-    return _LIGHT_TOPIC_PREFIX + str(group_addr) + _TOPIC_CONF_SUFFIX
+    return _LIGHT_TOPIC_PREFIX + ga_string(group_addr,app_addr,False) + _TOPIC_CONF_SUFFIX
 
 
-def bin_sensor_state_topic(group_addr: int) -> Text:
+def bin_sensor_state_topic(group_addr: int, app_addr: int | Application) -> Text:
     """Gets the Binary Sensor State topic for a group address."""
-    return _BINSENSOR_TOPIC_PREFIX + str(group_addr) + _TOPIC_STATE_SUFFIX
+    return _BINSENSOR_TOPIC_PREFIX + ga_string(group_addr,app_addr,False) + _TOPIC_STATE_SUFFIX
 
 
-def bin_sensor_conf_topic(group_addr: int) -> Text:
+def bin_sensor_conf_topic(group_addr: int, app_addr: int | Application) -> Text:
     """Gets the Binary Sensor Config topic for a group address."""
-    return _BINSENSOR_TOPIC_PREFIX + str(group_addr) + _TOPIC_CONF_SUFFIX
+    return _BINSENSOR_TOPIC_PREFIX + ga_string(group_addr,app_addr,False) + _TOPIC_CONF_SUFFIX
+
 
 
 class CBusHandler(PCIProtocol):
@@ -90,27 +119,41 @@ class CBusHandler(PCIProtocol):
     """
     mqtt_api = None
 
-    def __init__(self, labels: Optional[Dict[int, Text]], *args, **kwargs):
+    def __init__(self, labels: Optional[Dict[int, Dict]], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.labels = (
-            labels if labels is not None else {})  # type: Dict[int, Text]
+            labels if labels is not None else {56:{}})  # type: Dict[int, Text]
 
 
-    def on_lighting_group_ramp(self, source_addr, group_addr, duration, level):
+    def on_lighting_group_ramp(self, source_addr, group_addr, app_addr,duration, level):
         if not self.mqtt_api:
             return
         self.mqtt_api.lighting_group_ramp(
-            source_addr, group_addr, duration, level)
+            source_addr, group_addr, app_addr,duration, level)
 
-    def on_lighting_group_on(self, source_addr, group_addr):
+    def on_lighting_group_on(self, source_addr, group_addr,app_addr):
         if not self.mqtt_api:
             return
-        self.mqtt_api.lighting_group_on(source_addr, group_addr)
+        self.mqtt_api.lighting_group_on(source_addr, group_addr,app_addr)
 
-    def on_lighting_group_off(self, source_addr, group_addr):
+    def on_lighting_group_off(self, source_addr, group_addr,app_addr):
         if not self.mqtt_api:
             return
-        self.mqtt_api.lighting_group_off(source_addr, group_addr)
+        self.mqtt_api.lighting_group_off(source_addr, group_addr,app_addr)
+    
+    def on_level_report(self, app_addr, start, report: LevelStatusReport):
+        groups = self.mqtt_api.groupDB.setdefault(app_addr,{})
+        for val in  report:
+            if groups[start]:
+                if val==None:
+                    pass
+                elif val==0:
+                    self.on_lighting_group_off(0,start,app_addr)
+                elif val == 255:
+                    self.on_lighting_group_on(0,start,app_addr)
+                else:
+                    self.on_lighting_group_ramp(0,start,app_addr,0,val)
+            start+=1
 
     # TODO: on_lighting_group_terminate_ramp
 
@@ -123,8 +166,12 @@ class MqttClient(mqtt.Client):
     def on_connect(self, client, userdata: CBusHandler, flags, rc):
         logger.info('Connected to MQTT broker')
         userdata.mqtt_api = self
-        self.subscribe([(set_topic(ga), 2) for ga in ga_range()])
+        self.groupDB = {}
         self.publish_all_lights(userdata.labels)
+        for app_addr in self.groupDB.keys():
+            for block in range(0,256,32):
+                pass
+                Periodic.throttler.enqueue(lambda b= block,a= app_addr:userdata.request_status(b,a))          
 
     def on_message(self, client, userdata: CBusHandler, msg: mqtt.MQTTMessage):
         """Handle a message from an MQTT subscription."""
@@ -133,7 +180,7 @@ class MqttClient(mqtt.Client):
             return
 
         try:
-            ga = get_topic_group_address(msg.topic)
+            group_addr, app_addr = get_topic_group_address(msg.topic)
         except ValueError:
             # Invalid group address
             logging.error(f'Invalid group address in topic {msg.topic}')
@@ -159,23 +206,69 @@ class MqttClient(mqtt.Client):
         if light_on:
             if brightness == 255 and transition_time == 0:
                 # lighting on
-                userdata.lighting_group_on(ga)
-                self.lighting_group_on(None, ga)
+                userdata.lighting_group_on(group_addr,app_addr)
+                self.lighting_group_on(None, group_addr,app_addr)
             else:
                 # ramp
-                userdata.lighting_group_ramp(ga, transition_time, brightness)
-                self.lighting_group_ramp(None, ga, transition_time, brightness)
+                userdata.lighting_group_ramp(group_addr, app_addr, transition_time, brightness)
+                self.lighting_group_ramp(None, group_addr, app_addr, transition_time, brightness)
         else:
             # lighting off
-            userdata.lighting_group_off(ga)
-            self.lighting_group_off(None, ga)
+            userdata.lighting_group_off(group_addr,app_addr)
+            self.lighting_group_off(None, group_addr,app_addr)
 
     def publish(self, topic: Text, payload: Dict[Text, Any]):
         """Publishes a payload as JSON."""
         payload = json.dumps(payload)
         return super().publish(topic, payload, 1, True)
 
-    def publish_all_lights(self, labels: Dict[int, Text]):
+    def publish_light(self, group_addr : int, app_addr :int | Application, app_labels:dict  = None):
+                default_name = default_light_name(group_addr,app_addr)
+                UID = f'cbus_light_{ga_string(group_addr,app_addr,False)}'
+                name = default_name
+                if app_labels:
+                    _,labels =  app_labels.get(app_addr,(None,{}))
+                    if labels:
+                        name = labels.get(group_addr,name)
+                UID = f'cbus_light_{ga_string(group_addr,app_addr,False)}'
+                self.subscribe(set_topic(group_addr,app_addr), 2 )
+                self.publish(conf_topic(group_addr,app_addr), {
+                    'name': name,
+                    'unique_id': UID,
+                    'cmd_t': set_topic(group_addr,app_addr),
+                    'stat_t': state_topic(group_addr,app_addr),
+                    'schema': 'json',
+                    'brightness': True,
+                    'device': {
+                        'identifiers': [UID],
+                        'connections': [['cbus_group_address', str(group_addr)],['cbus_application_address', str(app_addr)]],
+                        'sw_version': 'cmqttd https://github.com/micolous/cbus',
+                        'name': default_name,
+                        'manufacturer': 'Clipsal',
+                        'model': 'C-Bus Lighting Application',
+                        'via_device': 'cmqttd',
+                    },
+                })
+                Sensor_UID = f'cbus_bin_sensor_{ga_string(group_addr,app_addr,False)}'
+                self.publish(bin_sensor_conf_topic(group_addr,app_addr), {
+                    'name': f'{name} (as binary sensor)',
+                    'unique_id': Sensor_UID, 
+                    'stat_t': bin_sensor_state_topic(group_addr,app_addr),
+                    'device': {
+                        'identifiers': [Sensor_UID],
+                        'connections': [['cbus_group_address', str(group_addr)],['cbus_application_address', str(app_addr)]],
+                        'sw_version': 'cmqttd https://github.com/micolous/cbus',
+                        'name': default_name,
+                        'manufacturer': 'Clipsal',
+                        'model': 'C-Bus Lighting Application',
+                        'via_device': 'cmqttd',
+                    },
+                })
+                self.groupDB.setdefault(app_addr,{})[group_addr] = True
+                
+
+
+    def publish_all_lights(self, app_labels):
         """Publishes a configuration topic for all lights."""
         # Meta-device which holds all the C-Bus group addresses
         self.publish(_META_TOPIC + _TOPIC_CONF_SUFFIX, {
@@ -192,76 +285,53 @@ class MqttClient(mqtt.Client):
             },
         })
 
-        for ga in ga_range():
-            name = labels.get(ga,  f'C-Bus Light {ga:03d}')
-            self.publish(conf_topic(ga), {
-                'name': name,
-                'unique_id': f'cbus_light_{ga}',
-                'cmd_t': set_topic(ga),
-                'stat_t': state_topic(ga),
-                'schema': 'json',
-                'brightness': True,
-                'device': {
-                    'identifiers': [f'cbus_light_{ga}'],
-                    'connections': [['cbus_group_address', str(ga)]],
-                    'sw_version': 'cmqttd https://github.com/micolous/cbus',
-                    'name': f'C-Bus Light {ga:03d}',
-                    'manufacturer': 'Clipsal',
-                    'model': 'C-Bus Lighting Application',
-                    'via_device': 'cmqttd',
-                },
-            })
+        for app_addr,(_,labels) in app_labels.items():
+            for group_addr in labels.keys():
+                self.publish_light(group_addr,app_addr,app_labels)
+                
+    def check_published(self,group_addr: int, app_addr: int | Application):
+        if not self.groupDB.setdefault(app_addr,{}).get(group_addr,False):
+            self.publish_light(group_addr,app_addr)
 
-            self.publish(bin_sensor_conf_topic(ga), {
-                'name': f'{name} (as binary sensor)',
-                'unique_id': f'cbus_bin_sensor_{ga}',
-                'stat_t': bin_sensor_state_topic(ga),
-                'device': {
-                    'identifiers': [f'cbus_bin_sensor_{ga}'],
-                    'connections': [['cbus_group_address', str(ga)]],
-                    'sw_version': 'cmqttd https://github.com/micolous/cbus',
-                    'name': f'C-Bus Light {ga:03d}',
-                    'manufacturer': 'Clipsal',
-                    'model': 'C-Bus Lighting Application',
-                    'via_device': 'cmqttd',
-                },
-            })
-
-    def publish_binary_sensor(self, group_addr: int, state: bool):
+    
+    def publish_binary_sensor(self, group_addr: int, app_addr: int | Application, state: Optional[bool]):
         payload = 'ON' if state else 'OFF'
         return super().publish(
-            bin_sensor_state_topic(group_addr), payload, 1, True)
+            bin_sensor_state_topic(group_addr,app_addr), payload, 1, True)
 
-    def lighting_group_on(self, source_addr: Optional[int], group_addr: int):
+    def lighting_group_on(self, source_addr: Optional[int], group_addr: int, app_addr: int | Application):
         """Relays a lighting-on event from CBus to MQTT."""
-        self.publish(state_topic(group_addr), {
+        self.check_published(group_addr,app_addr)
+        self.publish(state_topic(group_addr,app_addr), {
             'state': 'ON',
             'brightness': 255,
             'transition': 0,
             'cbus_source_addr': source_addr,
         })
-        self.publish_binary_sensor(group_addr, True)
+        self.publish_binary_sensor(group_addr,app_addr, True)
 
-    def lighting_group_off(self, source_addr: Optional[int], group_addr: int):
+    def lighting_group_off(self, source_addr: Optional[int], group_addr: int, app_addr: int | Application):
         """Relays a lighting-off event from CBus to MQTT."""
-        self.publish(state_topic(group_addr), {
+        self.check_published(group_addr,app_addr)
+        self.publish(state_topic(group_addr,app_addr), {
             'state': 'OFF',
             'brightness': 0,
             'transition': 0,
             'cbus_source_addr': source_addr,
         })
-        self.publish_binary_sensor(group_addr, False)
+        self.publish_binary_sensor(group_addr,app_addr, False)
 
-    def lighting_group_ramp(self, source_addr: Optional[int], group_addr: int,
+    def lighting_group_ramp(self, source_addr: Optional[int], group_addr: int, app_addr:int|Application,
                             duration: int, level: int):
         """Relays a lighting-ramp event from CBus to MQTT."""
-        self.publish(state_topic(group_addr), {
+        self.check_published(group_addr,app_addr)
+        self.publish(state_topic(group_addr,app_addr), {
             'state': 'ON',
             'brightness': level,
             'transition': duration,
             'cbus_source_addr': source_addr,
         })
-        self.publish_binary_sensor(group_addr, level > 0)
+        self.publish_binary_sensor(group_addr, app_addr, level > 0 if isinstance(level,int) else None)
 
 
 def read_auth(client: mqtt.Client, auth_file: TextIO):
@@ -271,43 +341,68 @@ def read_auth(client: mqtt.Client, auth_file: TextIO):
     client.username_pw_set(username, password)
 
 
-def read_cbz_labels(cbz_file: BinaryIO) -> Dict[int, Text]:
+def read_cbz_labels(cbz_file: BinaryIO, network_name = None) -> Dict[int, Text]:
     """Reads group address names from a given Toolkit CBZ file."""
-    labels = {}  # type: Dict[int, Text]
+    class obj():
+        pass
+
+    labels = {56:{}}  # type: Dict[int,Dict[int, Text]]
+
     cbz = CBZ(cbz_file)
 
-    # TODO: support multiple networks/applications
-    # Look for 1 direct network
     networks = [n for n in cbz.installation.project.network
                 if n.interface.interface_type != 'bridge']
+                
+    if network_name:
+        networks = [n for n in networks if n.tag_name == network_name]
+
     if len(networks) != 1:
-        logger.warning('Expected exactly 1 non-bridge network in project file, '
-                       'got %d instead! Labels will be unavailable.',
-                       len(networks))
-        return labels
+        if network_name:
+            logger.warning('Could not find a non-bridge network with name "%s" in project file.',network_name)
+        else:
+            logger.warning('Expected one non-bridge network in project file, found %d instead',len(networks))
+        app = obj()
+        app.address = 56
+        app.tag_name = "Lighting"
+        app.groups = []    
+        net = obj()
+        net.applications  = [app]
+        networks = [net]
 
-    # Look for
-    applications = [a for a in networks[0].applications
-                    if a.address == Application.LIGHTING]
-    if len(applications) != 1:
-        logger.warning('Could not find lighting application %x in project '
-                       'file. Labels will be unavailable.',
-                       Application.LIGHTING)
-        return labels
+    applications = [a for a in networks[0].applications if a.address in LightingApplication.supported_applications()]
+    
+    if len(applications) == 0:
+        logger.warning('Could not find any lighting application in project file.')
+        app = obj()
+        app.address = 56
+        app.tag_name = "Lighting"
+        app.groups = []   
+        applications =  [app]
 
-    for group in applications[0].groups:
-        name = group.tag_name.strip()
-
-        # Ignore default names
-        if not name or name in ('<Unused>', f'Group {group.address}'):
-            continue
-
-        labels[group.address] = name
-
+    for a in applications:
+        l = {}
+        if  a.groups:
+            for group in a.groups:
+                name = group.tag_name.strip()
+                if not name or name in ('<Unused>', f'Group {group.address}'):
+                    name = default_light_name(group.address,a.address)
+                l[group.address] = name
+        else:
+            logger.warning('No label available in project file for application %d.',a.address)
+            logger.warning('Will use default labels.')
+            for ga in ga_range():
+                l[ga] = default_light_name(ga,a.address)
+        labels[a.address]=(a.tag_name,l)
     return labels
+
+# Wait time between commands emitted by throtller
+_PERIOD = 0.97
 
 
 async def _main():
+    
+    #throttler is queue used used to stagger commmands
+    Periodic.throttler = Periodic(_PERIOD)
     parser = ArgumentParser()
 
     group = parser.add_argument_group('Logging options')
@@ -416,7 +511,16 @@ async def _main():
              'generated names like "C-Bus Light 001" will be used instead.'
     )
 
+    group.add_argument(
+        '-N', '--cbus-network',
+        nargs='*',
+        help='Name of the C-Bus network to be used in case a project file is provided'
+             'and the project contains multiple networks.'
+    )
+
     option = parser.parse_args()
+
+    option.cbus_network = " ".join(option.cbus_network) 
 
     if bool(option.broker_client_cert) != bool(option.broker_client_key):
         return parser.error(
@@ -428,7 +532,7 @@ async def _main():
 
     loop = get_event_loop()
     connection_lost_future = loop.create_future()
-    labels = (read_cbz_labels(option.project_file)
+    labels = (read_cbz_labels(option.project_file,option.cbus_network)
               if option.project_file else None)
 
     def factory():

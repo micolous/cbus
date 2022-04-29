@@ -50,7 +50,7 @@ class ClockSAL(SAL, abc.ABC):
         return Application.CLOCK
 
     @staticmethod
-    def decode_sals(data: bytes) -> Sequence[ClockSAL]:
+    def decode_sals(data: bytes,_=None) -> Sequence[ClockSAL]:
         """
         Decodes a clock broadcast application packet and returns it's SAL(s).
 
@@ -251,7 +251,7 @@ class ClockApplication(BaseApplication):
         return {Application.CLOCK}
 
     @staticmethod
-    def decode_sals(data: bytes) -> Sequence[SAL]:
+    def decode_sals(data: bytes,_=None) -> Sequence[SAL]:
         """
         Decodes a clock and timekeeping application packet and returns its
         SAL(s).

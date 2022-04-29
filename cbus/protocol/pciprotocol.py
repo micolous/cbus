@@ -27,6 +27,8 @@ from typing import Iterable, Optional, Text, Union
 
 from six import int2byte
 
+from cbus.protocol.cal.report import BinaryStatusReport, LevelStatusReport
+
 try:
     from serial_asyncio import create_serial_connection
 except ImportError:
@@ -52,6 +54,7 @@ from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.pp_packet import PointToPointPacket
 from cbus.protocol.reset_packet import ResetPacket
+from cbus.protocol.cal.extended import ExtendedCAL
 
 logger = logging.getLogger(__name__)
 
@@ -114,17 +117,17 @@ class PCIProtocol(CBusProtocol):
                     # lighting application
                     if isinstance(s, LightingRampSAL):
                         self.on_lighting_group_ramp(p.source_address,
-                                                    s.group_address,
+                                                    s.group_address,s.application_address,
                                                     s.duration, s.level)
                     elif isinstance(s, LightingOnSAL):
                         self.on_lighting_group_on(p.source_address,
-                                                  s.group_address)
+                                                  s.group_address,s.application_address)
                     elif isinstance(s, LightingOffSAL):
                         self.on_lighting_group_off(p.source_address,
-                                                   s.group_address)
+                                                   s.group_address,s.application_address)
                     elif isinstance(s, LightingTerminateRampSAL):
                         self.on_lighting_group_terminate_ramp(
-                            p.source_address, s.group_address)
+                            p.source_address, s.group_address,s.application_address)
                     else:
                         logger.debug(f'hcp: unhandled lighting SAL type: {s!r}')
                 elif isinstance(s, ClockSAL):
@@ -134,6 +137,18 @@ class PCIProtocol(CBusProtocol):
                         self.on_clock_update(p.source_address, s.val)
                 else:
                     logger.debug(f'hcp: unhandled SAL type: {s!r}')
+        elif isinstance(p,PointToPointPacket):
+            for s in p:
+                if isinstance(s,ExtendedCAL):
+                    if isinstance(s.report,BinaryStatusReport):
+                        pass
+                    elif isinstance(s.report,LevelStatusReport):
+                        self.on_level_report(s.child_application, s.block_start, s.report)
+                    else:
+                        pass
+                else:
+                    pass
+
         else:
             logger.debug(f'hcp: unhandled other packet: {p!r}')
 
@@ -326,7 +341,7 @@ class PCIProtocol(CBusProtocol):
         return int2byte(o)
 
     def _send(self,
-              cmd: Union[BasePacket],
+              cmd: BasePacket,
               confirmation: bool = True,
               basic_mode: bool = False):
         """
@@ -384,10 +399,17 @@ class PCIProtocol(CBusProtocol):
             self._send(ResetPacket())
 
         # serial user interface guide sect 10.2
-        # Set application address 1 to 38 (lighting)
-        # self._send('A3210038', encode=False, checksum=False)
+        # Set application address 1 to ALL applications
+        # self._send('A32100FF', encode=False, checksum=False)
         self._send(DeviceManagementPacket(
-            checksum=False, parameter=0x21, value=0x38),
+            checksum=False, parameter=0x21, value=0xFF),
+            basic_mode=True)
+        
+        # serial user interface guide sect 10.2
+        # Set application address 2 to USED applications
+        # self._send('A32200FF', encode=False, checksum=False)
+        self._send(DeviceManagementPacket(
+            checksum=False, parameter=0x22, value=0xFF),
             basic_mode=True)
 
         # Interface options #3
@@ -409,7 +431,7 @@ class PCIProtocol(CBusProtocol):
         # 6: IDMON
         # self._send('A3300059', encode=False, checksum=False)
         self._send(DeviceManagementPacket(
-            checksum=False, parameter=0x30, value=0x59),
+            checksum=False, parameter=0x30, value=0x79),
             basic_mode=True)
 
     def identify(self, unit_address, attribute):
@@ -430,7 +452,7 @@ class PCIProtocol(CBusProtocol):
             unit_address=unit_address, cals=[IdentifyCAL(attribute)])
         return self._send(p)
 
-    def lighting_group_on(self, group_addr: Union[int, Iterable[int]]):
+    def lighting_group_on(self, group_addr: Union[int, Iterable[int]],application_addr: Union[int,Application] ):
         """
         Turns on the lights for the given group_id.
 
@@ -453,10 +475,17 @@ class PCIProtocol(CBusProtocol):
                 f'group_addr iterable length is > 9 ({group_addr_count})')
 
         p = PointToMultipointPacket(
-            sals=[LightingOnSAL(ga) for ga in group_addr])
+            sals=[LightingOnSAL(ga,application_addr) for ga in group_addr])
         return self._send(p)
 
-    def lighting_group_off(self, group_addr: Union[int, Iterable[int]]):
+    def request_status(self,group_addr: Union[int, Iterable[int]],application_addr: Union[int,Application] ):
+        p = PointToMultipointPacket(sals=[
+                StatusRequestSAL(level_request=True, group_address=group_addr,child_application=application_addr)
+            ])
+        return self._send(p)
+    
+    
+    def lighting_group_off(self, group_addr: Union[int, Iterable[int]],application_addr: Union[int,Application] ):
         """
         Turns off the lights for the given group_id.
 
@@ -480,11 +509,11 @@ class PCIProtocol(CBusProtocol):
                 f'group_addr iterable length is > 9 ({group_addr_count})')
 
         p = PointToMultipointPacket(
-            sals=[LightingOffSAL(ga) for ga in group_addr])
+            sals=[LightingOffSAL(ga,application_addr) for ga in group_addr])
         return self._send(p)
 
     def lighting_group_ramp(
-            self, group_addr: int, duration: int, level: int = 255):
+            self, group_addr: int, application_addr: Union[int,Application], duration: int, level: int = 255 ):
         """
         Ramps (fades) a group address to a specified lighting level.
 
@@ -506,11 +535,11 @@ class PCIProtocol(CBusProtocol):
 
         """
         p = PointToMultipointPacket(
-            sals=LightingRampSAL(group_addr, duration, level))
+            sals=LightingRampSAL(group_addr, application_addr, duration, level))
         return self._send(p)
 
     def lighting_group_terminate_ramp(
-            self, group_addr: Union[int, Iterable[int]]):
+            self, group_addr: Union[int, Iterable[int]], application_addr: Union[int,Application]):
         """
         Stops ramping a group address at the current point.
 
@@ -533,7 +562,7 @@ class PCIProtocol(CBusProtocol):
                 f'group_addr iterable length is > 9 ({group_addr_count})')
 
         p = PointToMultipointPacket(
-            sals=[LightingTerminateRampSAL(ga) for ga in group_addr])
+            sals=[LightingTerminateRampSAL(ga,application_addr) for ga in group_addr])
         return self._send(p)
 
     def clock_datetime(self, when: Optional[datetime] = None):

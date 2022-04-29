@@ -43,7 +43,7 @@ class EnableSAL(SAL):
         return Application.ENABLE
 
     @staticmethod
-    def decode_sals(data: bytes) -> List[EnableSAL]:
+    def decode_sals(data: bytes,_=None) -> List[EnableSAL]:
         """
         Decodes a enable control application packet and returns it's SAL(s).
 
@@ -150,7 +150,7 @@ class EnableApplication(BaseApplication):
         return {Application.ENABLE}
 
     @classmethod
-    def decode_sals(cls, data: bytes) -> List[EnableSAL]:
+    def decode_sals(cls, data: bytes, _ = None) -> List[EnableSAL]:
         """
         Decodes a enable broadcast application packet and returns its SAL(s).
         """
