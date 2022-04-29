@@ -15,10 +15,11 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from asyncio import get_event_loop, run
+from asyncio import get_event_loop, run, sleep
 from argparse import ArgumentParser, FileType
 import json
 import logging
+from marshal import load
 from typing import Any, BinaryIO, Dict, Optional, Text, TextIO
 
 import paho.mqtt.client as mqtt
@@ -40,7 +41,9 @@ from cbus.common import MIN_GROUP_ADDR, MAX_GROUP_ADDR, check_ga, Application
 from cbus.paho_asyncio import AsyncioHelper
 from cbus.protocol.pciprotocol import PCIProtocol
 from cbus.toolkit.cbz import CBZ
+from cbus.toolkit.periodic import Periodic
 from cbus.protocol.application import LightingApplication
+from cbus.protocol.cal.report import LevelStatusReport,BinaryStatusReport
 
 
 logger = logging.getLogger(__name__)
@@ -53,11 +56,11 @@ _TOPIC_STATE_SUFFIX = '/state'
 _META_TOPIC = 'homeassistant/binary_sensor/cbus_cmqttd'
 _APPLICATION_GROUP_SEPARATOR = "_"
 
-def check_aa_lighting(aa):
-    if not aa in LightingApplication.supported_applications():
+def check_aa_lighting(app):
+    if not app in LightingApplication.supported_applications():
         raise ValueError(
             'Application ${aa} is not a valid lighting application'.format(
-                aa))
+                app))
 
 def ga_range():
     return range(MIN_GROUP_ADDR, MAX_GROUP_ADDR + 1)
@@ -137,6 +140,20 @@ class CBusHandler(PCIProtocol):
         if not self.mqtt_api:
             return
         self.mqtt_api.lighting_group_off(source_addr, group_addr,app_addr)
+    
+    def on_level_report(self, app_addr, start, report: LevelStatusReport):
+        groups = self.mqtt_api.groupDB.setdefault(app_addr,{})
+        for val in  report:
+            if groups[start]:
+                if val==None:
+                    pass
+                elif val==0:
+                    self.on_lighting_group_off(0,start,app_addr)
+                elif val == 255:
+                    self.on_lighting_group_on(0,start,app_addr)
+                else:
+                    self.on_lighting_group_ramp(0,start,app_addr,0,val)
+            start+=1
 
     # TODO: on_lighting_group_terminate_ramp
 
@@ -151,7 +168,10 @@ class MqttClient(mqtt.Client):
         userdata.mqtt_api = self
         self.groupDB = {}
         self.publish_all_lights(userdata.labels)
-
+        for app_addr in self.groupDB.keys():
+            for block in range(0,256,32):
+                pass
+                Periodic.throttler.enqueue(lambda b= block,a= app_addr:userdata.request_status(b,a))          
 
     def on_message(self, client, userdata: CBusHandler, msg: mqtt.MQTTMessage):
         """Handle a message from an MQTT subscription."""
@@ -160,7 +180,7 @@ class MqttClient(mqtt.Client):
             return
 
         try:
-            ga, aa = get_topic_group_address(msg.topic)
+            group_addr, app_addr = get_topic_group_address(msg.topic)
         except ValueError:
             # Invalid group address
             logging.error(f'Invalid group address in topic {msg.topic}')
@@ -186,16 +206,16 @@ class MqttClient(mqtt.Client):
         if light_on:
             if brightness == 255 and transition_time == 0:
                 # lighting on
-                userdata.lighting_group_on(ga,aa)
-                self.lighting_group_on(None, ga,aa)
+                userdata.lighting_group_on(group_addr,app_addr)
+                self.lighting_group_on(None, group_addr,app_addr)
             else:
                 # ramp
-                userdata.lighting_group_ramp(ga, aa, transition_time, brightness)
-                self.lighting_group_ramp(None, ga, aa, transition_time, brightness)
+                userdata.lighting_group_ramp(group_addr, app_addr, transition_time, brightness)
+                self.lighting_group_ramp(None, group_addr, app_addr, transition_time, brightness)
         else:
             # lighting off
-            userdata.lighting_group_off(ga,aa)
-            self.lighting_group_off(None, ga,aa)
+            userdata.lighting_group_off(group_addr,app_addr)
+            self.lighting_group_off(None, group_addr,app_addr)
 
     def publish(self, topic: Text, payload: Dict[Text, Any]):
         """Publishes a payload as JSON."""
@@ -265,17 +285,17 @@ class MqttClient(mqtt.Client):
             },
         })
 
-        for aa,(_,labels) in app_labels.items():
-            for ga in labels.keys():
-                self.publish_light(ga,aa,app_labels)
+        for app_addr,(_,labels) in app_labels.items():
+            for group_addr in labels.keys():
+                self.publish_light(group_addr,app_addr,app_labels)
                 
     def check_published(self,group_addr: int, app_addr: int | Application):
         if not self.groupDB.setdefault(app_addr,{}).get(group_addr,False):
             self.publish_light(group_addr,app_addr)
 
     
-    def publish_binary_sensor(self, group_addr: int, app_addr: int | Application, state: bool):
-        payload = 'ON' if state else 'OFF'
+    def publish_binary_sensor(self, group_addr: int, app_addr: int | Application, state: Optional[bool]):
+        payload = "UNK" if state == None else ('ON' if state else 'OFF')
         return super().publish(
             bin_sensor_state_topic(group_addr,app_addr), payload, 1, True)
 
@@ -311,7 +331,7 @@ class MqttClient(mqtt.Client):
             'transition': duration,
             'cbus_source_addr': source_addr,
         })
-        self.publish_binary_sensor(group_addr, app_addr, level > 0)
+        self.publish_binary_sensor(group_addr, app_addr, level > 0 if isinstance(level,int) else None)
 
 
 def read_auth(client: mqtt.Client, auth_file: TextIO):
@@ -375,8 +395,14 @@ def read_cbz_labels(cbz_file: BinaryIO, network_name = None) -> Dict[int, Text]:
         labels[a.address]=(a.tag_name,l)
     return labels
 
+# Wait time between commands emitted by throtller
+_PERIOD = 0.97
+
 
 async def _main():
+    
+    #throttler is queue used used to stagger commmands
+    Periodic.throttler = Periodic(_PERIOD)
     parser = ArgumentParser()
 
     group = parser.add_argument_group('Logging options')

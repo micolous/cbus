@@ -67,23 +67,27 @@ class BufferedProtocol(asyncio.Protocol, abc.ABC):
         :param data: new data to add to the buffer
         :return: None
         """
-        data_size = len(data)
-        if data_size > self._size_limit:
-            raise ValueError('Received data exceeds size limit '
+        try:
+            data_size = len(data)
+            if data_size > self._size_limit:
+                raise ValueError('Received data exceeds size limit '
                              '({} bytes)'.format(self._size_limit))
 
-        # Add the data to the buffer
-        with self._buf_lock:
-            if len(self._buf) + data_size > self._size_limit:
-                self._buf = bytearray()
-                raise ValueError(
-                    'Received data would make the buffer exceed the maximum '
-                    'limit, buffer dropped!')
+            # Add the data to the buffer
+            with self._buf_lock:
+                if len(self._buf) + data_size > self._size_limit:
+                    self._buf = bytearray()
+                    raise ValueError(
+                        'Received data would make the buffer exceed the maximum '
+                        'limit, buffer dropped!')
 
-            self._buf.extend(data)
+                self._buf.extend(data)
 
-        # Handle any messages that may be in the buffer.
-        self._process_buffer()
+            # Handle any messages that may be in the buffer.
+            self._process_buffer()
+        except:
+            # Clear buffer.
+            self._buf =  bytearray()
 
     def _process_buffer(self):
         with self._buf_lock:

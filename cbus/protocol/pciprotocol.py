@@ -27,6 +27,8 @@ from typing import Iterable, Optional, Text, Union
 
 from six import int2byte
 
+from cbus.protocol.cal.report import BinaryStatusReport, LevelStatusReport
+
 try:
     from serial_asyncio import create_serial_connection
 except ImportError:
@@ -52,6 +54,7 @@ from cbus.protocol.error_packet import PCIErrorPacket
 from cbus.protocol.pm_packet import PointToMultipointPacket
 from cbus.protocol.pp_packet import PointToPointPacket
 from cbus.protocol.reset_packet import ResetPacket
+from cbus.protocol.cal.extended import ExtendedCAL
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +137,18 @@ class PCIProtocol(CBusProtocol):
                         self.on_clock_update(p.source_address, s.val)
                 else:
                     logger.debug(f'hcp: unhandled SAL type: {s!r}')
+        elif isinstance(p,PointToPointPacket):
+            for s in p:
+                if isinstance(s,ExtendedCAL):
+                    if isinstance(s.report,BinaryStatusReport):
+                        pass
+                    elif isinstance(s.report,LevelStatusReport):
+                        self.on_level_report(s.child_application, s.block_start, s.report)
+                    else:
+                        pass
+                else:
+                    pass
+
         else:
             logger.debug(f'hcp: unhandled other packet: {p!r}')
 
@@ -416,7 +431,7 @@ class PCIProtocol(CBusProtocol):
         # 6: IDMON
         # self._send('A3300059', encode=False, checksum=False)
         self._send(DeviceManagementPacket(
-            checksum=False, parameter=0x30, value=0x59),
+            checksum=False, parameter=0x30, value=0x79),
             basic_mode=True)
 
     def identify(self, unit_address, attribute):
@@ -463,6 +478,13 @@ class PCIProtocol(CBusProtocol):
             sals=[LightingOnSAL(ga,application_addr) for ga in group_addr])
         return self._send(p)
 
+    def request_status(self,group_addr: Union[int, Iterable[int]],application_addr: Union[int,Application] ):
+        p = PointToMultipointPacket(sals=[
+                StatusRequestSAL(level_request=True, group_address=group_addr,child_application=application_addr)
+            ])
+        return self._send(p)
+    
+    
     def lighting_group_off(self, group_addr: Union[int, Iterable[int]],application_addr: Union[int,Application] ):
         """
         Turns off the lights for the given group_id.
