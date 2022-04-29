@@ -295,7 +295,7 @@ class MqttClient(mqtt.Client):
 
     
     def publish_binary_sensor(self, group_addr: int, app_addr: int | Application, state: Optional[bool]):
-        payload = "UNK" if state == None else ('ON' if state else 'OFF')
+        payload = 'ON' if state else 'OFF'
         return super().publish(
             bin_sensor_state_topic(group_addr,app_addr), payload, 1, True)
 
